@@ -10,7 +10,7 @@ if [ "$1" = "" -o "$2" = "" ]; then
    exit 1
 fi
 
-. ../initrd/functions
+. ./functions
 
 TMPDIR=/tmp/tgz2img$$
 

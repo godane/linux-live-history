@@ -210,6 +210,21 @@ mount_device()
   return $err
 }
 
+# modprobe module $1, suppress all messages
+# $1 = module name, eg. ehci-hcd
+#
+modprobe_module()
+{
+  PRINTK=`cat /proc/sys/kernel/printk`
+  echo "0" >/proc/sys/kernel/printk
+
+  modprobe $1 >/dev/null 2>/dev/null
+  err=$?
+
+  echo "$PRINTK" >/proc/sys/kernel/printk
+  return $err
+}
+
 # Mount all CDs to $1
 # $1 = mount directory, in which all CDs will be mounted,    eg. /mnt/mnt
 # return: echo all mounted devices

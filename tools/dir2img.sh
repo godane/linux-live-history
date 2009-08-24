@@ -10,7 +10,7 @@ if [ ! -d "$1" -o "$3" = "" ]; then
    exit 1
 fi
 
-. ../initrd/functions
+. ./functions
 
 mkciso "$1" "$2" "$3"
 if [ $? != 0 ]; then echo "error building compressed image"; exit; fi

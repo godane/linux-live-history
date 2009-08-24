@@ -55,28 +55,35 @@ cp -R /sbin/*.old $MOUNTDIR/sbin # this line can be safely removed when using 2.
 echo -ne "#!/bin/bash\necho \`ls -ol \"\$1\"\` | cut -d \" \" -f 4" >$MOUNTDIR/bin/filesize
 chmod 0755 $MOUNTDIR/bin/filesize
 
+LMK="lib/modules/$KERNEL"
+
 #necessary modules and dependency files
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL
-cp -R /lib/modules/$KERNEL/modules* $MOUNTDIR/lib/modules/$KERNEL
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ovlfs
-cp -R /lib/modules/$KERNEL/kernel/fs/ovlfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+mkdir -p $MOUNTDIR/$LMK
+cp -R /$LMK/modules* $MOUNTDIR/$LMK
+mkdir -p $MOUNTDIR/$LMK/kernel/fs/ovlfs
+cp -R /$LMK/kernel/fs/ovlfs $MOUNTDIR/$LMK/kernel/fs
 
 #disk (ide, scsi?) modules
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/ide
-cp -R /lib/modules/$KERNEL/kernel/drivers/ide $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers
+mkdir -p $MOUNTDIR/$LMK/kernel/drivers/ide
+cp -R /$LMK/kernel/drivers/ide $MOUNTDIR/$LMK/kernel/drivers
 
 #to enable burning
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
-cp -R /lib/modules/$KERNEL/kernel/drivers/scsi/ide-scsi* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
+mkdir -p $MOUNTDIR/$LMK/kernel/drivers/scsi
+cp -R /$LMK/kernel/drivers/scsi/ide-scsi* $MOUNTDIR/$LMK/kernel/drivers/scsi
 
 #filesystem modules
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ntfs
-cp -R /lib/modules/$KERNEL/kernel/fs/ntfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ext3
-cp -R /lib/modules/$KERNEL/kernel/fs/ext3 $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/reiserfs
-cp -R /lib/modules/$KERNEL/kernel/fs/reiserfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+mkdir -p $MOUNTDIR/$LMK/kernel/fs/ntfs
+cp -R /$LMK/kernel/fs/ntfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
+mkdir -p $MOUNTDIR/$LMK/kernel/fs/ext3
+cp -R /$LMK/kernel/fs/ext3 $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
+mkdir -p $MOUNTDIR/$LMK/kernel/fs/reiserfs
+cp -R /$LMK/kernel/fs/reiserfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
 
+#usb modules
+mkdir -p $MOUNTDIR/$LMK/kernel/drivers/usb
+cp -R /$LMK/kernel/drivers/usb/usbcore* $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
+cp -R /$LMK/kernel/drivers/usb/host $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
+cp -R /$LMK/kernel/drivers/usb/storage $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
 
 cp {linuxrc,functions} $MOUNTDIR
 chmod a+x $MOUNTDIR/linuxrc

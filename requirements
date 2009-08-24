@@ -4,15 +4,15 @@
 
 
     * devfs enabled kernel (compile dev filesystem).
-      I know it's obsolete but there is nothing stable enough now.
+      I know it's obsolete but there is nothing working enough now.
 
     * ovlfs modules has to be compiled for the kernel you are using.
       Get the source at http://ovlfs.sourceforge.net, and be sure
-      that symlink /lib/modules/2.x.x/build points to the correct
+      that symlink /lib/modules/2.4.xx/build points to the correct
       kernel source tree before compiling. Install ovlfs to your system.
 
     * mkzftree is used for img compression. Make sure you have it,
       and also make sure your mkisofs is patched properly.
       (This is already done under Slackware)
 
-  These requirements could change with new kernel versions.
+  These requirements could change with new kernel or ovlfs versions.

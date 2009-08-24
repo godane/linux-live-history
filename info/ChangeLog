@@ -1,7 +1,17 @@
+ 3.0.27
+
+  * USB support added back, it's possible to start slax from USB mastorage device
+    (only if you know how to boot from it, or by using floppy)
+  * added nousb kernel boot parameter again
+  * added tools/modinsert.sh script (to insert downloaded modules to LiveCD ISO)
+
+
  3.0.26
 
    mkciso: mkzftree seems unable to compress files >2GB, added a check
    runme.sh: added a check for directories existence (eg. /opt doesn't need to be there)
+   accidentaly removed ide-scsi modloading, cd burning doesn't work
+   
 
  3.0.25
  

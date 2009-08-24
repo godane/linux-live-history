@@ -59,14 +59,25 @@ if [ ! "`cmdline_parameter nolock`" = "" ]; then
    echo "0" >/proc/sys/dev/cdrom/lock
 fi
 
+if [ "`cmdline_parameter nousb`" = "" && "`cmdline_parameter nohotplug`" = "" ]; then
+   echo "probing usb hardware"
+   modprobe_module ide-scsi
+   modprobe_module usbcore
+   modprobe_module ehci-hcd
+   modprobe_module usb-uhci
+   modprobe_module uhci
+   modprobe_module usb-ohci
+   modprobe_module usb-storage
+fi
+
 # call mount_all_cds function, to mount /dev/hdc hdd etc.
-echo "mounting all available CDs..."
+echo "mounting all available CDs"
 mount_all_cds /mnt/mnt >>$MOUNTS
 
-echo "mounting other discs (ro)..."
+echo "mounting other discs (ro)"
 mount_all_discs /mnt/mnt >>$MOUNTS
 
-echo "mounting floppy if available (ro)..."
+echo "mounting floppy if available (ro)"
 mount_device /dev/floppy/0 /mnt/mnt/floppy ro
 echo "/dev/floppy/0" >>$MOUNTS
 
@@ -226,3 +237,9 @@ $DEBUG
 echo "changing root directory..."
 /sbin/pivot_root . mnt/ramdisk
 exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
+
+header "ERROR!"
+echo "You are not supposed to be here, something went wrong!"
+echo "calling /mnt/usr/bin/chroot failed?"
+echo "Press Ctrl+Alt+Del for reboot."
+while [ 1 = 1 ]; do bash; done

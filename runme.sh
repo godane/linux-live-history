@@ -46,7 +46,7 @@ tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz
 
 echo "creating LiveCD ISO image..."
 cd $CDDATA
-./create_bootiso /tmp/livecd.iso
+./create_bootiso.sh /tmp/livecd.iso
 
 cd /tmp
 header "Your ISO is created in /tmp/livecd.iso"
