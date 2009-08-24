@@ -1,13 +1,10 @@
 #!/bin/bash
 # Author: Tomas Matejicek <http://www.linux-live.org>
 
-echo "this doesn't work yet"
-exit
-
-if [ "$1" = "" -o ! -b "$2" ]; then
-  echo "This script will copy all files from current directory to USB flashdisk."
-  echo "You should call it from the mounted CD directory."
-  echo "example: $0 livecd.iso|data_dir /dev/sda1"
+if [ "$1" = "" -o ! -b "$2"  -o ! -b "$3" ]; then
+  echo "Copy all files from LiveCD to USB flashdisk."
+  echo "usage:   $0 [ data_dir | livecd.iso ] [ partition ] [ mbr ]"
+  echo "example: $0 . /dev/sda1 /dev/sda"
   exit
 fi
 
@@ -20,37 +17,39 @@ if [ ! -d "$DATADIR" ]; then
    DATADIR=/tmp/livecd_data$$
    mkdir -p "$DATADIR"
    mount -o loop "$1" "$DATADIR"
+   if [ ! "$?" = "0" ]; then echo "error mounting $1 to $DATADIR"; exit; fi
 fi
 
 mkdir -p $MOUNTPOINT
 mount $2 $MOUNTPOINT
-if [ ! "$?" = "0" ]; then
-   echo "error mounting $2";
-   exit
-fi
+if [ ! "$?" = "0" ]; then echo "error mounting $2"; exit; fi
 
 cp -R "$DATADIR"/* "$MOUNTPOINT"
+APPEND="`cat $DATADIR/isolinux.cfg | grep append | cut -b 7-`"
 
-
-echo -n "
-boot = $2
+echo "
+boot = $3
 prompt
-lba32
-timeout = 300
-install = text
+timeout = 30
+vga = normal
 message = $MOUNTPOINT/splash
+map = $MOUNTPOINT/lilo.map
+install = text
 
+# Linux bootable partition config begins
 image = $MOUNTPOINT/vmlinuz
+root = /dev/ram0
 label = slax
+initrd = $MOUNTPOINT/initrd.gz
+read-write
+append=\" usbdisk $APPEND \" " >$TMPLILOCONF
 
-append=" >$TMPLILOCONF
-
-
-#max_loop=255 initrd=initrd.gz init=linuxrc livecd_subdir=/ load_ramdisk=1 prompt_ramdisk=0 ramdisk_size=7777 root=/dev/ram0 rw"
-
+lilo -v -C $TMPLILOCONF
 
 umount $DATADIR 2>/dev/null >/dev/null
 if [ "$?" = "0" ]; then rmdir $DATADIR; fi
 
 umount $MOUNTPOINT
 rmdir $MOUNTPOINT
+
+echo "LiveCD is installed in $3"

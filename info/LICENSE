@@ -2,6 +2,7 @@
  License:
 
    This software is released under GNU GENERAL PUBLIC LICENSE.
+   You can do what you like with the code except claim you wrote it.
    See COPYING for more.
 
  Warranty:
@@ -10,10 +11,10 @@
 
  Author:
 
-   This software is written by 
+   This software is written by
    Tomas Matejicek <http://www.linux-live.org>
 
- Thanks to:
+ Special Thanks to:
  
    Patrick Volgerding for Slackware Linux
    Arthur Naseef for Overlay filesystem (ovlfs)

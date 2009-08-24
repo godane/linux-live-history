@@ -59,15 +59,18 @@ if [ ! "`cmdline_parameter nolock`" = "" ]; then
    echo "0" >/proc/sys/dev/cdrom/lock
 fi
 
-if [ "`cmdline_parameter nousb`" = "" && "`cmdline_parameter nohotplug`" = "" ]; then
+# to be able to boot from hdc=ide-scsi
+modprobe_module ide-scsi
+
+if [ ! "`cmdline_parameter usbdisk`" = "" ]; then
    echo "probing usb hardware"
-   modprobe_module ide-scsi
    modprobe_module usbcore
-   modprobe_module ehci-hcd
+   modprobe_module usb-storage
    modprobe_module usb-uhci
    modprobe_module uhci
    modprobe_module usb-ohci
-   modprobe_module usb-storage
+   modprobe_module ehci-hcd
+   sleep 5
 fi
 
 # call mount_all_cds function, to mount /dev/hdc hdd etc.
@@ -77,9 +80,11 @@ mount_all_cds /mnt/mnt >>$MOUNTS
 echo "mounting other discs (ro)"
 mount_all_discs /mnt/mnt >>$MOUNTS
 
-echo "mounting floppy if available (ro)"
-mount_device /dev/floppy/0 /mnt/mnt/floppy ro
-echo "/dev/floppy/0" >>$MOUNTS
+if [ ! "`cmdline_parameter floppy`" = "" ]; then
+   echo "mounting floppy if available (ro)"
+   mount_device /dev/floppy/0 /mnt/mnt/floppy ro
+   echo "/dev/floppy/0" >>$MOUNTS
+fi
 
 LIVECD_SUBDIRECTORY=`cmdline_value livecd_subdirectory`
 LIVECD_SUBDIR=`cmdline_value livecd_subdir`

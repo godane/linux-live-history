@@ -13,7 +13,7 @@ echo "creating empty image file initrd.img..."
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >/dev/null 2>/dev/null
 
 echo "making filesystem..."
-mke2fs -F -m 0 -i 1024 $INITRDIMG >/dev/null 2>/dev/null
+mkfs -t ext2 -F -m 0 -i 1024 $INITRDIMG >/dev/null 2>/dev/null
 
 echo "creating empty directory $MOUNTDIR..."
 rm -Rf $MOUNTDIR

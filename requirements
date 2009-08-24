@@ -15,4 +15,7 @@
       and also make sure your mkisofs is patched properly.
       (This is already done under Slackware)
 
+    * ext2 filesystem must be compiled into kernel, a module is not enough
+      (because initrd is ext2 formated)
+
   These requirements could change with new kernel or ovlfs versions.

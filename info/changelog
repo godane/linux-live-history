@@ -1,3 +1,13 @@
+ 3.0.28
+
+  * Floppy automounting disabled (it caused alot of problems on some hw)
+  * Floppy is automounted only with "floppy" boot parameter
+  * USB modules for linuxrc are loaded only with "usbdisk" boot parameter
+  * Fixed -a (AND) in linuxrc (there was && instead of -a which caused to
+    fail loading USB modules at all)
+  * Added script to copy&install SLAX to USB Mastorage device (flashdisk)!
+    (./bootfiles/create_bootflashdisk.sh, untested but should work)
+
  3.0.27
 
   * USB support added back, it's possible to start slax from USB mastorage device
