@@ -1,0 +1,24 @@
+------------------------------------------------------------------------------
+
+ WELCOME to Slax 3.0.23!                                    ____________
+ At first, login as "root" with password "toor"          __________________
+                                                        _____________ __ ____
+ Then try the following commands:                     _________________ __ ___
+ - "gui" for Xwindow system with KDE desktop         __________      ___ __ ___
+ - "guifast" for Xwindow system with FluxBox         _________        ___ __ __
+ - "mc" for Midnight Commander (filemanager)         __ __ ___        _________
+ - "man man" for manual pages about manual pages     ___ __ ___      __________
+ - "cfdisk" for user-friendly partitioning tool       ___ __ _________________
+ - "configsave" to save changes to floppy or USB       ____ __ ____200MB____
+ - "configrestore" to restore changes from backup        _________Live_CD__
+ - "rexima" to adjust audio volume                          ____________
+
+------------------------------------------------------------------------------
+
+ If you experienced problems running "gui", try "gui --help"
+ or type "startx" instead, to start Xwindow without hw autodetecting.
+
+ * Note: you cannot eject the LiveCD medium before rebooting the machine
+ * When finished, reboot your computer by pressing Ctrl+Alt+Delete
+
+------------------------------------------------------------------------------

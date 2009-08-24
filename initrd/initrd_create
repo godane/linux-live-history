@@ -1,0 +1,100 @@
+#!/bin/bash
+#
+# initrd_create:  make initrd rootdisk
+#
+# Author:	  Tomas Matejicek <http://www.linux-live.org>
+
+. ../config
+. ./functions
+
+KERNEL=`/bin/uname -r`
+
+# list directories (and symlinks to them)
+# $1 = toplevel directory
+#
+mklst_directories()
+{
+   ls -aAb1 "$1/$2" | while read FILE ; # list all files and filter directories
+   do
+     FILENAME="$2$FILE"
+
+     if [ -d "$1/$FILENAME" ]; then 
+        if [ -L "$1/$FILENAME" ]; then echo "ln -sf \"`readlink \"$1/$FILENAME\"`\" \"\$HD/$FILENAME\""; continue; fi
+        echo "mkdir -p \"\$HD/$FILENAME\""; mklst_directories "$1" "$FILENAME/"; continue;
+     fi
+   done
+}
+
+echo "creating empty image file initrd.img..."
+dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >/dev/null 2>/dev/null
+
+echo "making filesystem..."
+mke2fs -F -m 0 -i 1024 $INITRDIMG >/dev/null 2>/dev/null
+
+echo "creating empty directory $MOUNTDIR..."
+rm -Rf $MOUNTDIR
+mkdir $MOUNTDIR
+
+echo "mounting initrd.img to it..."
+mount -o loop $INITRDIMG $MOUNTDIR
+
+echo "creating directories..."
+rmdir $MOUNTDIR/lost+found
+mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,sbin,lib,tmp,usr/bin,usr/sbin}
+mklst_directories /var >$MOUNTDIR/var.lst
+
+echo "copying files to the rootdisk..."
+touch $MOUNTDIR/etc/{m,fs}tab
+
+for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount mkdir rmdir \
+ls ln echo cat grep egrep fdisk blockdev pivot_root insmod lsmod modprobe swapon \
+eject tail tr chroot tempfile readlink basename dirname test [ ; do
+   for LOCATION in /bin /sbin /usr/bin /usr/sbin ;
+   do
+      if [ -r "$LOCATION/$BINARY" ]; then
+         cp -R "$LOCATION/$BINARY" "$MOUNTDIR/$LOCATION/$BINARY"
+
+         list_libs "$LOCATION/$BINARY" | sort | uniq | while read LIB; do
+	    mkdir -p "`dirname \"$MOUNTDIR/$LIB\"`"
+            if [ ! -a "$MOUNTDIR/$LIB" ]; then
+               cp -R "$LIB" "$MOUNTDIR/$LIB"
+	    fi
+	 done
+      fi
+   done
+done
+cp -R /sbin/*.old $MOUNTDIR/sbin # this line can be safely removed when using 2.6 kernel
+
+#filesize script by using ls + cut
+echo -ne "#!/bin/bash\necho \`ls -ol \"\$1\"\` | cut -d \" \" -f 4" >$MOUNTDIR/bin/filesize
+chmod 0755 $MOUNTDIR/bin/filesize
+
+#necessary modules and dependency files
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL
+cp -R /lib/modules/$KERNEL/modules* $MOUNTDIR/lib/modules/$KERNEL
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ovlfs
+cp -R /lib/modules/$KERNEL/kernel/fs/ovlfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+
+#disk (ide, scsi, usb, fs) modules
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/ide
+cp -R /lib/modules/$KERNEL/kernel/drivers/ide $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/ide
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
+cp -R /lib/modules/$KERNEL/kernel/drivers/scsi/ide-scsi* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/{storage,host}
+cp -R /lib/modules/$KERNEL/kernel/drivers/usb/usbcore* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb
+cp -R /lib/modules/$KERNEL/kernel/drivers/usb/storage/usb-storage* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/storage
+cp -R /lib/modules/$KERNEL/kernel/drivers/usb/storage/usb-storage* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/storage
+cp -R /lib/modules/$KERNEL/kernel/drivers/usb/host/uhci* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/host
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ntfs
+cp -R /lib/modules/$KERNEL/kernel/fs/ntfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+
+cp {linuxrc,functions} $MOUNTDIR
+chmod a+x $MOUNTDIR/linuxrc
+cp ../info/{README,LICENSE,COPYING} $MOUNTDIR
+
+echo "unmounting $MOUNTDIR and gzipping initrd.img..."
+umount $MOUNTDIR
+gzip --best $INITRDIMG
+
+echo "deleting directory $MOUNTDIR..."
+rm -Rf $MOUNTDIR

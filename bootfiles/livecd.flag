@@ -1,0 +1,2 @@
+When the LiveCD starts, it mounts all available discs and CDROMs.
+Then it tries to find this file. So please don't delete it from here.

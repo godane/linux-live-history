@@ -1,0 +1,160 @@
+#!/bin/sh
+. ./functions
+
+# storage files
+MOUNTS=/mounts.log
+MNTORDER=/mnt.order
+INSORDER=/ins.order
+STGFILE=/mnt/tmp/ovlfs.stor
+
+# paths
+LIVECDDATA=/mnt/mnt/livecd
+IMGRO=$LIVECDDATA/imgro
+IMGRW=$LIVECDDATA/imgrw
+CP2RAM=$LIVECDDATA/cp2ram
+CHANGES=$LIVECDDATA/changes
+
+# init script, absolute path for chrooted filesystem
+LINUXINIT=/tmp/init
+
+header "probing USB and SCSI hardware"
+
+/sbin/modprobe -q uhci >/dev/null 2>/dev/null
+/sbin/modprobe -q ide-scsi >/dev/null 2>/dev/null
+/sbin/modprobe -q usb-storage >/dev/null 2>/dev/null
+
+header "linuxrc-start"
+
+echo "creating root filesystem in /mnt"
+mount -t tmpfs -o size=90%,nr_inodes=50000 tmpfs /mnt
+mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var}
+mkdir -p /mnt/mnt/{ramdisk,livecd}
+HD=/mnt/var
+. ./var.lst
+
+mount -t proc proc /proc
+
+# call mount_all_cds function, to mount /dev/hdc hdd etc.
+echo "mounting all available CDs..."
+mount_all_cds /mnt/mnt >>$MOUNTS
+
+echo "mounting other discs..."
+mount_all_discs /mnt/mnt >>$MOUNTS
+
+LIVECD_SUBDIRECTORY=`cmdline_value livecd_subdirectory`
+LIVECD_SUBDIR=`cmdline_value livecd_subdir`
+# and choose the longer one:
+if [ ${#LIVECD_SUBDIR} -lt ${#LIVECD_SUBDIRECTORY} ]; then
+   LIVECD_SUBDIR="$LIVECD_SUBDIRECTORY"
+fi
+
+echo "liveCD subdirectory is $LIVECD_SUBDIR";
+
+# search what mount directory is our CD in
+for DIR in /mnt/mnt/*
+do
+  if [ -r "$DIR/$LIVECD_SUBDIR/livecd.flag" ]; then
+     export LIVECD_MOUNT="$DIR"
+     export LIVECD_PATH=`dirname "$DIR/$LIVECD_SUBDIR/x"`
+     break
+  fi
+done
+
+# if none, run bash
+if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
+  header "eRRoR!"
+  echo "cannot find your compressed IMG files! Maybe you are trying to start the"
+  echo "LiveCD from unsupported CDROM drive (scsi?)"
+  echo "Or you entered wrong livecd_subdir= parameter?"
+  echo "Press Ctrl+Alt+Del for reboot."
+  while [ 1 = 1 ]; do bash; done
+fi
+
+echo "liveCD found in $LIVECD_PATH"
+
+mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
+
+echo -n "copying selected modules to RAM... "
+ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
+   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+done
+ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
+   echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+done
+echo
+
+echo -n "mounting all images... "
+cat $MNTORDER | while read IMG;
+do
+   echo -n "`basename \" $IMG\"` "
+   mount_img $IMG $IMGRO $INSORDER
+done
+echo
+
+`cmdline_value debug`
+
+header "creating live filesystem"
+
+/sbin/modprobe -q ovl
+mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
+
+echo -n "inserting images into filesystem... "
+cat $INSORDER | while read IMG;
+do
+   IMG=$IMGRW/${IMG:${#IMGRO}}
+   echo -n "`basename \"$IMG\"` "
+   make_links $IMG /mnt /mnt
+done
+echo
+
+echo -n "unpacking .tar.gz from the CD... "
+ls -aA1b $LIVECD_PATH/packs | while read PACK;
+do
+   echo -n "$PACK "
+   tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
+done
+echo
+
+`cmdline_value debug`
+
+echo "creating fstab..."
+
+echo "tmpfs /     tmpfs defaults 0 0" >/mnt/etc/fstab
+echo "proc  /proc proc  defaults 0 0" >>/mnt/etc/fstab
+
+cat $MOUNTS | while read DEVICE; do
+   LINE="`cat /proc/mounts | egrep \"^$DEVICE[[:space:]]\"`"
+   if [ "$LINE" = "" ]; then continue; fi
+
+   umount "$DEVICE" 1>/dev/null 2>/dev/null
+   if [ "$?" = 0 ]; then
+      echo ${LINE/ \/mnt/ } >>/mnt/etc/fstab
+   fi
+done
+
+list_swaps >>/mnt/etc/fstab
+
+echo >/mnt/etc/mtab
+touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
+
+echo "changing root..."
+
+echo >/mnt/$LINUXINIT
+chmod 0755 /mnt/$LINUXINIT
+
+echo '
+echo "freeing ramdisk..."
+umount -nl /mnt/ramdisk
+/sbin/blockdev --flushbufs /dev/rd/0
+echo "'"`header \"starting init\"`"'"
+exec /sbin/init <dev/console >dev/console 2>&1
+' >>/mnt/$LINUXINIT
+
+mount -o remount,ro /mnt
+cd /mnt
+mount -t devfs devfs dev
+
+`cmdline_value debug`
+
+/sbin/pivot_root . mnt/ramdisk
+exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1

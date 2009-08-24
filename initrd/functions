@@ -1,0 +1,246 @@
+#!/bin/bash
+# Functions for use in LiveCD
+# Author: Tomas Matejicek <http://www.linux-live.org>
+#
+
+# header
+# $1 = text to show
+#
+header()
+{
+   echo " "
+   echo "+============================================================================="
+   echo "| $1:"
+   echo "+============================================================================="
+   echo " "
+}
+
+# file extension
+# $1 = filename with extension
+# return: whole extension
+#
+file_extension()
+{
+   echo "$1" | egrep -io "\\.[^.]*\$"
+}
+
+# look into cmdline and echo value of $1 option
+# $1 = value name, case sensitive, for example livecd_subdir
+# $2 = file to use instead /proc/cmdline, optional
+#
+cmdline_value()
+{
+   CMDLINE=/proc/cmdline
+   if [ ! "$2" = "" ]; then CMDLINE="$2"; fi
+   cat "$CMDLINE" | egrep -io "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep -o "[^=]+\$" | tail -n 1
+}
+
+# create temp directory in $1 with the preffix $2
+# $1 = prefix to use, it may be a fullpath too
+# (for example tempdir /mnt/cdrom/bin.img /mnt will create /mnt/bin.KJBDRTYH)
+# $2 = subdirectory where tempdir will be created
+#
+tempdir()
+{
+   local TMPDIR
+   if [ "$2" != "" ]; then TMPDIR="-d $2"; fi
+   local MOUNTPOINT=`basename $1`
+   MOUNTPOINT=`tempfile -p $MOUNTPOINT. $TMPDIR`
+
+   rm "$MOUNTPOINT"
+   if [ $? != 0 ]; then echo "cannot remove temp file $MOUNTPOINT"; exit; fi
+
+   mkdir -p "$MOUNTPOINT"
+   if [ $? != 0 ]; then echo "error creating directory $MOUNTPOINT"; exit; fi
+   echo "$MOUNTPOINT"
+}
+
+# create compressed iso image
+# $1 = inpout directory tree (for example /bin)
+# $2 = output img file
+# $3 = relative root dir
+#
+mkciso()
+{
+   TMPISO=`tempfile`
+   if [ "$3" != "" ]; then INPUT="-graft-points $3=$1"; else INPUT="$1"; fi
+
+   mkisofs -R -D -o "$TMPISO" $INPUT 2>/dev/null
+   mkzftree -z 9 -F "$TMPISO" "$2"
+
+   rm -R "$TMPISO"
+}
+
+# link all files and directories from $1/* to $2
+# $1 = source directory
+# $2 = destination directory
+# $3 = directory to strip, usually /mnt
+#
+make_links()
+{
+   local SOURCEDIR="`dirname \"$1/x\"`"
+   ls -aA1b "$SOURCEDIR" 2>/dev/null | while read FILE;
+   do
+      local DESTFILE="$2/$FILE"
+
+      if [ -L "$SOURCEDIR/$FILE" ]; then
+         rm -rf "$DESTFILE"
+         ln -sf "`readlink \"$SOURCEDIR/$FILE\"`" "$DESTFILE"
+      else
+         if [ -d "$SOURCEDIR/$FILE" ]; then
+            if [ "`ls \"$DESTFILE\" 2>/dev/null`" = "" ]; then
+	       mkdir -p "$DESTFILE"
+	       if [ "`ls \"$SOURCEDIR/$FILE\" 2>/dev/null`" != ""  ]; then
+	          mount --rbind "$SOURCEDIR/$FILE" "$DESTFILE"
+	       fi
+            else
+      	       make_writable "$DESTFILE" $3
+               make_links "$SOURCEDIR/$FILE" "$DESTFILE" $3
+	    fi
+	 else
+            rm -rf "$DESTFILE"
+	    ln -sf "${SOURCEDIR:${#3}}/$FILE" "$DESTFILE"
+	 fi
+      fi
+   done
+}
+
+# make a symlink to file or directory writable in LiveCD linked tree
+# $1 = directory or file I would like to write to
+# $2 = stripped directory which has to be added back now
+#
+make_writable()
+{
+   # not a symlink? exit
+   if [ ! -L "$1" ]; then
+      return 1
+   fi
+
+   local LINKPOINT="$2""`readlink \"$1\"`"
+
+   if [ -d "$1" ]; then            # symlink to a directory?
+      rm -f "$1"                   # remove link
+      mkdir "$1"                   # create real directory instead of it
+      make_links "$LINKPOINT" "$1" # and link the content
+   else                            # symlink to a file?
+      cp -fR "$LINKPOINT" "$1"     # then just copy the original here
+   fi
+}
+
+# copy image to RAM, if commandline parameter told me
+# $1 = path to compressed image
+# $2 = destination path
+# return: will echo the final destination of image (the original path if not copied to RAM, or copy)
+#
+cp2ram()
+{
+   ALLINC=0; IMGINC=0; IMGEXC=0;
+   INCLUDE="`cmdline_value copy2ram`"
+   EXCLUDE="`cmdline_value nocopy2ram`"
+   EXT="`file_extension \"$1\"`"
+   IMGNAME="`basename \"$1\" \"$EXT\"`"
+
+   if [ ! "`echo \"$INCLUDE\" | egrep -i \"(^|,)all(,|\\\$)\"`" = "" ]; then ALLINC=1; fi
+   if [ ! "`echo \"$INCLUDE\" | egrep -i \"(^|,)$IMGNAME(,|\\\$)\"`" = "" ]; then IMGINC=1; fi
+   if [ ! "`echo \"$EXCLUDE\" | egrep -i \"(^|,)$IMGNAME(,|\\\$)\"`" = "" ]; then IMGEXC=1; fi
+
+   if [ "$ALLINC" = 1 -a "$IMGEXC" != 1 -o "$IMGINC" = 1 ]; then
+      echo -n " $IMGNAME$EXT" >&2
+      cp "$1" "$2/$IMGNAME$EXT"
+      if [ $? = 0 ]; then echo "$2/$IMGNAME$EXT"; return 0
+      else rm -f "$2/$IMGNAME$EXT"
+      fi
+   fi
+   echo $1
+}
+
+# mount image into unique temporary directory
+# $1 = image to mount
+# $2 = where to create a tmpdir
+# $3 = storage textfile, append mountpoint path there
+#
+mount_img()
+{
+   local MOUNTPOINT=`tempdir $1 $2`
+   mount -o loop,ro $1 $MOUNTPOINT
+   if [ $? != 0 ]; then echo "error mounting $1 to $MOUNTPOINT"; exit; fi
+   echo "$MOUNTPOINT" >>$3
+}
+
+# Mount device $1 to $2
+# $1 = /dev device to mount
+# $2 = /mnt mountpoint, directory will created automatically
+# $3 = mount options, for example "loop" or "remount,ro"
+#
+mount_device()
+{
+  if [ -a "$2" -o ! -b "$1" ]; then return 1; fi # only mount if directory doesn't exist
+  mkdir -p $2
+  if [ "$3" != "" ]; then OPTIONS="-o $3"; fi
+
+  PRINTK=`cat /proc/sys/kernel/printk`
+  echo "0" >/proc/sys/kernel/printk
+
+  mount -t auto $OPTIONS $1 $2 >/dev/null 2>/dev/null
+  err=$?
+
+  if [ "$err" != 0 ]; then rmdir $2; fi
+  echo "$PRINTK" >/proc/sys/kernel/printk
+  return $err
+}
+
+# Mount all CDs to $1
+# $1 = mount directory, in which all CDs will be mounted,    eg. /mnt/mnt
+# return: echo all mounted devices
+#
+mount_all_cds()
+{
+   CDIR=/dev/cdroms
+   if [ ! -d "$CDIR" ]; then return 0; fi
+   ls -aAb1 "$CDIR" | while read FILE ; # list all files in directory
+   do
+      CDDEV="$CDIR/`readlink $CDIR/$FILE`"
+      mount_device "$CDDEV" "$1/$FILE" ro
+      echo "$CDDEV"
+   done
+}
+
+# Mount all discs to $1
+# $1 = mount directory, in which all discs will be mounted,  eg. /mnt/mnt
+# return: echo all mounted devices
+#
+mount_all_discs()
+{
+   DDIR=/dev/discs
+   if [ ! -d $DDIR ]; then return 0; fi
+   ls -aAb1 $DDIR | while read DISC ; # list all files in directory
+   do
+      ls -aAb1 "$DDIR/$DISC" | grep part | while read PART;
+      do
+         mount_device "$DDIR/$DISC/$PART" "$1/$DISC$PART" ro
+	 echo "$DDIR/$DISC/$PART"
+      done
+   done
+}
+
+# Find all swaps and write info for fstab to stdout
+#
+list_swaps()
+{
+   /sbin/fdisk -l 2>/dev/null | grep -i "Linux swap" | egrep -o "^/dev/[a-z0-9/]+" | while read LINE;
+   do
+      echo "$LINE swap swap defaults 0 0"
+   done
+}
+
+# list all library dependencies, using ldd, including all links
+# $1 = binary
+#
+list_libs()
+{
+   ldd "$1" | egrep -o "=>.*" | cut -b 4- | cut -d " " -f 1 | while read LIB; do
+     echo "$LIB"
+     if [ -L "$LIB" ]; then LIB="`dirname $LIB`/`readlink $LIB`"; echo $LIB; fi
+     list_libs $LIB # even a library could use libraries
+   done
+}

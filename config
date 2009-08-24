@@ -1,0 +1,19 @@
+#-----------------------------------------------------#
+# This is a config file for runme.sh script.          #
+# Just run runme.sh, it will do all the work for you. #
+#-----------------------------------------------------#
+
+ # compressed directories (img) will be stored here
+ # (the whole folder will be erased now!)
+ CDDATA=/tmp/liveCD_data
+
+ # name of initrd image
+ INITRDIMG=initrd
+
+ # temporary folder for mounting IMGs
+ # (this folder will be completly erased!)
+ MOUNTDIR=/tmp/liveCD_mountdir
+
+ # the size of RAMdisk (in KBytes)
+ RAM0SIZE=7777
+

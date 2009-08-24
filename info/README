@@ -1,0 +1,19 @@
+This is a live (bootable) CD with Linux OS based on Slackware distribution,
+created by using linux-live scripts. See http://www.linux-live.org
+
+Insert this CD to your CDROM drive and reboot your computer.
+Make sure that cdrom booting is enabled in your bios.
+Voila, you are running Linux now! ;)
+
+You can also run it from DOS (in the case your bios cannot boot from CD),
+just start X:\tools\dos\linux.bat from the DOS prompt.
+
+--
+see
+    http://www.linux-live.org
+    http://ovlfs.sourceforge.net
+    http://www.slackware.com
+    http://www.mplayerhq.hu
+    http://www.xvid.org
+    http://kopete.kde.org
+    http://www.rdesktop.org
