@@ -1,11 +1,12 @@
 REM #########################################################################
-REM  DOS batch file to boot Linux.
+REM DOS batch file to boot Linux.
 
-REM  First, ensure any unwritten disk buffers are flushed:
+REM First, ensure any unwritten disk buffers are flushed:
 @smartdrv /C
 
-REM  Start the LOADLIN process:
+REM Start the LOADLIN process:
 cls
-loadlin \vmlinuz initrd=\initrd.gz livecd_subdir=/ root=/dev/ram0 load_ramdisk=1 ramdisk_size=7777 rw %1 %2 %3
+type \splash
+loadlin @slax %1 %2 %3 %4 %5 %6 %7 %8 %9
 
-REM #########################################################################
+REM #########################################################################

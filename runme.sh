@@ -39,6 +39,7 @@ cp $VMLINUZ $CDDATA/vmlinuz
 
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/packs
+mkdir -p $CDDATA/lang
 tar -C / -c root | gzip -f --best >$CDDATA/packs/root.tar.gz
 tar -C / -c etc | gzip -f --best >$CDDATA/packs/etc.tar.gz
 tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz

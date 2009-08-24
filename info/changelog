@@ -1,3 +1,14 @@
+ 3.0.25
+ 
+   fixed mouse autoconfig, it should finaly work now!
+   filesystem modules for ext3 and reiserfs added to initrd
+   partitions are mounted "ro" in linuxrc, but "default" entry is writed to fstab
+   added "lang=" kernel parameter to insert all modules from language cpecific directory cd/lang/$1/*
+   fixed loadlin (dos) parameters
+   added floppy automounting
+   removed usb kernel modules from initrd
+   isolinux timeout changed to 2 seconds
+
 
  3.0.24
 

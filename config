@@ -20,4 +20,4 @@ MOUNTDIR=/tmp/liveCD_mountdir
 RAM0SIZE=7777
 
 # volume label for the CD
-CDLABEL="SLAX 3.0.24"
+CDLABEL="SLAX 3.0.25"

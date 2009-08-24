@@ -1,5 +1,6 @@
 #!/bin/sh
 . ./functions
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/:.
 
 # storage files
 MOUNTS=/mounts.log
@@ -17,25 +18,16 @@ CHANGES=$LIVECDDATA/changes
 # init script, absolute path for chrooted filesystem
 LINUXINIT=/tmp/init
 
-header "probing USB and SCSI hardware"
-
-if [ "`cmdline_parameter nohotplug`" = "" ]; then
-   /sbin/modprobe -q uhci >/dev/null 2>/dev/null
-   /sbin/modprobe -q ide-scsi >/dev/null 2>/dev/null
-   /sbin/modprobe -q usb-storage >/dev/null 2>/dev/null
-   sleep 1
-fi
-
 header "linuxrc-start"
 
 echo "creating root filesystem in /mnt"
 mount -t tmpfs -o size=90% tmpfs /mnt
-mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var/run}
+mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var/run,var/lock}
 mkdir -p /mnt/mnt/{ramdisk,livecd}
 
-# to avoid "overmounting" by ovlfs, which could sometimes cause errors
+# touch to avoid "overmounting" by ovlfs, which could sometimes cause errors
 # with locking. For example /etc/mtab locking or /root/.Xauthority locking
-touch /mnt/{etc,root,tmp,var/run}/.lock_enable
+touch /mnt/{etc,root,tmp,var/run,var/lock}/.lock_enable
 
 mount -t proc proc /proc
 
@@ -46,6 +38,8 @@ if [ "$DEBUG" = "" ]; then
       DEBUG="cat /proc/self/environ /proc/mounts"
    fi
 fi
+
+$DEBUG
 
 # mount /dev filesystem only if it's not already mounted by kernel
 if [ ! -r /dev/.devfsd ]; then
@@ -60,8 +54,6 @@ if [ ! -r /dev/.devfsd ]; then
    fi
 fi
 
-$DEBUG
-
 if [ ! "`cmdline_parameter nolock`" = "" ]; then
    echo "CD locking disabled by nolock kernel parameter"
    echo "0" >/proc/sys/dev/cdrom/lock
@@ -71,8 +63,12 @@ fi
 echo "mounting all available CDs..."
 mount_all_cds /mnt/mnt >>$MOUNTS
 
-echo "mounting other discs..."
+echo "mounting other discs (ro)..."
 mount_all_discs /mnt/mnt >>$MOUNTS
+
+echo "mounting floppy if available (ro)..."
+mount_device /dev/floppy/0 /mnt/mnt/floppy ro
+echo "/dev/floppy/0" >>$MOUNTS
 
 LIVECD_SUBDIRECTORY=`cmdline_value livecd_subdirectory`
 LIVECD_SUBDIR=`cmdline_value livecd_subdir`
@@ -104,16 +100,26 @@ if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
 fi
 
 echo "liveCD found in $LIVECD_PATH"
-
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
 
+LANGFILE="`cmdline_value lang`"
+
+# base
 echo -n "copying selected modules to RAM... "
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
+
+# modules
 ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
+
+# lang
+if [ ! "$LANGFILE" = "" -a -r "$LIVECD_PATH/lang/$LANGFILE.img" ]; then
+   echo "`cp2ram \"$LIVECD_PATH/lang/$LANGFILE.img\" \"$CP2RAM\"`" >>$MNTORDER
+fi
+
 echo
 
 echo -n "mounting all images... "
@@ -133,7 +139,7 @@ mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
 
 if [ ! "$?" = "0" ]; then
   header "ERROR!"
-  echo "cannot mount cdrom in read-write mode."
+  echo "cannot overmount cdrom in pseudo-write mode."
   echo "Maybe your kernel doesn't support ovlfs?"
   echo "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
@@ -177,7 +183,9 @@ cat $MOUNTS | while read DEVICE; do
 
    umount "$DEVICE" 1>/dev/null 2>/dev/null
    if [ "$?" = 0 ]; then
-      echo ${LINE/ \/mnt/ } >>/mnt/etc/fstab
+      LINERO=${LINE/ \/mnt/ }
+      LINEDEF=${LINERO/ ro / defaults }
+      echo $LINEDEF >>/mnt/etc/fstab
    fi
 done
 
@@ -215,18 +223,6 @@ mount -t devfs devfs dev
 
 $DEBUG
 
-echo "creating /dev/mouse..."
-
-DEV=/mnt/dev
-if [ -r $DEV/ttyS1 ]; then ln -sf ttyS1 $DEV/mouse; fi           # COM2 mouse
-if [ -r $DEV/ttyS0 ]; then ln -sf ttyS0 $DEV/mouse; fi           # COM1 mouse
-if [ -r $DEV/misc/psaux ]; then ln -sf misc/psaux $DEV/mouse; fi # PS/2 mouse
-if [ -r $DEV/input/mice ]; then ln -sf input/mice $DEV/mouse; fi # USB mouse
-
 echo "changing root directory..."
-
 /sbin/pivot_root . mnt/ramdisk
-
-$DEBUG
-
 exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1

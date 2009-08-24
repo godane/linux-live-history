@@ -19,4 +19,5 @@ mount -o loop $TMPFILE $TMPDIR
 mount -o loop $TMPDIR/mountme.iso $TMPDIR
 cp -R $TMPDIR/* "$2"
 umount $TMPDIR
+umount $TMPDIR
 rm $TMPFILE

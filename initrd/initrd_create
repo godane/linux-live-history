@@ -61,18 +61,22 @@ cp -R /lib/modules/$KERNEL/modules* $MOUNTDIR/lib/modules/$KERNEL
 mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ovlfs
 cp -R /lib/modules/$KERNEL/kernel/fs/ovlfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
 
-#disk (ide, scsi, usb, fs) modules
+#disk (ide, scsi?) modules
 mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/ide
-cp -R /lib/modules/$KERNEL/kernel/drivers/ide $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/ide
+cp -R /lib/modules/$KERNEL/kernel/drivers/ide $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers
+
+#to enable burning
 mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
 cp -R /lib/modules/$KERNEL/kernel/drivers/scsi/ide-scsi* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/scsi
-mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/{storage,host}
-cp -R /lib/modules/$KERNEL/kernel/drivers/usb/usbcore* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb
-cp -R /lib/modules/$KERNEL/kernel/drivers/usb/storage/usb-storage* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/storage
-cp -R /lib/modules/$KERNEL/kernel/drivers/usb/storage/usb-storage* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/storage
-cp -R /lib/modules/$KERNEL/kernel/drivers/usb/host/uhci* $MOUNTDIR/lib/modules/$KERNEL/kernel/drivers/usb/host
+
+#filesystem modules
 mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ntfs
 cp -R /lib/modules/$KERNEL/kernel/fs/ntfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/ext3
+cp -R /lib/modules/$KERNEL/kernel/fs/ext3 $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+mkdir -p $MOUNTDIR/lib/modules/$KERNEL/kernel/fs/reiserfs
+cp -R /lib/modules/$KERNEL/kernel/fs/reiserfs $MOUNTDIR/lib/modules/$KERNEL/kernel/fs
+
 
 cp {linuxrc,functions} $MOUNTDIR
 chmod a+x $MOUNTDIR/linuxrc

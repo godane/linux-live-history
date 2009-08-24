@@ -185,7 +185,7 @@ mount_img()
 
 # Mount device $1 to $2
 # $1 = /dev device to mount
-# $2 = /mnt mountpoint, directory will created automatically
+# $2 = /mnt mountpoint, directory will be created automatically
 # $3 = mount options, for example "loop" or "remount,ro"
 #
 mount_device()
