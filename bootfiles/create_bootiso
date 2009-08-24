@@ -1,10 +1,8 @@
 #!/bin/bash
 # This script will create bootable ISO from files in curent directory.
 # usage: create_bootiso /mnt/disk/freespace/yourFilename.iso
-
-# /-----------------------------------------------------
+#
 # How to add your own files to the Linux-Live ISO image?
-# -----------------------------------------------------/
 #
 # At first, copy the entire content of the CD to some directory.
 # For example by using cp -R /mnt/hdc/* /mnt/hda5/theCD/
@@ -16,8 +14,11 @@
 # This will create liveCD.iso, which is a bootable image of your
 # modified CD, which you can burn and boot. Enjoy! :)
 
-
-LABEL="SLAX 3.0.23"
+if [ -r "../config" ]; then
+   . ../config
+else
+   CDLABEL="LinuxLiveCD"
+fi
 
 if [ "$1" = "" -o "$1" = "--help" -o "$1" = "-h" ]; then
   echo "This script will create bootable ISO from files in curent directory."
@@ -29,6 +30,6 @@ fi
 # so we need to restore it from backup.
 gunzip -c isolinux.bin.gz >isolinux.bin
 
-mkisofs -o "$1" -z -v -R -A "$LABEL" -V "$LABEL" \
+mkisofs -o "$1" -v -J -R -D -A "$CDLABEL" -V "$CDLABEL" \
 -no-emul-boot -boot-info-table -boot-load-size 4 \
 -b isolinux.bin -c isolinux.boot .

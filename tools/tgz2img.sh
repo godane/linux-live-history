@@ -17,6 +17,8 @@ TMPDIR=/tmp/tgz2img$$
 mkdir -p $TMPDIR/{bin,etc/rc.d,lib,sbin,var,usr/bin,usr/sbin,usr/lib}
 installpkg -root $TMPDIR $1
 if [ $? != 0 ]; then echo "error installing package"; exit; fi
+rm -Rf $TMPDIR/var/log/{packages,removed_packages,removed_scripts,scripts}
+rm -Rf $TMPDIR/usr/doc
 rmdir --ignore-fail-on-non-empty $TMPDIR/{bin,etc/rc.d,lib,sbin,var,usr/bin,usr/sbin,usr/lib}
 
 mkciso $TMPDIR "$2"

@@ -24,6 +24,17 @@ file_extension()
    echo "$1" | egrep -io "\\.[^.]*\$"
 }
 
+# look into cmdline and echo $1 back if $1 is set
+# $1 = value name, case sensitive, for example livecd_subdir
+# $2 = file to use instead /proc/cmdline, optional
+#
+cmdline_parameter()
+{
+   CMDLINE=/proc/cmdline
+   if [ ! "$2" = "" ]; then CMDLINE="$2"; fi
+   cat "$CMDLINE" | egrep -io "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)"
+}
+
 # look into cmdline and echo value of $1 option
 # $1 = value name, case sensitive, for example livecd_subdir
 # $2 = file to use instead /proc/cmdline, optional
@@ -56,19 +67,22 @@ tempdir()
 }
 
 # create compressed iso image
-# $1 = inpout directory tree (for example /bin)
-# $2 = output img file
-# $3 = relative root dir
+# $1 = input directory tree (for example /bin)
+# $2 = output img file (for example /tmp/bin.iso)
+# $3 = relative root dir (for example /bin)
 #
 mkciso()
 {
-   TMPISO=`tempfile`
+   RAW=`tempfile`
+   COMPRESSED=`tempfile`
    if [ "$3" != "" ]; then INPUT="-graft-points $3=$1"; else INPUT="$1"; fi
 
-   mkisofs -R -D -o "$TMPISO" $INPUT 2>/dev/null
-   mkzftree -z 9 -F "$TMPISO" "$2"
+   mkisofs -R -J -D -o "$RAW" $INPUT 2>/dev/null
+   mkzftree -z 9 -F "$RAW" "$COMPRESSED"
+   mkisofs -R -J -D -z -o "$2" -graft-points mountme.iso=$COMPRESSED 2>/dev/null
 
-   rm -R "$TMPISO"
+   rm -f "$RAW"
+   rm -f "$COMPRESSED"
 }
 
 # link all files and directories from $1/* to $2
@@ -88,9 +102,9 @@ make_links()
          ln -sf "`readlink \"$SOURCEDIR/$FILE\"`" "$DESTFILE"
       else
          if [ -d "$SOURCEDIR/$FILE" ]; then
-            if [ "`ls \"$DESTFILE\" 2>/dev/null`" = "" ]; then
+            if [ "`ls -aA \"$DESTFILE\" 2>/dev/null`" = "" ]; then
 	       mkdir -p "$DESTFILE"
-	       if [ "`ls \"$SOURCEDIR/$FILE\" 2>/dev/null`" != ""  ]; then
+	       if [ "`ls -aA \"$SOURCEDIR/$FILE\" 2>/dev/null`" != ""  ]; then
 	          mount --rbind "$SOURCEDIR/$FILE" "$DESTFILE"
 	       fi
             else
@@ -164,6 +178,8 @@ mount_img()
    local MOUNTPOINT=`tempdir $1 $2`
    mount -o loop,ro $1 $MOUNTPOINT
    if [ $? != 0 ]; then echo "error mounting $1 to $MOUNTPOINT"; exit; fi
+   mount -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
+   if [ $? != 0 ]; then echo "error submounting $1"; exit; fi
    echo "$MOUNTPOINT" >>$3
 }
 

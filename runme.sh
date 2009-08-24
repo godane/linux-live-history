@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# run to create a LiveCD in /tmp/liveCD.iso :)
+# run this script to create a LiveCD in /tmp/livecd.iso
+# Your kernel image has to be in /boot/vmlinuz or /vmlinuz
 #
 
 . ./initrd/functions
@@ -40,6 +41,7 @@ mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/packs
 tar -C / -c root | gzip -f --best >$CDDATA/packs/root.tar.gz
 tar -C / -c etc | gzip -f --best >$CDDATA/packs/etc.tar.gz
+tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz
 
 echo "creating LiveCD ISO image..."
 cd $CDDATA

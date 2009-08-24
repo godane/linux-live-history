@@ -19,20 +19,53 @@ LINUXINIT=/tmp/init
 
 header "probing USB and SCSI hardware"
 
-/sbin/modprobe -q uhci >/dev/null 2>/dev/null
-/sbin/modprobe -q ide-scsi >/dev/null 2>/dev/null
-/sbin/modprobe -q usb-storage >/dev/null 2>/dev/null
+if [ "`cmdline_parameter nohotplug`" = "" ]; then
+   /sbin/modprobe -q uhci >/dev/null 2>/dev/null
+   /sbin/modprobe -q ide-scsi >/dev/null 2>/dev/null
+   /sbin/modprobe -q usb-storage >/dev/null 2>/dev/null
+   sleep 1
+fi
 
 header "linuxrc-start"
 
 echo "creating root filesystem in /mnt"
-mount -t tmpfs -o size=90%,nr_inodes=50000 tmpfs /mnt
-mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var}
+mount -t tmpfs -o size=90% tmpfs /mnt
+mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var/run}
 mkdir -p /mnt/mnt/{ramdisk,livecd}
-HD=/mnt/var
-. ./var.lst
+
+# to avoid "overmounting" by ovlfs, which could sometimes cause errors
+# with locking. For example /etc/mtab locking or /root/.Xauthority locking
+touch /mnt/{etc,root,tmp,var/run}/.lock_enable
 
 mount -t proc proc /proc
+
+DEBUG="`cmdline_value debug`"
+if [ "$DEBUG" = "" ]; then
+   DEBUG="`cmdline_parameter debug`"
+   if [ ! "$DEBUG" = "" ]; then
+      DEBUG="cat /proc/self/environ /proc/mounts"
+   fi
+fi
+
+# mount /dev filesystem only if it's not already mounted by kernel
+if [ ! -r /dev/.devfsd ]; then
+   mount -t devfs devfs /dev
+   if [ ! "$?" = "0" ]; then
+      header "ERROR!"
+      echo "devfs is not mounted in /dev and mount attempt failed"
+      echo "Your kernel probably doesn't support devfs"
+      echo "try cat /proc/filesystems | grep devfs"
+      echo "Press Ctrl+Alt+Del for reboot."
+      while [ 1 = 1 ]; do bash; done
+   fi
+fi
+
+$DEBUG
+
+if [ ! "`cmdline_parameter nolock`" = "" ]; then
+   echo "CD locking disabled by nolock kernel parameter"
+   echo "0" >/proc/sys/dev/cdrom/lock
+fi
 
 # call mount_all_cds function, to mount /dev/hdc hdd etc.
 echo "mounting all available CDs..."
@@ -62,7 +95,7 @@ done
 
 # if none, run bash
 if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
-  header "eRRoR!"
+  header "ERROR!"
   echo "cannot find your compressed IMG files! Maybe you are trying to start the"
   echo "LiveCD from unsupported CDROM drive (scsi?)"
   echo "Or you entered wrong livecd_subdir= parameter?"
@@ -91,12 +124,20 @@ do
 done
 echo
 
-`cmdline_value debug`
+$DEBUG
 
 header "creating live filesystem"
 
 /sbin/modprobe -q ovl
 mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
+
+if [ ! "$?" = "0" ]; then
+  header "ERROR!"
+  echo "cannot mount cdrom in read-write mode."
+  echo "Maybe your kernel doesn't support ovlfs?"
+  echo "Press Ctrl+Alt+Del for reboot."
+  while [ 1 = 1 ]; do bash; done
+fi
 
 echo -n "inserting images into filesystem... "
 cat $INSORDER | while read IMG;
@@ -115,7 +156,15 @@ do
 done
 echo
 
-`cmdline_value debug`
+$DEBUG
+
+if [ ! "`cmdline_parameter eject`" = "" ]; then
+   echo "trying to eject LiveCD medium..."
+   eject "$LIVECD_MOUNT" >/dev/null 2>/dev/null
+   if [ ! "$?" = 0 ]; then
+      echo "error, cdrom cannot be unmounted or doesn't support ejecting"
+   fi
+fi
 
 echo "creating fstab..."
 
@@ -137,10 +186,20 @@ list_swaps >>/mnt/etc/fstab
 echo >/mnt/etc/mtab
 touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
 
-echo "changing root..."
+echo "creating init script in /tmp/init..."
 
 echo >/mnt/$LINUXINIT
 chmod 0755 /mnt/$LINUXINIT
+
+NEWROOTPASS="`cmdline_value passwd`"
+if [ "$NEWROOTPASS" = "ask" ]; then
+   echo -ne "\nEnter new password for root: "
+   read -s NEWROOTPASS
+fi
+
+if [ ! "$NEWROOTPASS" = "" ]; then
+   echo "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
+fi
 
 echo '
 echo "freeing ramdisk..."
@@ -154,7 +213,20 @@ mount -o remount,ro /mnt
 cd /mnt
 mount -t devfs devfs dev
 
-`cmdline_value debug`
+$DEBUG
+
+echo "creating /dev/mouse..."
+
+DEV=/mnt/dev
+if [ -r $DEV/ttyS1 ]; then ln -sf ttyS1 $DEV/mouse; fi           # COM2 mouse
+if [ -r $DEV/ttyS0 ]; then ln -sf ttyS0 $DEV/mouse; fi           # COM1 mouse
+if [ -r $DEV/misc/psaux ]; then ln -sf misc/psaux $DEV/mouse; fi # PS/2 mouse
+if [ -r $DEV/input/mice ]; then ln -sf input/mice $DEV/mouse; fi # USB mouse
+
+echo "changing root directory..."
 
 /sbin/pivot_root . mnt/ramdisk
+
+$DEBUG
+
 exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1

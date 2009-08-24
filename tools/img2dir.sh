@@ -9,8 +9,6 @@ if [ ! -d "$2" ]; then
    exit 1
 fi
 
-. ../initrd/functions
-
 TMPFILE=`tempfile`
 TMPDIR=`tempfile`
 rm $TMPDIR
@@ -18,6 +16,7 @@ mkdir $TMPDIR
 
 mkzftree -u -F "$1" $TMPFILE
 mount -o loop $TMPFILE $TMPDIR
+mount -o loop $TMPDIR/mountme.iso $TMPDIR
 cp -R $TMPDIR/* "$2"
 umount $TMPDIR
 rm $TMPFILE

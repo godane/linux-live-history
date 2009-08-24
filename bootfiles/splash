@@ -1,25 +1,19 @@
- /-----------------------------------\---------------------------------3.0.23-\
- |       ____   _        __  __      |                                        |
- |      / ___| | |  __ _ \ \/ /      |  Wait a while please, it could take    |
- |      \___ \ | | / _` | \  /       |  several minutes to load SLAX.         |
- |       ___) || || (_| | /  \       |                                        |
- |      |____/ |_| \__,_|/_/\_\      |  You can affect the system by passing  |
- |                                   |  special parameters to the kernel now. |
- |   Linux Live based on Slackware   |  Type "slax" followed by one or more   |
- |                                   |  parameters as shown below, or just    |
- \-----------------------------------/  press Enter to skip this boot prompt. |
- |                                                                            |
- | slax hdc=ide-scsi ... to enable CD burning for drive hdc (secndry. master) |
- | slax nohotplug ...... to disable probing for usb and other hotplugable HW  |
- | slax debug=bash ..... to start Linux shell several times during the boot   |
- | slax copy2ram=all ... to copy all files to RAM (only if you have enough!)  |
- | slax eject .......... to force ejecting cdrom (use only with copy2ram=all) |
- | slax nolockcd ....... to disable CD locking (dangerous, use with caution)  |
- |                                                                            |
- | slax vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors) |
- | slax vga=769 ........ for 640x480 graphicd mode  (the same like above)     |
- | slax copy2ram=all nocopy2ram=bin,usr ... don't copy bin.img & usr.img 2RAM |
- |                                                                            |
- \----------------------------------------------------------------------------/
+You can affect the system by passing special parameters to the kernel now.
+Type "linux" followed by one or more parameters as shown below, or just press
+Enter to skip this boot prompt.
 
- 
+linux nohotplug ...... to disable probing for usb and other hotplugable HW  
+linux debug=bash ..... to start Linux shell several times during the boot   
+linux copy2ram=all ... to copy all files to RAM (only if you have enough!)  
+linux eject .......... to force cdrom ejecting (use only with copy2ram=all) 
+linux nolock ......... to disable CD locking (dangerous, use with caution)  
+linux passwd=TEXT .... to change root's password to TEXT 
+linux passwd=ask ..... prompt for the root password during the boot 
+
+linux vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors) 
+linux vga=769 ........ for 640x480 graphicd mode  (the same like above)     
+linux hdc=ide-scsi ... to enable CD burning for drive hdc (secndry. master) 
+
+linux copy2ram=all nocopy2ram=bin,usr ... don't copy bin.img & usr.img 2RAM 
+
+

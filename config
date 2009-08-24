@@ -1,19 +1,23 @@
-#-----------------------------------------------------#
+#!/bin/bash
 # This is a config file for runme.sh script.          #
 # Just run runme.sh, it will do all the work for you. #
 #-----------------------------------------------------#
 
- # compressed directories (img) will be stored here
- # (the whole folder will be erased now!)
- CDDATA=/tmp/liveCD_data
+# compressed directories (img) will be stored here
+# (the whole folder will be erased now!)
+CDDATA=/tmp/liveCD_data
 
- # name of initrd image
- INITRDIMG=initrd
+# name of initrd image
+INITRDIMG=initrd
 
- # temporary folder for mounting IMGs
- # (this folder will be completly erased!)
- MOUNTDIR=/tmp/liveCD_mountdir
+# temporary folder for mounting IMGs
+# (this folder will be completly erased!)
+MOUNTDIR=/tmp/liveCD_mountdir
 
- # the size of RAMdisk (in KBytes)
- RAM0SIZE=7777
+# the size of RAMdisk (in KBytes)
+# if you change this, then you will need to change the size 
+# also in files: bootfiles/isolinux.cfg and tools/DOS/linux.bat
+RAM0SIZE=7777
 
+# volume label for the CD
+CDLABEL="SLAX 3.0.24"
