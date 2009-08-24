@@ -1,3 +1,8 @@
+ 3.0.26
+
+   mkciso: mkzftree seems unable to compress files >2GB, added a check
+   runme.sh: added a check for directories existence (eg. /opt doesn't need to be there)
+
  3.0.25
  
    fixed mouse autoconfig, it should finaly work now!

@@ -28,11 +28,11 @@ cp -R {info,tools} $CDDATA
 touch $CDDATA/livecd.flag # just to be sure it's there
 
 echo "creating compressed images (.img)..."
-mkciso /bin $CDDATA/base/bin.img /bin
-mkciso /lib $CDDATA/base/lib.img /lib
-mkciso /opt $CDDATA/base/opt.img /opt
-mkciso /usr $CDDATA/base/usr.img /usr
-mkciso /sbin $CDDATA/base/sbin.img /sbin
+if [ -d "/bin" ]; then mkciso /bin $CDDATA/base/bin.img /bin; fi
+if [ -d "/lib" ]; then mkciso /lib $CDDATA/base/lib.img /lib; fi
+if [ -d "/opt" ]; then mkciso /opt $CDDATA/base/opt.img /opt; fi
+if [ -d "/usr" ]; then mkciso /usr $CDDATA/base/usr.img /usr; fi
+if [ -d "/sbin" ]; then mkciso /sbin $CDDATA/base/sbin.img /sbin; fi
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz

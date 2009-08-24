@@ -69,7 +69,7 @@ tempdir()
 # create compressed iso image
 # $1 = input directory tree (for example /bin)
 # $2 = output img file (for example /tmp/bin.iso)
-# $3 = relative root dir (for example /bin)
+# $3 = relative root dir string (for example /bin)
 #
 mkciso()
 {
@@ -79,6 +79,11 @@ mkciso()
 
    mkisofs -R -J -D -o "$RAW" $INPUT 2>/dev/null
    mkzftree -z 9 -F "$RAW" "$COMPRESSED"
+   if [ ! "$?" = 0 ]; then
+      echo "mkzftree error: directory $1 is very big? Maybe you are running"
+      echo "out of disk space, or kmzftree doesn't support large files..."
+      exit
+   fi
    mkisofs -R -J -D -z -o "$2" -graft-points mountme.iso=$COMPRESSED 2>/dev/null
 
    rm -f "$RAW"
