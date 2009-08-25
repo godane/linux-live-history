@@ -39,8 +39,18 @@ rcopy_ex()
    fi
 }
 
+debug()
+{
+   # uncomment to show debug messages
+   # echo "$@"
+   return 0
+}
+
 ##################################################
 # Create INITRD image now:
+
+MOUNTDIR=/tmp/initrd_mountdir_$$
+INITRD_TREE=/tmp/initrd_tree_$$
 
 if [ ! -d "kernel-modules/$KERNEL" ]; then
    echo "The directory kernel-modules/$KERNEL doesn't exist. Please create it and copy"
@@ -48,88 +58,101 @@ if [ ! -d "kernel-modules/$KERNEL" ]; then
    exit 1
 fi
 
-echo "creating empty image file initrd.img"
+debug "creating empty directory $INITRD_TREE"
+rm -Rf $INITRD_TREE
+mkdir $INITRD_TREE
+
+debug "creating directories"
+mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
+
+debug "creating some essential devices in rootdisk"
+mknod $INITRD_TREE/dev/console c 5 1
+mknod $INITRD_TREE/dev/null c 1 3
+mknod $INITRD_TREE/dev/ram b 1 1
+mknod $INITRD_TREE/dev/systty c 4 0
+mknod $INITRD_TREE/dev/tty c 5 0
+mknod $INITRD_TREE/dev/tty1 c 4 1
+
+loops=255
+while [ $loops -ge 0 ]; do
+   mknod $INITRD_TREE/dev/loop$loops b 7 $loops
+   loops=$(($loops-1))
+done
+
+debug "copying files to the rootdisk"
+touch $INITRD_TREE/etc/{m,fs}tab
+cp {linuxrc,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
+chmod a+x $INITRD_TREE/linuxrc
+
+cp static-binaries/busybox $INITRD_TREE/bin
+cp static-binaries/unionctl $INITRD_TREE/bin
+ln -s busybox $INITRD_TREE/bin/ash
+ln -s busybox $INITRD_TREE/bin/sh
+ln -s busybox $INITRD_TREE/bin/[
+
+LMK="lib/modules/$KERNEL"
+
+#necessary modules and dependency files
+mkdir -p $INITRD_TREE/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/unionfs.ko.gz $INITRD_TREE/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/squashfs.ko.gz $INITRD_TREE/$LMK/kernel/fs
+
+#copy filesystem modules, if not directly copied into kernel
+rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>/dev/null
+
+rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/vfat $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/ntfs $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/ext3 $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/reiserfs $INITRD_TREE 2>/dev/null
+
+#usb modules
+rcopy_ex /$LMK/kernel/drivers/usb/host $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>/dev/null
+
+#disk (scsi, ide, raid, pcmcia) modules
+rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE
+#rcopy_ex /$LMK/kernel/drivers/ide $INITRD_TREE
+#rcopy_ex /$LMK/kernel/drivers/pcmcia $INITRD_TREE
+
+debug "gzipping kernel modules"
+find $INITRD_TREE -name "*.ko" | xargs -r gzip --best
+
+debug "generating module dependency files"
+depmod -b $INITRD_TREE $KERNEL
+
+debug "creating empty image file $INITRDIMG"
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >/dev/null 2>/dev/null
 
-echo "making filesystem"
+debug "making filesystem"
 mkfs -t ext2 -F -m 0 -b 1024 -i 1024 $INITRDIMG 2>/dev/null >/dev/null
 
-echo "creating empty directory $MOUNTDIR"
+debug "creating empty directory $MOUNTDIR"
 rm -Rf $MOUNTDIR
 mkdir $MOUNTDIR
 
-echo "mounting initrd.img to it"
+debug "mounting $INITRDIMG to it"
 mount -o loop $INITRDIMG $MOUNTDIR
 if [ "$?" -ne 0 ]; then
    echo "Error mounting initrd! Not enough free loop devices?"
    exit 1
 fi
 
-echo "creating directories"
+debug "copying content of $INITRD_TREE to $MOUNTDIR"
 rmdir $MOUNTDIR/lost+found
-mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
+cp -R --preserve $INITRD_TREE/* $MOUNTDIR
 
-echo "creating some essential devices in rootdisk"
-mknod $MOUNTDIR/dev/console c 5 1
-mknod $MOUNTDIR/dev/null c 1 3
-mknod $MOUNTDIR/dev/ram b 1 1
-mknod $MOUNTDIR/dev/systty c 4 0
-mknod $MOUNTDIR/dev/tty c 5 0
-mknod $MOUNTDIR/dev/tty1 c 4 1
-
-loops=255
-while [ $loops -ge 0 ]; do
-   mknod $MOUNTDIR/dev/loop$loops b 7 $loops
-   loops=$(($loops-1))
-done
-
-echo "copying files to the rootdisk"
-touch $MOUNTDIR/etc/{m,fs}tab
-cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
-chmod a+x $MOUNTDIR/linuxrc
-
-cp static-binaries/busybox $MOUNTDIR/bin
-cp static-binaries/unionctl $MOUNTDIR/bin
-ln -s busybox $MOUNTDIR/bin/ash
-ln -s busybox $MOUNTDIR/bin/sh
-ln -s busybox $MOUNTDIR/bin/[
-
-LMK="lib/modules/$KERNEL"
-
-#necessary modules and dependency files
-mkdir -p $MOUNTDIR/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/unionfs.ko* $MOUNTDIR/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/squashfs.ko* $MOUNTDIR/$LMK/kernel/fs
-
-#copy filesystem modules, if not directly copied into kernel
-rcopy_ex /$LMK/kernel/lib/zlib_inflate $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/block/loop* $MOUNTDIR 2>/dev/null
-
-rcopy_ex /$LMK/kernel/fs/isofs $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/vfat $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
-
-#usb modules
-rcopy_ex /$LMK/kernel/drivers/usb/host $MOUNTDIR 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/usb/storage $MOUNTDIR 2>/dev/null
-
-#disk (scsi, ide, raid, pcmcia) modules
-rcopy_ex /$LMK/kernel/drivers/scsi $MOUNTDIR
-#rcopy_ex /$LMK/kernel/drivers/ide $MOUNTDIR
-#rcopy_ex /$LMK/kernel/drivers/pcmcia $MOUNTDIR
-
-echo "generating module dependency files"
-depmod -b $MOUNTDIR
-
-echo "unmounting $MOUNTDIR"
+debug "unmounting $MOUNTDIR"
 umount $MOUNTDIR
 
-echo "gzipping initrd.img"
+debug "gzipping $INITRDIMG"
 gzip --best $INITRDIMG
 
-echo "deleting directory $MOUNTDIR"
-rm -Rf $MOUNTDIR
+debug "deleting directory $MOUNTDIR"
+rmdir $MOUNTDIR
 
-echo "initrd.gz created"
+debug "deleting directory $INITRD_TREE"
+rm -Rf $INITRD_TREE
+
+debug "$INITRDIMG.gz created"

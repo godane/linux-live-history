@@ -68,6 +68,14 @@ echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
 activate_fstab $UNION
 
+# More likely these directories aren't there.
+# Even if they are, this won't hurt.
+mkdir -p $UNION/proc
+mkdir -p $UNION/sys
+mkdir -p $UNION/tmp
+mkdir -p $UNION/dev
+mkdir -p $UNION/boot
+
 $DEBUGCMD
 
 # Union contains all the files and directories unioned from all modules.
@@ -77,22 +85,17 @@ echolog "changing root directory..."
 cd $UNION
 mkdir -p $INITRAMDISK
 
-# More likely these directories aren't there.
-# Even if they are, this won't hurt.
-mkdir -p $UNION/proc
-mkdir -p $UNION/sys
-mkdir -p $UNION/tmp
-mkdir -p $UNION/dev
-mkdir -p $UNION/boot
-
-umount /sys # we don't need it anymore
+umount /sys # we won't need it anymore
 if [ ! -e $UNION/dev/console ]; then mknod $UNION/dev/console c 5 1; fi
-pivot_root . $INITRAMDISK
+
+if [ -x $UNION/usr/sbin/chroot ];
+  then CHROOT=/usr/sbin/chroot
+  else CHROOT=/usr/bin/chroot
+fi
 
 header "linux live end"
-
-if [ -x /usr/bin/chroot ]; then exec /usr/bin/chroot . sbin/init <dev/console >dev/console 2>&1; fi
-if [ -x /usr/sbin/chroot ]; then exec /usr/sbin/chroot . sbin/init <dev/console >dev/console 2>&1; fi
+pivot_root . $INITRAMDISK
+exec $CHROOT . sbin/init <dev/console >dev/console 2>&1; fi
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"

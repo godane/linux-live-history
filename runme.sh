@@ -40,13 +40,15 @@ rm initrd/$INITRDIMG.gz
 cp -R bootfiles/* $CDDATA
 cp -R {info,tools} $CDDATA
 
-echo "creating compressed image base.mo..."
-mksquashfs $ROOT/bin $ROOT/etc $ROOT/home $ROOT/lib $ROOT/opt \
-           $ROOT/root $ROOT/usr $ROOT/sbin $ROOT/var \
-           $CDDATA/base/base.mo >/dev/null
-if [ $? -ne 0 ]; then exit; fi
+echo "creating compressed images..."
 
-chmod oga-x $CDDATA/base/base.mo
+for dir in bin etc home lib opt root usr sbin var; do
+    if [ -d $ROOT/$dir ]; then
+      echo "base/$dir.mo"
+      create_module $ROOT/$dir $CDDATA/base/$dir.mo -keep-as-directory
+      if [ $? -ne 0 ]; then exit; fi
+    fi
+done
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz

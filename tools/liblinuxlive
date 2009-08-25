@@ -145,10 +145,12 @@ mount_device()
 # call mksquashfs with apropriate arguments
 # $1 = directory which will be compressed to squashfs module
 # $2 = output .mo file
+# $3 = optional -keep-as-directory argument
 #
 create_module()
 {
-   mksquashfs $1 $2 >/dev/null
+   mksquashfs $1 $2 $3 >/dev/null
+   if [ $? -ne 0 ]; then return 1; fi
    chmod oga-x $2 # remove execute attrib
 }
 

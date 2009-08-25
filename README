@@ -12,7 +12,7 @@
 
    cat ./info/changelog
    cat ./info/requirements
-   edit ./config to fit your needs
+   vi ./config
 
  Author:
 

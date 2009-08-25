@@ -10,9 +10,9 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      - initrd (CONFIG_BLK_DEV_INITRD=y)
 
      You can use untouched Vanila Linux kernel from Slackware!
-     
+
    * all the following things must be compiled in the kernel or as a 
-     kernel modules:
+     kernel modules (.ko):
      - loop
      - isofs (if you will boot your live distro from CDROM)
      - ehci-hcd, ohci-hcd, uhci-hcd, usb-storage (if you will boot your live distro from USB)

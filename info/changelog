@@ -1,3 +1,10 @@
+ 5.0.8
+ 
+ * fix chroot again
+ * added Linux 2.6.10 support (precompiled modules)
+ * removed Linux 2.6.9 support
+
+
  5.0.7
 
  * linuxrc: umount /sys before chroot, because Slackware won't moot /sys
@@ -5,14 +12,17 @@
  * linuxrc: chroot is called from /usr/bin/chroot at first, if there is 
    no such executable then linux-live scripts try /usr/sbin/chroot
 
+
  5.0.6
 
  * added img2mo tool to convert old format module to new one
  * initrd size changed to 4444KB
+
  
  5.0.5
  
  * updated unionfs.ko kernel module and unionctl binary
+
 
  5.0.4
 
