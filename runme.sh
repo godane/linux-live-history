@@ -26,7 +26,7 @@ echo "Using kernel modules from /lib/modules/$KERNEL"
 echo "creating initrd image..."
 cd initrd
 ./initrd_create
-if [ "$?" -ne 0 ]; exit; fi
+if [ "$?" -ne 0 ]; then exit; fi
 cd ..
 
 mkdir -p $CDDATA/base

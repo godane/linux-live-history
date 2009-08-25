@@ -24,5 +24,5 @@ KERNEL="`uname -r`"
 
 # change this variable if you installed your distro to some directory.
 # for example ROOT=/tmp/newdir. You may leave it empty, then it defaults to /
-ROOT=
+ROOT=/tmp/test
 

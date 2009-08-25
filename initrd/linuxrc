@@ -3,15 +3,18 @@
 # initrd:
 # /
 #   bin
+#   changes
 #   dev
 #   etc
 #   mnt
 #   union
 #        / mnt
 #             / live
-#                   / changes
+#                   / images
+#                   / initramdisk
 #   usr
 #   tmp
+#   toram
 
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 . liblinuxlive
@@ -28,11 +31,12 @@ if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
 
 $DEBUGCMD
 
+# I have to set these variables very carefully
 UNION=/union
 CHANGES=/changes
-MOUNT=$UNION/mnt
-IMAGES=$MOUNT/live/images
-TORAM=$MOUNT/live/toram
+MOUNTDIR=$UNION/mnt
+IMAGES=$UNION/mnt/live/images
+TORAM=$CHANGES/mnt/live/toram
 INITRAMDISK=mnt/live/initramdisk
 
 # we need cdrom support, isofs support, etc
@@ -45,7 +49,7 @@ $DEBUGCMD
 echolog "setup union on $UNION"
 mkdir -p $UNION
 mkdir -p $CHANGES
-mount -t tmpfs -o "size=90%" tmpfs $CHANGES
+mount -t tmpfs -o "size=80%" tmpfs $CHANGES
 mount -t unionfs -o dirs=$CHANGES unionfs $UNION
 
 $DEBUGCMD
@@ -53,22 +57,25 @@ $DEBUGCMD
 # try to find livecd data directory. If not found, try modprobing
 # USB or SCSI kernel modules and repead the find procedure again
 echolog "looking for data modules"
-if [ "$DATA" = "" ]; DATA="`find_live_data_dir $MOUNT`"; fi
-if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $MOUNT`"; fi
-if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $MOUNT`"; fi
+if [ "$DATA" = "" ]; then DATA="`find_live_data_dir $MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $MOUNTDIR`"; fi
 if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found"; fi
 echolog "found in $DATA"
 
 $DEBUGCMD
 
 #
-# Now we know where our DATA are. We can copy them to RAM.
-# We will copy ALL from "base" and "modules" directory, and then
-# .mo files selected by load=... boot option
+# Now we know where our DATA are. We can copy them to RAM if toram boot parameter
+# is present. We will copy ALL .mo files from "base" and "modules" directory,
+# and then .mo files selected by load=... boot option
 # Finaly modify DATA variable so it will point to directory with copied .mo files
 # 
 
-#TODO
+if [ ! "`cmdline_parameter`" = "" ]; then
+   copy_modules $DATA $TORAM
+   DATA=$TORAM
+fi
 
 #
 # Now we know the path to all .mo images which needs to be mounted and inserted
