@@ -6,6 +6,11 @@
 
 export PATH=.:..:./tools:../tools:/usr/sbin:/usr/bin:/sbin:/bin:/
 
+CHANGEDIR="`dirname \`readlink -f $0\``"
+echo "Changing current directory to $CHANGEDIR"
+cd $CHANGEDIR
+./install
+
 . liblinuxlive || exit 1
 . config || exit 1
 
@@ -13,6 +18,7 @@ mkmod()
 {  echo "processing $1..."; 
    if [ -d "$1" ]; then mkciso $1 $CDDATA/base/$1.img data/$1; fi
 }
+
 
 VMLINUZ=/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`dirname $VMLINUZ`/`readlink $VMLINUZ`; fi
@@ -46,11 +52,12 @@ cp $VMLINUZ $CDDATA/vmlinuz
 
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/packs
-mkdir -p $CDDATA/lang
+mkdir -p $CDDATA/optional
 
 # these directories have to be packed (tar.gz) because
 # it's not possible to overmount them by ovlfs 
 # (ovlfs has some problems with file locking)
+echo "compressing /etc /root /var..."
 tar -C / -c root | gzip -f --best >$CDDATA/packs/root.tar.gz
 tar -C / -c etc | gzip -f --best >$CDDATA/packs/etc.tar.gz
 tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz

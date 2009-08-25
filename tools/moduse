@@ -3,6 +3,7 @@
 # Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
+
 if [ "$1" = "" ]; then
    echo
    echo "Use module on the fly while running Live CD"
@@ -16,8 +17,19 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
+# for preinsert and postinsert scripts
+# $MANUAL is set only by moduse.
+# else (during LiveCD boot) it's unset.
+#
+MANUAL=true
+
 IMGRO=/mnt/livecd/imgro/
 IMGRW=/mnt/livecd/imgrw/
+
+if [ ! -a "$IMGRO" -o ! -a "$IMGRW" ]; then
+   "Error: You can use modules only while running a Live CD"
+   exit 1
+fi
 
 MODULE="`basename $1`"
 INSORDER=/tmp/moduse$$

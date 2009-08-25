@@ -1,7 +1,9 @@
-The file floppy.img.gz contains a compressed image of a floppy
-with Smart Boot Manager. Just unpack the .gz archive somewhere
-(it will create 1.4MB file) and use rawrite.exe (under Windows)
-or dd (under Linux) to create your own boot diskette.
+The file floppy.img.gz contains a compressed image of a floppy with
+Smart Boot Manager. 
 
-Booting from the diskette will allow you to boot from the CD
-even if your BIOS doesn't support it directly.
+Booting from this diskette will allow you to boot from the CD even if
+your BIOS doesn't support it directly.
+
+Just unpack the .gz archive somewhere (it will create 1.4MB file) and
+use rawrite.exe (under Windows) or dd (under Linux) to create your own
+boot diskette.

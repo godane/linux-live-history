@@ -11,11 +11,12 @@ linux probeusb ....... to autoprobe USB modules (eg. to enable USB flashdisk)
 linux floppy ......... to enable floppy automounting during startup
 linux passwd=TEXT .... to change root's password to TEXT
 linux passwd=ask ..... prompt for the root password during the boot
+linux load=modules ... load modules from "optional" directory. Eg: load=wine,xmms
 
 linux vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors)
 linux vga=769 ........ for 640x480 graphicd mode  (the same like above)
 linux hdc=ide-scsi ... to enable CD burning for drive hdc (secndry. master)
 
-linux copy2ram=all nocopy2ram=bin,usr ... don't copy bin.img & usr.img 2RAM
+memtest .............. to start memtest instead of LinuxLiveCD
 
 

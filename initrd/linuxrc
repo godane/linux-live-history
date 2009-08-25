@@ -55,6 +55,9 @@ if [ ! -r /dev/.devfsd ]; then
    fi
 fi
 
+# mount this very soon to allow modules to include device files
+mount -t devfs devfs /mnt/dev
+
 if [ ! "`cmdline_parameter nolock`" = "" ]; then
    echo "CD locking disabled by nolock kernel parameter"
    echo "0" >/proc/sys/dev/cdrom/lock
@@ -117,9 +120,8 @@ if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
 fi
 
 echo "liveCD found in $LIVECD_PATH"
+mount --rbind $LIVECD_PATH /mnt/boot
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
-
-LANGFILE="`cmdline_value lang`"
 
 echo -n "copying selected modules to RAM... "
 # base
@@ -132,10 +134,12 @@ ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
 
-# lang variable (use only one module by lang= kernel boot parameter)
-if [ ! "$LANGFILE" = "" -a -r "$LIVECD_PATH/lang/$LANGFILE.img" ]; then
-   echo "`cp2ram \"$LIVECD_PATH/lang/$LANGFILE.img\" \"$CP2RAM\"`" >>$MNTORDER
-fi
+# optional modules (insert only modules specified by load= kernel boot parameter)
+cmdline_value load | tr "," "\\n" | while read IMG; do
+   ls -aA1b "$LIVECD_PATH/optional/$IMG"* 2>/dev/null | while read IMAGE; do
+         echo "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
+   done
+done
 
 echo
 
@@ -248,7 +252,6 @@ exec /sbin/init <dev/console >dev/console 2>&1
 
 mount -o remount,ro /mnt
 cd /mnt
-mount -t devfs devfs dev
 
 $DEBUG
 

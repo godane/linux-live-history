@@ -1,3 +1,23 @@
+ 4.0.4
+
+ * modified F1 boot help text
+ * removed lang= functionality
+ * removed lang directory from the CD and replaced it by "optional" directory
+ * added "load=" boot parameter to insert specified images from "optional" directory
+   (for example load=wine,vmware.img,lang_cs will insert optional/wine* optional/vmware.img* and optional/lang_cs*)
+ * ./tools/moduse script sets $MANUAL variable to non-null value. This way it's possible
+   to know (inside preinsert and postinsert script) if it's inserted manually by
+   modinsert ($MANUAL!=""), or automatically during the LiveCD startup (before
+   chrooting /mnt as a root filesystem).
+ * devfs for /mnt/dev (real /dev) is mounted very soon to allow modules to
+   contain device files
+ * added memtest boot parameter starting memtest 3.1
+ * liveCD path is mounted by --rbind option to /boot
+ * mkciso removes the RAW img file imediately after compressing it
+   to free some important part of disk space
+ * added livecd-check to ./moduse script to disable using modules from hd-installed slax
+
+
  4.0.3
 
   * linuxrc creates /etc/profile.d/slax.(csh,sh) to export $LIVECD_SUBDIR and $LIVECD_MOUNT

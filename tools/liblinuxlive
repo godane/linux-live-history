@@ -1,5 +1,5 @@
 #!/bin/bash
-# ::Functions library:: for Linux Live scripts
+# Functions library :: for Linux Live scripts
 # Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
@@ -101,9 +101,9 @@ mkciso()
       echo "or mkzftree not found! (get it from cdrtools package)"
       exit 1
    fi
-   mkisofs -R -J -D -z -o "$2" -graft-points mountme.iso=$COMPRESSED 2>/dev/null
+   rm -f "$RAW" # it won't be needed anymore
 
-   rm -f "$RAW"
+   mkisofs -R -J -D -z -o "$2" -graft-points mountme.iso=$COMPRESSED 2>/dev/null
    rm -f "$COMPRESSED"
 }
 

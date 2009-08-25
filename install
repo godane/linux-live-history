@@ -1,10 +1,15 @@
 #!/bin/bash
-# install all scripts from /tools to /usr/sbin and /usr/lib,
-# so the user is able to use all commands while running his/her Live Linux
+# install all scripts from /tools to /usr/sbin and /usr/lib
+# so the user is able to use all these commands while running his/her Live Linux
+#
+# this script is automatically called by runme.sh
+#
+# Author: does it worth for such a short script ... hm... ok, Tomas Matejicek.
+#
 
 mkdir -p /usr/sbin
 mkdir -p /usr/lib
 ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE /usr/sbin; done
 ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE /usr/lib; done
 
-echo "Done, Linux Live scripts were installed"
+echo "Linux Live scripts were installed successfuly"

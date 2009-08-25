@@ -1,4 +1,14 @@
-../tools/liblinuxlive filesystem"
+../tools/liblinuxliveg all images... "
+cat $MNTORDER | while read IMG;
+do
+   echo -n "`basename \" $IMG\"` "
+   mount_img $IMG $IMGRO $INSORDER
+done
+echo
+
+$DEBUG
+
+header "creating live filesystem"
 
 echo "Starting ovlfs support (by Arthur Naseef)"
 modprobe_module ovl
@@ -97,7 +107,6 @@ exec /sbin/init <dev/console >dev/console 2>&1
 
 mount -o remount,ro /mnt
 cd /mnt
-mount -t devfs devfs dev
 
 $DEBUG
 
@@ -110,23 +119,17 @@ echo "You are not supposed to be here, something went wrong!"
 echo "calling /mnt/usr/bin/chroot failed?"
 echo "Press Ctrl+Alt+Del for reboot."
 while [ 1 = 1 ]; do bash; done
-ed CDROM drive (scsi?)"
-  echo "Or you entered wrong livecd_subdir= parameter?"
+red wrong livecd_subdir= parameter?"
   echo "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
 fi
 
 echo "liveCD found in $LIVECD_PATH"
+mount --rbind $LIVECD_PATH /mnt/boot
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
-
-LANGFILE="`cmdline_value lang`"
 
 echo -n "copying selected modules to RAM... "
 # base
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
-   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-done
-
-# modules
-ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while readN­‰·; do
-   Ö›‰· "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CA
+   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\"N­‰·CP2RAM\"Ö›‰·>$MNTORDER
+dø—·

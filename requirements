@@ -10,6 +10,7 @@
       Get the source at http://ovlfs.sourceforge.net, and be sure
       that symlink /lib/modules/2.4.xx/build points to the correct
       kernel source tree before compiling. Install ovlfs to your system.
+      Or, download precompiled kernel with ovlfs from http://www.linux-live.org
 
     * mkzftree is used for img compression. Make sure you have it,
       and also make sure your mkisofs is patched properly.
