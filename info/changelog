@@ -1,7 +1,13 @@
+ 4.2.2
+ 
+ * added isolinux 2.11 to bootfiles
+
+
  4.2.1
 
  * mount_img() function produces more usefull error messages now
  * initrd_create: don't fail while copying nonexistent kernel modules (except ovl)
+
 
  4.2
 

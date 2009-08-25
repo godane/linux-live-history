@@ -32,6 +32,10 @@ cd initrd
 cd ..
 
 mkdir -p $CDDATA/base
+mkdir -p $CDDATA/modules
+mkdir -p $CDDATA/packs
+mkdir -p $CDDATA/optional
+mkdir -p $CDDATA/devel
 
 echo "copying boot files to $CDDATA..."
 cp initrd/$INITRDIMG.gz $CDDATA/initrd.gz
@@ -50,11 +54,6 @@ mkmod /sbin
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz
-
-mkdir -p $CDDATA/modules
-mkdir -p $CDDATA/packs
-mkdir -p $CDDATA/optional
-mkdir -p $CDDATA/devel
 
 # these directories have to be packed (tar.gz) because
 # it's not possible to overmount them by ovlfs 
