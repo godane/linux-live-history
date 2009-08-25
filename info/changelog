@@ -1,9 +1,8 @@
- 4.0.6
+ 4.0.7
  
  * fixed moduse script, added calling of "manual" module script if exists
  * liblinuxlive: added -n to mount calls
  * third argument for dir2img is optional now, it defaults to "/"
- * harddisk partitions are mounted with 022 umask, allowing users to read data
 
 
  4.0.5
