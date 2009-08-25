@@ -6,18 +6,20 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
    * all the following things must be compiled directly into kernel:
      - ext2 (CONGIG_EXT2_FS=y)
      - tmpfs (CONFIG_TMPFS=y)
-     - loop device (CONFIG_BLK_DEV_LOOP=y)
      - ramdisk (CONFIG_BLK_DEV_RAM=y)
      - initrd (CONFIG_BLK_DEV_INITRD=y)
 
+     You can use untouched Vanila Linux kernel from Slackware!
+
    * unionFS module must be compiled for your kernel. Download the source
      from here: http://www.filesystems.org/project-unionfs.html and
-     compile unionfs.ko module.
+     compile unionfs.ko module. You don't need it if linux-live contains
+     a precompiled kernel module for you (in initrd/kernel-modules directory)
 
    * SquashFS filesystem (http://squashfs.sourceforge.net) is needed
      to compress all data. It's available only as a patch for kernel
      but it can be used to compile a kernel module squashfs.ko. You will
-     mksquashfs command either, it's a part of squashfs tools.
+     need mksquashfs command either, it's a part of squashfs tools.
 
    * Your distro must be running kernel 2.6.9 or higher
      and udev must be installed and working.
@@ -29,5 +31,7 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      right? Unionfs can't be remounted ro, so I can't avoid this in linux live
      scripts. I have to patch Slackware rc scripts (rc.S) to skip this test.
      You will need to do something similar for your distro.
+
+   * Your distro must have /usr/sbin/chroot
 
   These requirements could change with new kernel or unionfs versions.

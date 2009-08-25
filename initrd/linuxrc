@@ -10,7 +10,8 @@ echolog "mounting /proc and /sys filesystems"
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 
-# setup DEBUGCMD variable
+# setup DEBUGCMD variable. If debug boot option is present, call debug()
+# function several times during script's execution
 if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
 
 $DEBUGCMD
@@ -29,7 +30,8 @@ setup_dma
 
 $DEBUGCMD
 
-# $UNION will be used as a root directory, livecd modules will be added soon
+# $UNION will be used as a root directory, livecd modules will be added soon.
+# Create temp filesystem and setup union on the top.
 echolog "setup union on $UNION"
 mkdir -p $UNION
 mkdir -p $CHANGES
@@ -49,37 +51,43 @@ echolog "found in $DATA"
 
 $DEBUGCMD
 
-#
 # If toram or copy2ram boot parameter is present, copy all .mo modules to RAM.
-# (skip those modules from /optional/ which are not listed in load= boot option)
-# Finaly modify DATA variable so it will point to directory with copied .mo files
-# 
-
+# (skip modules from /optional/ which are not listed in load= boot option)
+# Finaly modify DATA variable so it will point to correct directory
 if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
    echolog "copying modules to RAM, this may take some time"
    copy_modules $DATA $TORAM
    DATA=$TORAM
 fi
 
-#
-# Now we know the path to all .mo images which needs to be mounted and inserted
-# to live filesystem. Do it now.
-#
+$DEBUGCMD
 
+# DATA contains path to all .mo images which needs to be mounted and inserted
+# into live filesystem. Do it now.
 echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
 activate_fstab $UNION
 
+$DEBUGCMD
+
+# Union contains all the files and directories unioned from all modules.
+# Change root directory to it, and move initrd's root to /mnt/live/initramdisk
+# Finaly execute /sbin/init to start the distribution.
 echolog "changing root directory..."
 cd $UNION
 mkdir -p $INITRAMDISK
+
+# More likely these directories aren't there.
+# Even if they are, this won't hurt.
+mkdir -p $UNION/proc
+mkdir -p $UNION/sys
+mkdir -p $UNION/tmp
 mkdir -p $UNION/dev
+mkdir -p $UNION/boot
+
 if [ ! -e $UNION/dev/console ]; then mknod $UNION/dev/console c 5 1; fi
-
-$DEBUGCMD
-
-/bin/busybox pivot_root . $INITRAMDISK
-exec /usr/bin/chroot . sbin/init <dev/console >dev/console 2>&1
+pivot_root . $INITRAMDISK
+exec /usr/sbin/chroot . sbin/init <dev/console >dev/console 2>&1
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"

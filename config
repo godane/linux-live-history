@@ -16,7 +16,7 @@ MOUNTDIR=/tmp/live_tmp_mountdir_$$
 # the size of RAMdisk (in KBytes)
 # if you change this, then you will need to change the size
 # also in the following files: bootfiles/isolinux.cfg, bootfiles/DOS/slax
-RAM0SIZE=9999
+RAM0SIZE=4444
 
 # kernel version. Change it to "2.6.10" for example, if you are building
 # LiveCD with a different kernel than the one you are actually running

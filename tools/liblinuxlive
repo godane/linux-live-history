@@ -108,7 +108,7 @@ modprobe_module()
      TMPMOD="/tmp/`basename $MODULE .gz`";
      # if the module is not loaded already
      if [ "`cat $LSMOD 2>/dev/null | egrep \"^$TMPMOD\\\$\"`" = "" ]; then
-        gunzip -c $MODULE >$TMPMOD
+        gunzip -c $MODULE 2>/dev/null >$TMPMOD
         if [ "$?" -ne 0 ]; then cp $MODULE $TMPMOD; fi # can't gunzip? copy
         insmod $TMPMOD $2 >/dev/null 2>/dev/null; err=$?
         if [ "$err" -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi

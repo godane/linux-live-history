@@ -43,7 +43,7 @@ cp -R {info,tools} $CDDATA
 echo "creating compressed image base.mo..."
 mksquashfs $ROOT/bin $ROOT/etc $ROOT/home $ROOT/lib $ROOT/opt \
            $ROOT/root $ROOT/usr $ROOT/sbin $ROOT/var \
-           $CDDATA/base/base.mo
+           $CDDATA/base/base.mo >/dev/null
 if [ $? -ne 0 ]; then exit; fi
 
 chmod oga-x $CDDATA/base/base.mo

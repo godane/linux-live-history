@@ -1,3 +1,12 @@
+ 5.0.6
+
+ * added img2mo tool to convert old format module to new one
+ * initrd size changed to 4444KB
+ 
+ 5.0.5
+ 
+ * updated unionfs.ko kernel module and unionctl binary
+
  5.0.4
 
  * added toram boot parameter (copy2ram is an alias for toram and can be used too)

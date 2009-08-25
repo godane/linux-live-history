@@ -88,8 +88,8 @@ touch $MOUNTDIR/etc/{m,fs}tab
 cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
 chmod a+x $MOUNTDIR/linuxrc
 
-cp binaries/busybox $MOUNTDIR/bin
-cp binaries/unionctl $MOUNTDIR/bin
+cp static-binaries/busybox $MOUNTDIR/bin
+cp static-binaries/unionctl $MOUNTDIR/bin
 ln -s busybox $MOUNTDIR/bin/ash
 ln -s busybox $MOUNTDIR/bin/sh
 ln -s busybox $MOUNTDIR/bin/[
@@ -98,8 +98,8 @@ LMK="lib/modules/$KERNEL"
 
 #necessary modules and dependency files
 mkdir -p $MOUNTDIR/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/unionfs.ko.gz $MOUNTDIR/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/squashfs.ko.gz $MOUNTDIR/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/unionfs.ko* $MOUNTDIR/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/squashfs.ko* $MOUNTDIR/$LMK/kernel/fs
 
 #copy filesystem modules, if not directly copied into kernel
 rcopy_ex /$LMK/kernel/lib/zlib_inflate $MOUNTDIR 2>/dev/null

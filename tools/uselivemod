@@ -17,7 +17,7 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
-union_insert_module /.. $1 /mnt/live/images
+union_insert_module / $1 /mnt/live/images
 
 # executable called "manual" is started only by this script (uselivemod)
 #

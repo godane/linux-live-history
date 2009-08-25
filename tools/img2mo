@@ -1,0 +1,27 @@
+#!/bin/bash
+# Convert old IMG to new MO module
+# Author: Tomas M. <http://www.linux-live.org>
+#
+
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
+if [ "$2" = "" ]; then
+   echo
+   echo "Convert old format module .img (Linux Live < 5) to new .mo format"
+   echo "Usage: $0 oldmod.img newmod.mo"
+   exit
+fi
+
+TMP=/tmp/img2mo$$
+mkdir -p $TMP
+mount -o loop $1 $TMP
+mount -o loop $TMP/mountme.iso $TMP
+create_module $TMP/data $2
+if [ $? != 0 ]; then echo "error building compressed image"; exit 1; fi
+umount $TMP
+umount $TMP
+rmdir $TMP

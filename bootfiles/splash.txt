@@ -21,7 +21,6 @@ linux fromhd=folder .. start livecd from "/mnt/folder/$hddsubdir"
 
 linux vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors)
 linux vga=769 ........ for 640x480 graphicd mode  (the same like above)
-linux hdc=ide-scsi ... to enable CD burning for drive hdc (secndry. master)
 
 memtest .............. to start memtest instead of LinuxLiveCD
 
