@@ -381,22 +381,34 @@ activate_fstab()
    echo "proc             /proc            proc        defaults         0   0" >>$FSTAB
 
    list_cdrom_devices | while read DEVICE; do
-      MOUNTDIR="/mnt/cdrom_`basename $DEVICE`"
+      MOUNTDIR="/mnt/`basename $DEVICE`_cdrom"
       mkdir -p $1/$MOUNTDIR
-      echo "$DEVICE $MOUNTDIR iso9660 noauto,users 0 0" >>$FSTAB
+      echo "$DEVICE $MOUNTDIR iso9660 noauto,users,exec 0 0" >>$FSTAB
    done
 
    list_partition_devices | while read DEVICE; do
-      MOUNTDIR="/mnt/`basename $DEVICE`"
-      mount_device $DEVICE $1/$MOUNTDIR
-      umount $1/$MOUNTDIR 2>/dev/null
-      if [ $? -eq 0 ]; then # add to fstab only if mount+umount is OK
+      unset REMOVABLE; DEV="`basename $DEVICE`"; DEV0="`echo $DEV | cut -b 1-3`"
+      if [ "`cat /sys/block/$DEV0/removable`" != "0" ]; then
+         REMOVABLE="_removable"
+      fi
+
+      # skip this device if mountpoint exists
+      MOUNTDIR="/mnt/$DEV$REMOVABLE"
+      if [ -d "$1/$MOUNTDIR" ]; then continue; fi
+
+      # try to mount the device and unmount it. If OK, we can add it to fstab
+      mount_device "$DEVICE" "$1/$MOUNTDIR"
+      umount "$1/$MOUNTDIR" 2>/dev/null
+      if [ $? -eq 0 ]; then
          echo "$DEVICE $MOUNTDIR auto auto,users,suid,dev,exec 0 0" >>$FSTAB
       else # remove empty directory
-         rmdir $1/$MOUNTDIR 2>/dev/null
+         rmdir "$1/$MOUNTDIR" 2>/dev/null
       fi
    done
 
    fdisk -l 2>/dev/null | grep -i "Linux swap" | egrep "^/dev/" \
      | cut -f 1 -d " " | sed -r "s/(.+)/\\1 swap swap defaults 0 0/" >>$FSTAB
+
+   echo "/dev/fd0 /mnt/floppy auto noauto,users,suid,dev,exec 0 0" >>$FSTAB
+   mkdir -p $1/mnt/floppy
 }

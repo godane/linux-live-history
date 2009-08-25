@@ -5,12 +5,7 @@ Enter to skip this boot prompt.
 linux debug .......... to start Linux shell several times during the boot
 linux copy2ram ....... to copy all files to RAM (only if you have enough!)
 linux floppy ......... to enable floppy automounting during startup
-linux passwd=TEXT .... to change root's password to TEXT
-linux passwd=ask ..... prompt for the root password during the boot
 linux load=modules ... load modules from "optional" directory. Eg: load=wine,xmms
-
-linux vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors)
-linux vga=769 ........ for 640x480 graphicd mode  (the same like above)
 
 memtest .............. to start memtest instead of LinuxLiveCD
 

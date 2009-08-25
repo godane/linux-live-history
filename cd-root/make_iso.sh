@@ -1,7 +1,7 @@
 #!/bin/bash
 # ---------------------------------------------------
 # Script to create bootable ISO in Linux
-# usage: create_bootiso.sh /tmp/slax.iso
+# usage: make_iso.sh /tmp/slax.iso
 # author: Tomas M. <http://www.linux-live.org>
 # ---------------------------------------------------
 

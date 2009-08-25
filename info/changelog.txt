@@ -1,8 +1,17 @@
+ 5.0.16
+
+ * mnt entries are marked as _cdrom and _removable
+ * uselivemod updated to workaround unionfs bug, wasn't able to mount -o loop
+ * updated kernel modules for 2.6.11.8, updated unionctl and mksquashfs
+ * cd directory tree is changed to be more simple
+ * create_bootdisk renamed to make_iso.sh and make_iso.bat
+ 
+
  5.0.15
 
  * added unionfs from 27th of April 2005
  * fixed uselivemod bug
- * new unionfs allows us to mount .mo modules from unioned dir!
+ * new unionfs allows us to mount .mo modules from unioned dir too!
  * added precompiled modules (squashfs, unionfs) for Linux 2.6.11.8
 
 

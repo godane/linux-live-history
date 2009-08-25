@@ -21,25 +21,26 @@ if [ "`ls $VMLINUZ 2>/dev/null`" = "" ]; then echo "cannot find $VMLINUZ"; exit 
 
 header "Creating LiveCD from your Linux"
 
-echo "Using kernel from $VMLINUZ"
+mkdir -p $CDDATA/base
+mkdir -p $CDDATA/modules
+mkdir -p $CDDATA/optional
+mkdir -p $CDDATA/rootcopy
+
+echo "copying cd-root to $CDDATA, using kernel from $VMLINUZ"
 echo "Using kernel modules from /lib/modules/$KERNEL"
+cp -R cd-root/* $CDDATA
+cp -R tools $CDDATA
+cp -R info/* $CDDATA
+cp $VMLINUZ $CDDATA/boot/vmlinuz
+
 echo "creating initrd image..."
 cd initrd
 ./initrd_create
 if [ "$?" -ne 0 ]; then exit; fi
 cd ..
 
-mkdir -p $CDDATA/devel
-mkdir -p $CDDATA/base
-mkdir -p $CDDATA/modules
-mkdir -p $CDDATA/optional
-mkdir -p $CDDATA/rootcopy
-
-echo "copying cd-root to $CDDATA..."
-cp initrd/$INITRDIMG.gz $CDDATA/initrd.gz
+cp initrd/$INITRDIMG.gz $CDDATA/boot/initrd.gz
 rm initrd/$INITRDIMG.gz
-cp -R cd-root/* $CDDATA
-cp -R {info,tools} $CDDATA
 
 echo "creating compressed images..."
 
@@ -51,12 +52,9 @@ for dir in bin etc home lib opt root usr sbin var; do
     fi
 done
 
-echo "copying kernel from $VMLINUZ..."
-cp $VMLINUZ $CDDATA/vmlinuz
-
 echo "creating LiveCD ISO image..."
 cd $CDDATA
-./create_bootiso.sh /tmp/livecd.iso
+./make_iso.sh /tmp/livecd.iso
 
 cd /tmp
 header "Your ISO is created in /tmp/livecd.iso"

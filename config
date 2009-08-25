@@ -11,7 +11,7 @@ INITRDIMG=initrd
 
 # the size of RAMdisk (in KBytes)
 # if you change this, then you will need to change the size
-# also in the following files: bootfiles/isolinux.cfg, bootfiles/DOS/slax
+# also in the following files: ./cd-root/isolinux.cfg, ./cd-root/boot/DOS/config
 RAM0SIZE=4444
 
 # kernel version. Change it to "2.6.10" for example, if you are building

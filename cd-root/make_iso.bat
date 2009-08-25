@@ -1,7 +1,7 @@
 @ECHO OFF
 REM  ----------------------------------------------------
 REM  Batch file to create bootable ISO in MS Windows
-REM  usage: create_bootiso c:\slax.iso
+REM  usage: make_iso c:\slax.iso
 REM  author: Tomas M. <http://www.linux-live.org>
 REM  ----------------------------------------------------
 
@@ -14,7 +14,7 @@ REM  so we need to restore it from backup.
 copy isolinux.bi_ isolinux.bin
 if not "%errorlevel%"=="0" goto error2
 
-programs\WIN\mkisofs.exe -o "%1" -v -J -R -D -A "%CDLABEL%" -V "%CDLABEL%" -no-emul-boot -boot-info-table -boot-load-size 4 -b boot\isolinux.bin -c boot\isolinux.boot .
+tools\WIN\mkisofs.exe -o "%1" -v -J -R -D -A "%CDLABEL%" -V "%CDLABEL%" -no-emul-boot -boot-info-table -boot-load-size 4 -b boot\isolinux.bin -c boot\isolinux.boot .
 
 :error1
 echo A parameter is required - target ISO file.
