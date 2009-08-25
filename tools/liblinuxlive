@@ -113,6 +113,7 @@ modprobe_module()
   done
 
   echo "$PRINTK" >/proc/sys/kernel/printk
+  if [ "$err" -ne 0 ]; then echolog "error inserting module $1 ($err)"; fi
   return $err
 }
 
@@ -296,7 +297,7 @@ create_block_devices()
 modprobe_essential_modules()
 {
    echolog "starting loop device support"
-   modprobe_module loop max_loop=256
+   modprobe_module loop max_loop=255
    echolog "starting cdrom filesystem support"
    modprobe_module isofs
    echolog "starting squashfs support"

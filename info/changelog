@@ -1,8 +1,21 @@
+ 5.0.9
+
+ * added precompiled version of mksquashfs to ./tools
+ * added new unionfs (CVS snapshot unionfs-022205-1641)
+ * liblinuxlive: added error message to modprobe_module function,
+     so errors are displayed in the case if insmod didn't work.
+     Some modprobe fixes added
+ * busybox: added some more plugins (commands)
+ * busybox: patched to support more than 8 loop devices
+ * each directory of root filesystem is now packed separately
+
+
  5.0.8
- 
+
  * fix chroot again
  * added Linux 2.6.10 support (precompiled modules)
- * removed Linux 2.6.9 support
+ * removed Linux 2.6.9 modules
+ * all kernel modules in initrd are compressed by gzip
 
 
  5.0.7

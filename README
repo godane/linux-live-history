@@ -1,9 +1,10 @@
 
  Linux Live scripts
 
-   These scripts are used to create LiveCD iso image
-   from your real Linux distribution. Just unpack these scripts somewhere
-   in /tmp, login as root and run runme.sh. It will produce /tmp/livecd.iso.
+   These scripts are used to create LiveCD iso image from your real
+   Linux distribution. Just install your distro somewhere, unpack these
+   scripts somewhere in $DISTRO/tmp, login as root and run  runme.sh. It
+   will produce /tmp/livecd.iso
 
    Burn it and boot it.
 
