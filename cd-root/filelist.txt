@@ -9,5 +9,5 @@ rootcopy ... contains files which are directly copied to root directory / while 
 
 Important files:
 
-create_bootiso.sh .... script to build new iso in Linux
-create_bootiso.cmd ... script to build new iso in Windows
+make_iso.sh .... script to build new iso in Linux
+make_iso.bat ... script to build new iso in DOS/Windows

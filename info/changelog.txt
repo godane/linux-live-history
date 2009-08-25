@@ -1,9 +1,20 @@
- 5.1.0
+ 5.1.2
  
- just renamed because 5.0.16 is in the middle of directory listing,
- people were still downloading 5.0.9 which was at the end! :(
- 
+ * added squashfs kernel modules for 2.6.12.2
+ * added unionfs unionfs-063005-2217
+ * released 2.6.12.2 precompiled kernel for lazy people
+ * added mkisofs which works in MS DOS too!
 
+ 5.1.1
+
+ * mo2dir now calls /sbin/ldconfig at the end 
+ * added modprobe loop to initrd_create
+ * uninstall script
+ * removed editiso script. Use make_iso instead...
+ * fixed make_iso.bat and added mkisofs.exe for DOS!
+ * added uniondbg binary
+ 
+ 5.1.0
  5.0.16
 
  * mnt entries are marked as _cdrom and _removable

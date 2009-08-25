@@ -17,17 +17,17 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
-union_insert_module / "$1" /mnt/live/memory/images 2>/dev/null
+union_insert_module / "$1" /mnt/live/memory/images 2>/dev/null >/dev/null
 if [ $? -ne 0 ]; then
    MODULE=/mnt/live/memory/copy2ram/`basename $1`
    while [ -a "$MODULE" ]; do MODULE="$MODULE.x"; done
-   echo "error occured. copying module to $MODULE and trying again"
-   cp $1 $MODULE
-   union_insert_module / "$MODULE" /mnt/live/memory/images 2>/dev/null
+   cp "$1" "$MODULE"
+   union_insert_module / "$MODULE" /mnt/live/memory/images
 fi
 
 # executable in /var/log/setup/setup.modulename will be started
 # only by this script (uselivemod)
+# not in the case when module is loaded during startup from CD
 #
 SETUPEXE="/var/log/setup/setup.`basename $1 .mo`"
 if [ -x "$SETUPEXE" ]; then

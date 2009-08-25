@@ -30,7 +30,7 @@ echo "copying cd-root to $CDDATA, using kernel from $VMLINUZ"
 echo "Using kernel modules from /lib/modules/$KERNEL"
 cp -R cd-root/* $CDDATA
 cp -R tools $CDDATA
-cp -R info/* $CDDATA
+cp -R !info/* $CDDATA
 cp $VMLINUZ $CDDATA/boot/vmlinuz
 
 echo "creating initrd image..."

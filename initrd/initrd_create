@@ -85,7 +85,7 @@ chmod a+x $INITRD_TREE/linuxrc
 
 cp static-binaries/modprobe $INITRD_TREE/sbin
 cp static-binaries/busybox $INITRD_TREE/bin
-cp static-binaries/unionctl $INITRD_TREE/bin # symlink will be copied as original file
+cp static-binaries/{unionctl,uniondbg} $INITRD_TREE/bin # symlink will be copied as original file
 ln -s busybox $INITRD_TREE/bin/ash
 ln -s busybox $INITRD_TREE/bin/sh
 ln -s busybox $INITRD_TREE/bin/[
@@ -140,6 +140,7 @@ rm -Rf $MOUNTDIR
 mkdir $MOUNTDIR
 
 debug "mounting $INITRDIMG to it"
+modprobe loop 2>/dev/null
 mount -o loop $INITRDIMG $MOUNTDIR
 if [ "$?" -ne 0 ]; then
    echo "Error mounting initrd! Not enough free loop devices?"

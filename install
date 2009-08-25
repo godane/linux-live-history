@@ -1,17 +1,23 @@
 #!/bin/bash
-# install all scripts from /tools to /usr/sbin and /usr/lib
+# install/uninstall all scripts from /tools to /usr/sbin and /usr/lib
 # so the user is able to use all these commands while running his/her Live Linux
 #
-# this script is automatically called by runme.sh
+# install script is automatically called by runme.sh
 #
-# Author: does it worth for such a short script ... hm... ok, Tomas M.
+# Author: does it worth for such a short script ... hm... ok, Tomas M. :^)
 #
 
-ROOT=$1
+ROOT="$1"
+N="`basename $0`"
 
-mkdir -p $ROOT/usr/sbin
-mkdir -p $ROOT/usr/lib
-ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
-ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
+if [ "$N" = "install" ]; then
+   mkdir -p $ROOT/usr/sbin
+   mkdir -p $ROOT/usr/lib
+   ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
+   ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
+else
+   ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do rm -v $ROOT/usr/sbin/$FILE; done
+   ls -aA1b ./tools | egrep "^lib" | while read FILE; do rm -v $ROOT/usr/lib/$FILE; done
+fi
 
-echo "Linux Live scripts were installed successfuly to $1/"
+echo "Linux Live scripts were $N""ed successfuly in $1/"
