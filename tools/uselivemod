@@ -17,7 +17,7 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
-union_insert_module / "$MODULE" /mnt/live/memory/images
+union_insert_module / "$1" /mnt/live/memory/images 2>/dev/null
 
 # executable in /var/log/setup/setup.modulename will be started
 # only by this script (uselivemod)

@@ -1,18 +1,13 @@
 Important directories:
 
-DOS ............ contains loadlin.exe, program to start Live CD from MSDOS
-FLOPPY ......... contains floppy image with smart boot manager, to boot Live CD on computers which can't boot from the CD
-WIN ............ contains mkisofs executables to create new ISO under Windows
-base ........... contains base (essential) modules for filesystem. All .mo files from this directory will be used.
-devel .......... contains all scripts used to create the Live CD
-info ........... contains text files with information and documentation
-modules ........ contains additional modules for filesystem. All .mo files from this directory will be used.
-optional ....... contains optional modules, which are loaded only with "load=modulename.mo" boot option.
-rootcopy ....... contains files which are directly copied to root directory / while booting, overwriting originals.
-tools .......... contains scripts and binaries to work with modules
+boot ....... contains files to boot Live CD
+
+base ....... contains base (essential) modules for filesystem. All .mo files from this directory will be used.
+modules .... contains additional modules for filesystem. All .mo files from this directory will be used.
+optional ... contains optional modules, which are loaded only with "load=modulename.mo" boot option.
+rootcopy ... contains files which are directly copied to root directory / while booting, overwriting originals.
 
 Important files:
 
 create_bootiso.sh .... script to build new iso in Linux
 create_bootiso.cmd ... script to build new iso in Windows
-

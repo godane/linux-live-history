@@ -1,7 +1,7 @@
 You can start the LiveCD from DOS prompt. Boot your DOS and type:
 
   X:
-  CD \DOS
+  CD \BOOT\DOS
   LINUX.BAT
 
 (replace X: by your CDROM drive letter)
