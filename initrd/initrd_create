@@ -32,7 +32,7 @@ cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
 chmod a+x $MOUNTDIR/linuxrc
 
 # find all lib dependences
-for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount \
+for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount mv cut \
               mkdir rmdir ls ln echo cat grep egrep fdisk blockdev \
 	      pivot_root insmod lsmod modprobe depmod swapon eject tail tr \
 	      chroot readlink basename dirname test sleep [ ;
@@ -50,7 +50,9 @@ do
       fi
    done
 done
-cp -R /sbin/*.old $MOUNTDIR/sbin # this line can be safely removed when using 2.6 kernel
+
+# this line can be safely removed when using 2.6 kernel
+cp -R /sbin/*.old $MOUNTDIR/sbin 2>/dev/null
 
 #filesize script by using ls + cut
 echo -ne "#!/bin/bash\necho \`ls -ol \"\$1\"\` | cut -d \" \" -f 4" >$MOUNTDIR/bin/filesize

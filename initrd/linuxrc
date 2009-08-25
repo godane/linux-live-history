@@ -11,6 +11,7 @@ STGFILE=/mnt/tmp/ovlfs.stor
 
 # paths
 LIVECDDATA=/mnt/mnt/livecd
+LIVECD_SGN=livecd.sgn
 IMGRO=$LIVECDDATA/imgro
 IMGRW=$LIVECDDATA/imgrw
 CP2RAM=$LIVECDDATA/cp2ram
@@ -23,7 +24,7 @@ header "linuxrc-start"
 
 echo "creating root filesystem in /mnt"
 mount -t tmpfs -o "size=90%" tmpfs /mnt
-mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var/run,var/lock}
+mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,sys,var/run,var/lock}
 mkdir -p /mnt/mnt/{ramdisk,livecd}
 
 # touch to avoid "overmounting" by ovlfs, which could sometimes cause errors
@@ -102,19 +103,67 @@ echo "liveCD subdirectory is $LIVECD_SUBDIR";
 # search what mount directory is our CD in
 for DIR in /mnt/mnt/*
 do
-  if [ -r "$DIR/$LIVECD_SUBDIR/livecd.flag" ]; then
-     export LIVECD_MOUNT="$DIR"
-     export LIVECD_PATH="`dirname \"$DIR/$LIVECD_SUBDIR/x\"`"
+  if [ -r "$DIR/$LIVECD_SUBDIR/$LIVECD_SGN" ]; then
+     LIVECD_MOUNT="$DIR"
+     LIVECD_PATH="`dirname \"$DIR/$LIVECD_SUBDIR/x\"`"
+     echo "LiveCD path is now $LIVECD_PATH"
      break
   fi
 done
 
-# if none, run bash
-if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
+$DEBUG
+
+TOHD="`cmdline_value tohd`"
+FROMHD="`cmdline_value fromhd`"
+HDSUBDIR="`cmdline_value hdsubdir`"
+
+if [ "$HDSUBDIR" = "" ]; then
+   HDSUBDIR="LIVECD";
+fi
+
+# copy entire CD to harddisk and use it from there
+if [ ! "$TOHD" = "" ]; then
+   echo "Remounting $TOHD read-write"
+   remount /mnt/mnt/$TOHD rw
+   if [ $? -eq 0 ]; then
+      TOHDDIR=/mnt/mnt/$TOHD/$HDSUBDIR
+      mkdir -p $TOHDDIR 2>/dev/null
+      touch $TOHDDIR/slax.tmp 2>/dev/null
+      if [ $? -eq 0 ]; then
+         echo "Copying the LiveCD source to $TOHDDIR..."
+         cp -Rf $LIVECD_PATH/* $TOHDDIR 2>/dev/null
+	 if [ $? -eq 0 ]; then
+            FROMHD=$TOHD
+	    TOHD_OK=1
+         fi
+         echo "Remounting $TOHD read-only"
+         remount /mnt/mnt/$TOHD ro
+      fi
+   fi
+
+   if [ ! $TOHD_OK -eq 1 ]; then
+      header "ERROR!"
+      echo "An error occured while copying CD to $TOHD."
+      echo "Not enough free space? Wrong directory name? ($TOHD)"
+      echo "The original source CD will be used."
+      echo
+   fi
+fi
+
+# use already copied CD from harddisk
+if [ ! "$FROMHD" = "" ]; then
+   echo "FROMHD parameter detected, using $FROMHD"
+   LIVECD_MOUNT="/mnt/mnt/$FROMHD"
+   LIVECD_PATH="/mnt/mnt/$FROMHD/$HDSUBDIR"
+fi
+
+# if no data found, run bash
+if [ ! -r "$LIVECD_PATH/$LIVECD_SGN" ]; then
   header "ERROR!"
-  echo "cannot find your compressed IMG files! Maybe you are trying to start the"
-  echo "LiveCD from unsupported CDROM drive (scsi?)"
+  echo "cannot find your compressed IMG files! Maybe you are trying"
+  echo "to start the LiveCD from unsupported CDROM drive (scsi?)"
   echo "Or you entered wrong livecd_subdir= parameter?"
+  echo "Or you entered wrong fromhd= parameter?"
   echo "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
 fi
@@ -123,6 +172,7 @@ echo "liveCD found in $LIVECD_PATH"
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
 
 echo -n "copying selected modules to RAM... "
+
 # base
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
@@ -198,11 +248,11 @@ fi
 
 echo "exporting LIVECD variables to profile.d..."
 
-echo "export LIVECD_SUBDIR="${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.sh
-echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_PATH="${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.sh
 chmod 755 /mnt/etc/profile.d/slax.sh
-echo "setenv LIVECD_SUBDIR "${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.csh
-echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_PATH "${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.csh
 chmod 755 /mnt/etc/profile.d/slax.csh
 
 echo "creating fstab..."

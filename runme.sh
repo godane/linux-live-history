@@ -38,7 +38,7 @@ cp initrd/$INITRDIMG.gz $CDDATA/initrd.gz
 rm initrd/$INITRDIMG.gz
 cp -R bootfiles/* $CDDATA
 cp -R {info,tools} $CDDATA
-touch $CDDATA/livecd.flag # just to be sure it's there
+touch $CDDATA/livecd.sgn # just to be sure it's there
 
 echo "creating compressed images (.img)..."
 mkmod /bin

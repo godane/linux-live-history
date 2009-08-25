@@ -12,6 +12,12 @@ linux floppy ......... to enable floppy automounting during startup
 linux passwd=TEXT .... to change root's password to TEXT
 linux passwd=ask ..... prompt for the root password during the boot
 linux load=modules ... load modules from "optional" directory. Eg: load=wine,xmms
+linux mousedev= ...... specify mouse device, eg. mousedev=/dev/psaux
+linux mouseproto= .... specify mouse protocol, eg. mouseproto=imps/2
+linux wheelmouse ..... alias for mouseproto=imps/2
+linux hdsubdir ....... to be used for fromhd and tohd options, defaults to LIVECD
+linux tohd=folder .... copy entire CD to "/mnt/folder/$hdsubdir", start livecd from it
+linux fromhd=folder .. start livecd from "/mnt/folder/$hdsubdir"
 
 linux vga=773 ........ for 1024x768 graphics mode (framebuffer @256 colors)
 linux vga=769 ........ for 640x480 graphicd mode  (the same like above)

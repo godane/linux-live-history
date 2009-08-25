@@ -1,3 +1,11 @@
+ 4.1.2
+ 
+ * fixed create_bootdisk.sh (adding | head -n 1)
+ * added mv command to initrd
+ * added cut command to initrd
+ * implemented tohd and fromhd boot options
+
+
  4.1.1
  
  * added documentation DOC_MODULES

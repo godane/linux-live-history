@@ -1,4 +1,50 @@
-../tools/liblinuxlive -aA1b $LIVECD_PATH/packs | while read PACK;
+../tools/liblinuxlivesole >dev/console 2>&1
+' >>/mnt/$LINUXINIT
+
+mount -o remount,ro /mnt
+cd /mnt
+
+$DEBUG
+
+echo "changing root directory..."
+/sbin/pivot_root . mnt/ramdisk
+exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
+
+header "ERROR!"
+echo "You are not supposed to be here, something went wrong!"
+echo "calling /mnt/usr/bin/chroot failed?"
+echo "Press Ctrl+Alt+Del for reboot."
+while [ 1 = 1 ]; do bash; done
+entered wrong fromhd= parameter?"
+  echo "Press Ctrl+Alt+Del for reboot."
+  while [ 1 = 1 ]; do bash; done
+fi
+
+echo "liveCD found in $LIVECD_PATH"
+mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
+
+echo -n "copying selected modules to RAM... "
+
+# base
+ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
+   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+done
+
+# modules
+ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
+   echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+done
+
+# optional modules (insert only modules specified by load= kernel boot parameter)
+cmdline_value load | tr "," "\\n" | while read IMG; do
+   ls -aA1b "$LIVECD_PATH/optional/$IMG"* 2>/dev/null | while read IMAGE; do
+         echo "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
+   done
+done
+echo
+
+echo -n "unpacking .tar.gz from the CD... "
+ls -aA1b $LIVECD_PATH/packs | while read PACK;
 do
    echo -n "$PACK "
    tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
@@ -54,11 +100,11 @@ fi
 
 echo "exporting LIVECD variables to profile.d..."
 
-echo "export LIVECD_SUBDIR="${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.sh
-echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_PATH="${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.sh
 chmod 755 /mnt/etc/profile.d/slax.sh
-echo "setenv LIVECD_SUBDIR "${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.csh
-echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_PATH "${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.csh
 chmod 755 /mnt/etc/profile.d/slax.csh
 
 echo "creating fstab..."
@@ -83,53 +129,4 @@ list_swaps >>/mnt/etc/fstab
 echo >/mnt/etc/mtab
 touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
 
-echo "creating init script in /tmp/init..."
-
-echo >/mnt/$LINUXINIT
-chmod 0755 /mnt/$LINUXINIT
-
-NEWROOTPASS="`cmdline_value passwd`"
-if [ "$NEWROOTPASS" = "ask" ]; then
-   echo -ne "\nEnter new password for root: "
-   read -s NEWROOTPASS
-fi
-
-if [ ! "$NEWROOTPASS" = "" ]; then
-   echo "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
-fi
-
-echo '
-echo "freeing ramdisk..."
-umount -nl /mnt/ramdisk
-/sbin/blockdev --flushbufs /dev/rd/0
-echo "'"`header \"starting init\"`"'"
-exec /sbin/init <dev/console >dev/console 2>&1
-' >>/mnt/$LINUXINIT
-
-mount -o remount,ro /mnt
-cd /mnt
-
-$DEBUG
-
-echo "changing root directory..."
-/sbin/pivot_root . mnt/ramdisk
-exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
-
-header "ERROR!"
-echo "You are not supposed to be here, something went wrong!"
-echo "calling /mnt/usr/bin/chroot failed?"
-echo "Press Ctrl+Alt+Del for reboot."
-while [ 1 = 1 ]; do bash; done
-livecd_subdir= parameter?"
-  echo "Press Ctrl+Alt+Del for reboot."
-  while [ 1 = 1 ]; do bash; done
-fi
-
-echo "liveCD found in $LIVECD_PATH"
-mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
-
-echo -n "copying selected modules to RAM... "
-# base
-ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
-   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-doN­‰·# moduleÖ›‰· -aA1b "$LIVˆ
+N­‰· "creatiÖ›‰·nit script iˆ

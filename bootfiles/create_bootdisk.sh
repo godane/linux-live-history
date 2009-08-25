@@ -32,7 +32,7 @@ if [ ! "$?" = "0" ]; then echo "error mounting $2"; exit; fi
 mkdir -p $MOUNTPOINT/$SUBDIR
 cp -R "$DATADIR"/* "$MOUNTPOINT/$SUBDIR"
 gunzip "$MOUNTPOINT/$SUBDIR/splash.bmp.gz"
-APPEND="`cat $DATADIR/isolinux.cfg | grep append | cut -b 7-`"
+APPEND="`cat $DATADIR/isolinux.cfg | grep append | head -n 1 | cut -b 7-`"
 
 echo "
 boot = $3

@@ -212,6 +212,15 @@ mount_img()
    echo "$MOUNTPOINT" >>$3
 }
 
+# REmount device in $1 directory, in the mode set by $2
+# $1 = directory which is already mounted
+# $2 = mount option for -o remount,("ro", "rw")
+#
+remount()
+{
+   mount -o remount,$2 "`cat /proc/mounts | grep \"$1\" | cut -d \" \" -f 1`" $1 2>/dev/null
+}
+
 # Mount device $1 to $2
 # $1 = /dev device to mount
 # $2 = /mnt mountpoint, directory will be created automatically

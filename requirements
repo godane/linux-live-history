@@ -2,20 +2,21 @@
   To be able to create a Linux Live CD
   you will need to meet all the following requirements:
 
-    * all the following things must be compiled directly into kernel:
-      -  devfs (CONFIG_DEVFS_FS=y)
-      -  ext2 (CONGIG_EXT2_FS=y)
-      -  iso filesystem (CONFIG_ISO9660_FS=y)
-      -   with transparent decompression (CONFIG_ZISOFS=y)
+   * all the following things must be compiled directly into kernel:
+     - devfs (CONFIG_DEVFS_FS=y)
+     - ext2 (CONGIG_EXT2_FS=y)
+     - iso filesystem (CONFIG_ISO9660_FS=y)
+     -  with transparent decompression (CONFIG_ZISOFS=y)
 
-    * ovlfs module has to be compiled for the kernel you are using.
-      Get the source at http://ovlfs.sourceforge.net, and be sure
-      that symlink /lib/modules/2.4.xx/build points to the correct
-      kernel source tree before compiling. Install ovlfs to your system.
-      Or, download precompiled kernel with ovlfs from http://www.linux-live.org
+   * ovlfs module must be compiled for the kernel you are using.
+     Get the source at http://ovlfs.sourceforge.net, and be sure
+     that symlink /lib/modules/2.4.xx/build points to the correct
+     kernel source tree before compiling. Compiling could produce
+     some error messages, just ignore them. Install ovlfs to your system.
+     Or, download precompiled kernel with ovlfs from http://www.linux-live.org
 
-    * mkzftree is used for img compression. Make sure you have it,
-      and also make sure your mkisofs is patched properly.
-      (This all is already done in Slackware's cdrtools package)
+   * mkzftree is used for img compression. Make sure you have it,
+     and also make sure your mkisofs is patched properly.
+     (This all is already done in Slackware's cdrtools package)
 
   These requirements could change with new kernel or ovlfs versions.
