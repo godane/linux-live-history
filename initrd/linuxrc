@@ -15,7 +15,7 @@ if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
 
 $DEBUGCMD
 
-# I have to set these variables very carefully
+# we have to set these variables very carefully
 UNION=/union
 MEMORY=/memory
 MOUNTDIR=mnt
@@ -24,10 +24,10 @@ COPY2RAM=$MEMORY/copy2ram
 IMAGES=$MEMORY/images
 INITRAMDISK=$MOUNTDIR/live
 
-# we need cdrom support, isofs support, unionfs support, etc
+# cdrom support, isofs support, unionfs support, etc
 modprobe_essential_modules
 setup_dma
-echo -e "ext3\nvfat\n*" >/etc/filesystems
+echo -e "ext3\next2\nvfat\n*" >/etc/filesystems
 
 # in some cases, we need USB modules soon
 if [ "`cmdline_parameter probeusb`" != "" ]; then
@@ -100,6 +100,7 @@ if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]
    cd_autoeject 1
    umount $DATA 2>/dev/null
    if [ $? -ne 0 ]; then umount `dirname $DATA` 2>/dev/null; fi
+   rmdir $MOUNTDIR/* 2>/dev/null
    DATA=$COPY2RAM
    cd_autoeject 0
 fi

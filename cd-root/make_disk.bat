@@ -8,15 +8,22 @@ REM  ----------------------------------------------------
 if "%1"=="" goto error1
 
 echo Copying files to %1 ...
-xcopy * "%1" /I /R /E /Y >NUL
+
+xcopy * "%1\" /I /R /E /Y >NUL
+if not "%errorlevel%"=="0" goto error2
+move /Y "%1\base\vmlinuz" "%1\vmlinuz"
+if not "%errorlevel%"=="0" goto error2
+move /Y "%1\base\initrd.gz" "%1\initrd.gz"
+if not "%errorlevel%"=="0" goto error2
+copy /Y tools\WIN\syslinux.cfg "%1\" >NUL
 if not "%errorlevel%"=="0" goto error2
 
 echo Setting up boot sector in %1
-xcopy isolinux.cfg "%1\syslinux.cfg" /I /R /E /Y >NUL
-if not "%errorlevel%"=="0" goto error3
 tools\WIN\syslinux.exe -ma "%1"
 if not "%errorlevel%"=="0" goto error3
 
+echo.
+echo Successfully installed into %1
 goto theend
 
 :error1
@@ -33,6 +40,4 @@ echo Error setting up boot sector. The OS won't boot
 goto theend
 
 :theend
-echo.
-echo Successfully installed into %1
 pause

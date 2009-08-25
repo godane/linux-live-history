@@ -33,11 +33,12 @@ mkdir -p $CDDATA/base
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/optional
 mkdir -p $CDDATA/rootcopy
+mkdir -p $CDDATA/tools
 
 echo "copying cd-root to $CDDATA, using kernel from $VMLINUZ"
 echo "Using kernel modules from /lib/modules/$KERNEL"
 cp -R cd-root/* $CDDATA
-cp -R tools $CDDATA
+cp tools/* $CDDATA/tools
 cp -R DOC/* $CDDATA
 cp $VMLINUZ $CDDATA/boot/vmlinuz
 

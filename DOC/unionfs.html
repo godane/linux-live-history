@@ -49,14 +49,27 @@ link="#0000FF" vlink="#0000FF">
 
 This page shows an example of using unionfs, implemented in SLAX Linux Live CD.
 
-<p><a href=http://unionfs.filesystems.org>Unionfs</a>, developed at Stony Brook university in 2004, is a stackable unification file system, which can merge the contents of several directories (so called branches) while 
-keeping their physical content separate. It allows any mix of read-only and read-write branches, as well as insertion and deletion of branches on the fly. Unionfs can be used in 
-several ways, for example to unify home directories from multiple filesystems on different disk partitions, or to merge several CDs to create a unified view of a photo archive. In 
-a similar view, Unionfs, with copy-on-write functionality, can be used to merge read-only and read-write filesystems together and to virtually allow modification of read-only 
-filesystems saving changes to the writable ones.</p>
-<p><a href=http://slax.linux-live.org/>SLAX</a>, developed by Tomas Matejicek, is a 180 MB Linux Live distribution which aims at compacting full featured Linux operating system to a portable medium (like mini-CD) and allows everyone to 
-boot Linux on any machine without the need to install it. It works even on computers with no harddisk at all. Unionfs is the most important part 
-of a SLAX, it allows SLAX to seem and act as a real Linux OS with full-writable root directory tree. So let's speak about unionfs first.</p>
+<p><a href=ftp://unionfs-mirror.linux-live.org/unionfs/>Unionfs</a>, developed at
+Stony Brook university since 2004, is a stackable unification file system,
+which can merge the contents of several directories (so called branches)
+while  keeping their physical content separate. It allows any mix of
+read-only and read-write branches, as well as insertion and deletion of
+branches on the fly. Unionfs can be used in  several ways, for example
+to unify home directories from multiple filesystems on different disk
+partitions, or to merge several CDs to create a unified view of a photo
+archive. In  a similar view, Unionfs, with copy-on-write functionality,
+can be used to merge read-only and read-write filesystems together and
+to virtually allow modification of read-only  filesystems saving changes
+to the writable ones.</p>
+
+<p><a href=http://slax.linux-live.org/>SLAX</a> is a 177 MB Linux Live
+distribution which aims at compacting full featured Linux operating
+system to a portable medium (like usb flash drive or mini-cd) and allows
+everyone to  boot Linux on any machine without the need to install it.
+It works even on computers with no harddisk at all. Unionfs is the most
+important part  of a SLAX, it allows SLAX to seem and act as a real
+Linux OS with full-writable root directory tree. So let's speak about
+unionfs first.</p>
 
 <h2>Getting started</h2>
 <p>To get unionfs working, you need to create a Linux kernel module by compiling its source codes. Unionfs is available as a module extension for Linux Kernel 2.4.20 / 2.6.9 and 
@@ -65,16 +78,22 @@ higher. Download the latest version from FTP and extract the content of the arch
 <p>Then cd to its directory and read README and INSTALL files which are part of the archive. There are many instructions how to avoid problems. Before the compilation itself, you 
 might find it useful to know that it's possible to disable compiling debug information together with the module. Debug info is useful for reporting bugs, but significantly 
 increases the size of kernel module. 
-Two steps are required to disable debug at all:</p>
+Two parameters must be set to disable debug at all:</p>
 <ul>
-	<li>edit Makefile, and empty the variable UNIONFS_DEBUG_CFLAG (remove &quot;-g&quot; from the end of line)</li>
-	<li>create a file called fistdev.mk in the directory with sources, and add this text to it: <br>
-
-	EXTRACFLAGS=-DUNIONFS_NDEBUG</li>
+	<li>create a file called fistdev.mk in the directory with sources</li>
+	<li>add this text to it: <br>
+EXTRACFLAGS=-DUNIONFS_NDEBUG<BR>
+UNIONFS_DEBUG_CFLAG=
+</li>
 </ul>
-<p>The compiled kernel module will be about 80 KB big without debug info, compared to 5-7 MB with it.</p>
-<p>Another important thing is to download and extract sources for your running kernel (compilation won't work without them) and then modify LINUXSRC variable in Makefile, adding 
-path where you actually extracted it (this can be autodetected in some cases).</p>
+<p>The compiled kernel module will be about 90 KB big without debug info, compared to 5 MB with it 
+(you can download <a href=fistdev.mk>fistdev.mk</a> used to compile unionfs for SLAX)</p>
+
+<p>Another important thing to make the compilation work properly is to
+download and extract sources for your running kernel and to modify
+LINUXSRC variable in unionfs' Makefile, adding  path where you actually
+extracted it (this can be autodetected in some cases).</p>
+
 <p>Finally, use the following commands to build and install unionfs module into /lib/modules/$(KernelVersion)/kernel/fs/unionfs:</p>
 <pre>$ make
 $ make install
@@ -102,7 +121,7 @@ Some simple example follows, use unionctl command without any argument to see al
      /mnt/cdrom2 (r-)
      /mnt/cdrom3 (r-)</pre>
 <p>In the case when you change the content of branches themselves, execute the following command to force revalidation of the union:</p>
-<pre>uniondbf -g /mnt/union</pre>
+<pre>uniondbg -g /mnt/union</pre>
 <h2>Writing to union</h2>
 
 <p>Merging read-only directories is useful in many cases, but the union
@@ -134,8 +153,13 @@ To add a rw branch at the top of union in our example, type</p>
 techniques to allow virtual modifications and to save all changes in memory. SLAX is using these techniques for very long time, starting at the end of 2003 with ovlfs and 
 implementing unionfs at the end of 2004. SLAX 5, released in April 2005, can give you an impression of what miracles could be, thanks to unionfs, created.</p>
 <h2>SLAX internals</h2>
-<p>You need three essential things to boot Linux: Kernel image (which represents the operating system itself), partition or image file (eg. initrd.gz) with root filesystem and initial 
-program and some Linux loader (which reads Kernel into memory and executes it at the beginning). SLAX CD is booting by using isolinux.bin loader, it contains driver for filesystem on the CD and 
+<p>You need three essential things to boot Linux:
+<BR>1) kernel image (which represents the operating system itself, usually a file called vmlinuz)
+<BR>2) partition or image file (eg. initrd.gz) with root filesystem and initial program (linuxrc)
+<BR>3) some Linux loader (which reads Kernel into memory and executes it at the beginning).
+</p>
+
+<p>SLAX CD is booting by using isolinux.bin loader, it contains driver for filesystem on the CD and 
 thus is able to read Linux Kernel (file vmlinuz) and root filesystem image (file initrd.gz) from CD to the memory.</p>
 
 <p>When loaded in memory and executed, Linux kernel creates a virtual
@@ -201,13 +225,15 @@ Linux Live scripts: <a href="http://www.linux-live.org/">http://www.linux-live.o
 
 Linux kernel: <a href="http://www.kernel.org">http://www.kernel.org</a></p>
 
+Hunting unionfs bugs: <a href="/offer.php">offer for $2000</a></p>
+
 </td></tr></table>
 </td></tr></table>
 </td></tr></table>
 
 &nbsp;<BR>
 This site is maintained by Tomas Matejicek<br>
-(c) 2002-2005 unionfs.org</p>
+(c) 2002-2006 unionfs.org</p>
 
 </body>
 </html>

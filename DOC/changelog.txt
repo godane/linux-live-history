@@ -1,3 +1,15 @@
+ 5.4.2
+ 
+ * updated blkid libraries
+ * updated busybox, this fixes several issues with mount
+ * added make_disk.bat script to create bootable SLAX disk in Windows
+   (eg. to install SLAX to USB stick or any FAT32 partition in win)
+ * updated to latest unionfs snapshot (fix hardlinks count)
+ * updated mksquashfs and unsquashfs binaries in tools directory
+ * mo2dir shows correct error message if we try to use it on module inside union
+ * added iocharset boot option
+
+
  5.4.1
 
  * uselivemod starts ldconfig only if ld.so.conf is found in the module
