@@ -50,7 +50,6 @@ mkmod /lib
 mkmod /opt
 mkmod /usr
 mkmod /sbin
-#mkmod /home
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz
@@ -58,9 +57,10 @@ cp $VMLINUZ $CDDATA/vmlinuz
 # these directories have to be packed (tar.gz) because
 # it's not possible to overmount them by ovlfs 
 # (ovlfs has some problems with file locking)
-echo "compressing /etc /root /var..."
+echo "compressing /etc /home /root /var..."
 tar -C / -c root | gzip -f --best >$CDDATA/packs/root.tar.gz
 tar -C / -c etc | gzip -f --best >$CDDATA/packs/etc.tar.gz
+tar -C / -c home | gzip -f --best >$CDDATA/packs/home.tar.gz
 tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz
 
 echo "creating LiveCD ISO image..."

@@ -23,7 +23,7 @@ TMPFILE="/tmp/ll$$"
 
 mount_img "$1" "$TMPDIR" "$TMPFILE"
 IMGDIR="`cat $TMPFILE`"
-cp -R "$IMGDIR"/* "$2"
+cp -R --preserve "$IMGDIR"/* "$2"
 umount "$IMGDIR"
 umount "$IMGDIR"
 rm "$TMPFILE"

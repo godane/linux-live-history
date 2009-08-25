@@ -37,7 +37,8 @@ if [ -x "$IMG/preinsert" ]; then "$IMG/preinsert"; fi
 make_links "$IMG/data" "/" ""
 if [ -x "$IMG/postinsert" ]; then "$IMG/postinsert"; fi
 
-# executable called "manual" is started only by moduse
+# executable called "manual" is started only by this script (moduse)
+# and by installimg script.
 if [ -x "$IMG/manual" ]; then "$IMG/manual"; fi
 
 rm -f "$INSORDER"

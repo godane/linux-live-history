@@ -1,3 +1,17 @@
+ 4.2.4
+ 
+ * added installimg script to /tools/
+ * added toram boot option, a synonym for copy2ram
+ * /home directory is compressed like /root now...
+ * fixed list_libs() function in liblinuxlive which could return uncomplete
+   list of library dependencies (important bug!)
+
+
+ 4.2.3
+
+ * mount_img() function - use return instead of exit
+
+
  4.2.2
  
  * added isolinux 2.11 to bootfiles

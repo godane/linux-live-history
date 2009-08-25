@@ -41,7 +41,7 @@ cmdline_parameter()
 {
    CMDLINE=/proc/cmdline
    if [ ! "$2" = "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep -io "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)"
+   cat "$CMDLINE" | egrep -io "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep -o "[^[:space:]].*[^[:space:]]"
 }
 
 # look into cmdline and echo value of $1 option
@@ -108,7 +108,7 @@ mkciso()
       echolog "mkzftree error: directory $1 is very big? Maybe you are running"
       echolog "out of disk space, or mkzftree doesn't support large files,"
       echolog "or mkzftree not found! (get it from cdrtools package)"
-      exit 1
+      return 1
    fi
    rm -f "$RAW" # it won't be needed anymore
 
@@ -172,7 +172,7 @@ make_writable()
    fi
 }
 
-# try to copy all images to RAM, if commandline parameter copy2ram is present
+# try to copy all images to RAM, if commandline parameter copy2ram or toram is present
 # $1 = path to compressed image
 # $2 = destination path
 # return: will echo the final destination of image (the original path if not copied to RAM, or the copy)
@@ -180,6 +180,7 @@ make_writable()
 cp2ram()
 {
    DOCOPY="`cmdline_parameter copy2ram`"
+   if [ "$DOCOPY" = "" ]; then DOCOPY="`cmdline_parameter toram`"; fi
    IMGNAME="`basename \"$1\"`"
 
    if [ ! "$DOCOPY" = "" ]; then
@@ -205,18 +206,18 @@ mount_img()
    local MOUNTPOINT=`tempdir $1 $2`
    mount $4 -o loop,ro $1 $MOUNTPOINT
    if [ $? != 0 ]; then
-      echolog "error mounting $1 to $MOUNTPOINT"
+      echolog "!error mounting $1 to $MOUNTPOINT"
       echolog "Do you have enough free loop devices?"
       echolog "Or IMG file is corrupted? Can you check md5sum?"
-      exit 1
+      return 1
    fi
 
    mount $4 -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
    if [ $? != 0 ]; then
-      echolog "error submounting $1"
+      echolog "!error submounting $1"
       echolog "Do you have enough free loop devices?"
       echolog "Do you have transparent decompression for ISO filesystem compiled into kernel?"
-      exit 1
+      return 1
    fi
    
    echolog "$MOUNTPOINT" >>$3
@@ -330,7 +331,7 @@ list_swaps()
 #
 list_libs()
 {
-   ldd "$1" | egrep -o "=>.*" | cut -b 4- | cut -d " " -f 1 | while read LIB; do
+   ldd "$1" | egrep -o "[[:space:]]/.*" | cut -b 2- | cut -d " " -f 1 | while read LIB; do
      echo "$LIB"
      if [ -L "$LIB" ]; then LIB="`dirname $LIB`/`readlink $LIB`"; echo $LIB; fi
      list_libs $LIB # even a library could use libraries
