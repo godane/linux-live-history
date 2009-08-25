@@ -9,15 +9,16 @@ if "%1"=="" goto error1
 
 echo Copying files to %1 ...
 
-xcopy * "%1\" /I /R /E /Y >NUL
+xcopy * "%1\" /I /R /E /Y
 if not "%errorlevel%"=="0" goto error2
-move /Y "%1\base\vmlinuz" "%1\vmlinuz"
+move /Y "%1\boot\vmlinuz" "%1\vmlinuz"
 if not "%errorlevel%"=="0" goto error2
-move /Y "%1\base\initrd.gz" "%1\initrd.gz"
+move /Y "%1\boot\initrd.gz" "%1\initrd.gz"
 if not "%errorlevel%"=="0" goto error2
 copy /Y tools\WIN\syslinux.cfg "%1\" >NUL
 if not "%errorlevel%"=="0" goto error2
 
+echo .
 echo Setting up boot sector in %1
 tools\WIN\syslinux.exe -ma "%1"
 if not "%errorlevel%"=="0" goto error3
@@ -40,4 +41,5 @@ echo Error setting up boot sector. The OS won't boot
 goto theend
 
 :theend
+echo.
 pause

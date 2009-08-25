@@ -1,3 +1,19 @@
+ 5.4.4
+ 
+ * added noload cheatcode, to disable loading specified slax modules (even those from /base/ and /modules)
+ * added ramsize= cheatcode, to specify how much RAM is used to store changes (defaults to ramsize=60%)
+ * added make_disk.sh script to create bootable Live disk (eg. for USB devices)
+
+
+ 5.4.3
+
+ * forced ntfs to be mounted with ro option in all circumstances
+ * added iocharset boot option, to mount VFAT and NTFS drives
+   for example, if you have Central European Windows, use iocharset=iso8859-2
+ * fixed listing swap partitions in fstab
+ * fixed make_disk.bat and tested by few friends
+
+
  5.4.2
  
  * updated blkid libraries

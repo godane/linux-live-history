@@ -24,6 +24,10 @@ COPY2RAM=$MEMORY/copy2ram
 IMAGES=$MEMORY/images
 INITRAMDISK=$MOUNTDIR/live
 
+# amount of RAM to store changes
+RAMSIZE="`cmdline_value ramsize`"
+if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
+
 # cdrom support, isofs support, unionfs support, etc
 modprobe_essential_modules
 setup_dma
@@ -54,7 +58,7 @@ else false; fi
 
 # mount tmpfs only in the case when changes= boot parameter was empty
 # or we were not able to mount the storage device
-if [ $? -ne 0 ]; then mount -t tmpfs -o "size=60%" tmpfs $MEMORY; fi
+if [ $? -ne 0 ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY; fi
 
 mkdir -p $CHANGES
 mkdir -p $IMAGES
@@ -93,14 +97,17 @@ $DEBUGCMD
 # (skip modules from /optional/ which are not listed in load= boot option)
 # Finaly modify DATA variable so it will point to correct directory
 if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
-   echolog "copying data from CD to RAM, this may take some time..."
-   mkdir -p $COPY2RAM/rootcopy
-   copy_rootchanges $DATA $COPY2RAM/rootcopy
+   echolog "copying data to RAM, this may take some time..."
+   mkdir -p $COPY2RAM
+
+   # make sure it's in RAM even with changes= parameter
+   if [ "$CHANGESDEV" != "" ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $COPY2RAM; fi
    copy_to_ram $DATA $COPY2RAM
+
    cd_autoeject 1
    umount $DATA 2>/dev/null
    if [ $? -ne 0 ]; then umount `dirname $DATA` 2>/dev/null; fi
-   rmdir $MOUNTDIR/* 2>/dev/null
+   rmdir $MOUNTDIR/* 2>/dev/null # mounted device names are empty, remove them
    DATA=$COPY2RAM
    cd_autoeject 0
 fi
@@ -122,7 +129,7 @@ union_insert_modules $UNION $MEMORY $IMAGES
 $DEBUGCMD
 
 echo "copying rootchanges"
-copy_rootchanges $DATA $UNION
+cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 
 $DEBUGCMD
 

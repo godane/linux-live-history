@@ -10,7 +10,7 @@
 
 # linux live flag to fstab, if fstab line doesn't contain it,
 # never remove it from fstab automatically (user added it)
-FSTABLLFLAG="# Auto-Update"
+FSTABLLFLAG="# AutoUpdate"
 
 # ===========================================================
 # user interface functions
@@ -53,7 +53,7 @@ fatal()
    echolog "Something went wrong and we can't continue. This should never happen."
    echolog "Please reboot your computer with Ctrl+Alt+Delete ..."
    echolog
-   ash
+   ash < /dev/console
 }
 
 allow_only_root()
@@ -122,15 +122,15 @@ modprobe_module()
      # if the module is not loaded already
      if [ "`cat $LSMOD 2>/dev/null | egrep \"^$TMPMOD\\\$\"`" = "" ]; then
         gunzip -c $MODULE 2>/dev/null >$TMPMOD
-        if [ "$?" -ne 0 ]; then cp $MODULE $TMPMOD; fi # can't gunzip? copy
+        if [ 0$? -ne 0 ]; then cp $MODULE $TMPMOD; fi # can't gunzip? copy
         insmod $TMPMOD $2 >/dev/null 2>/dev/null; err=$?
-        if [ "$err" -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi # module log
+        if [ 0$err -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi # module log
         rm $TMPMOD
      fi
   done
 
   echo "$PRINTK" >/proc/sys/kernel/printk
-  if [ "$err" -ne 0 ]; then echolog "error inserting module $1 ($err) for your kernel `uname -r`"; fi
+  if [ 0$err -ne 0 ]; then echolog "error inserting module $1 ($err) for your kernel `uname -r`"; fi
   return $err
 }
 
@@ -152,7 +152,7 @@ mount_device()
   mount $FILESYSTEM $1 $2 $OPTIONS >/dev/null 2>/dev/null
   err=$?
 
-  if [ "$err" -ne 0 ]; then rmdir $2 2>/dev/null; fi
+  if [ 0$err -ne 0 ]; then rmdir $2 2>/dev/null; fi
   echo "$PRINTK" >/proc/sys/kernel/printk
   return $err
 }
@@ -170,7 +170,7 @@ mount_device()
 create_module()
 {
    mksquashfs "$1" "$2" $3 >/dev/null
-   if [ $? -ne 0 ]; then return 1; fi
+   if [ 0$? -ne 0 ]; then return 1; fi
    chmod oga-x "$2" # remove execute attrib
 }
 
@@ -182,7 +182,7 @@ mount_module()
 {
    mount -t squashfs -o loop,ro "$1" "$2"
    err=$?
-   if [ $err -eq 0 ]; then
+   if [ 0$err -eq 0 ]; then
       echo "$1 $2" >>/tmp/_mounts
    fi
    return $err
@@ -200,15 +200,18 @@ union_insert_dir()
 
 # List all modules in all directories (base, modules, optional)
 # and filter out unneeded optional modules (not specified by load= kernel parameter)
+# separator for load and noload arguments is "," or ";"
 # $1 = root directory of mounted DATAdir
 #
 list_modules()
 {
-   LOAD="`cmdline_value load`"
+   LOAD="`cmdline_value load | sed -r 's/\*/.\*/g'`"
+   NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g'`"
    ls -A1d $1/base/*.mo $1/modules/*.mo $1/optional/*.mo 2>/dev/null | while read LINE; do
       MODNAME="`basename $LINE .mo`"
-      if [ "$LOAD" != "*" -a "`echo $LINE | grep optional`" != "" -a "`echo $LOAD | egrep \"(^|,)$MODNAME(\\\$|,)\"`" = "" ]; then continue
-        else echo $LINE; fi
+      if [ "$LOAD" != "*" -a "`echo $LINE | grep optional`" != "" -a "`echo $LOAD | egrep \"(^|,)$MODNAME(\\\$|,|[[:space:]])\"`" = "" ]; then continue; fi
+      if [ "`echo $NOLOAD | egrep \"(^|,|;)$MODNAME(\\\$|,|;|[[:space:]])\"`" != "" ]; then continue; fi
+      echo $LINE
    done
 }
 
@@ -223,9 +226,9 @@ union_insert_module()
    if mountpoint $TARGET >/dev/null 2>&1; then continue; fi # skip mounted modules
    mkdir -p $TARGET
    mount_module $2 $TARGET
-   if [ $? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
+   if [ 0$? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
    union_insert_dir $1 $TARGET
-   if [ $? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
+   if [ 0$? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
    basename $TARGET
 }
 
@@ -249,22 +252,13 @@ union_insert_modules()
 #
 copy_to_ram()
 {
-   cp -R "$1/boot" "$2" # kernel is not required but it's nice2have
+   cp -a "$1/rootcopy" "$2" 2>/dev/null # could be empty
    list_modules "$1" | while read MODULE; do
       TARGET="$2/`basename \`dirname $MODULE\``"
       mkdir -p "$TARGET"
       cp "$MODULE" "$TARGET"
-      if [ "$?" -ne 0 ]; then fatal "can't copy to RAM, not enough memory?"; fi
+      if [ $? -ne 0 ]; then fatal "Not enough memory. Using ramsize=$RAMSIZE"; fi
    done
-}
-
-# Copy content of "rootcopy" directory on the CD to $2 (union, usually)
-# $1 = source
-# $2 = destination
-#
-copy_rootchanges()
-{
-   cp -a $1/rootcopy/* $2 2>/dev/null # could be empty
 }
 
 # ===========================================================
@@ -325,7 +319,7 @@ find_live_data_dir()
    list_block_devices | while read DEVICE; do
       DIR="/$1/`basename $DEVICE`"
       mount_device $DEVICE $DIR
-      if [ $? -ne 0 ]; then continue; fi
+      if [ 0$? -ne 0 ]; then continue; fi
       FOUND=`ls -A1d $DIR/livecd.sgn $DIR/*/livecd.sgn 2>/dev/null | head -n 1`
       if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null
       else dirname "$FOUND"; return 1; fi
@@ -449,17 +443,25 @@ fstab_update()
 
       MOUNTDIR="/mnt/$DEV$REMOVABLE"
       FS="`blkid -s TYPE $DEVICE | cut -d = -f 2 | tr -d ' \"'`"
-      if [ "$FS" = "ntfs" -a "$IOCHARSET" != "" ]; then OPT=",nls=$IOCHARSET"; fi
+
+      # add special options for NTFS
+      if [ "$FS" = "ntfs" ]; then
+         OPT=",ro"
+         if [ "$IOCHARSET" != "" ]; then OPT="$OPT,nls=$IOCHARSET"; fi
+      fi
+
+      # add special options for VFAT
       if [ "$FS" = "vfat" -a "$IOCHARSET" != ""  ]; then OPT=",iocharset=$IOCHARSET"; fi
 
+      # if the partition has filesystem, add it to fstab
       if [ "$FS" != "" ]; then
-         fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec$OPT
-         mkdir -p "$1/$MOUNTDIR"
+         if [ "$FS" = "swap" ]; then
+            fstab_update_line $FSTAB~ $DEVICE swap swap defaults
+         else
+            fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec$OPT
+            mkdir -p "$1/$MOUNTDIR"
+         fi
       fi
-   done
-
-   list_swap_devices | while read DEVICE; do
-      fstab_update_line $FSTAB~ $DEVICE swap swap defaults
    done
 
    fstab_update_line $FSTAB~ /dev/fd0 /mnt/floppy vfat,msdos noauto,users,suid,dev,exec
