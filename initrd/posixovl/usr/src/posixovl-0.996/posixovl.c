@@ -1902,7 +1902,8 @@ int main(int argc, char **argv)
 	new_argv = malloc(sizeof(char *) * (argc + 5 - optind));
 	new_argv[new_argc++] = argv[0];
 	snprintf(xargs, sizeof(xargs),
-	         "-oattr_timeout=0,default_permissions,use_ino,nonempty,dev,"
+	         "-oattr_timeout=300,entry_timeout=300,negative_timeout=300,kernel_cache,"
+	         "default_permissions,use_ino,nonempty,dev,"
 	         "fsname=posix-overlay(%s)", root_dir);
 	new_argv[new_argc++] = xargs;
 

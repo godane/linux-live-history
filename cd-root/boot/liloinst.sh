@@ -22,6 +22,11 @@ if [ "$TARGET" = "" ]; then
    exit 1
 fi
 
+if [ "$(cat /proc/mounts | grep "^$TARGET" | grep noexec)" ]; then
+   echo "The disk $TARGET is mounted with noexec parameter, trying to remount..."
+   mount -o remount,exec "$TARGET"
+fi
+
 MBR=$(echo "$TARGET" | sed -r "s/[0-9]+\$//g")
 NUM=${TARGET:${#MBR}}
 cd "$MYMNT"
@@ -69,7 +74,7 @@ initrd=$MYMNT/boot/initrd.gz
 label=Slax
 root=/dev/ram0
 read-write
-append = "ramdisk_size=6666 changes=slaxchanges from=$TARGET"
+append = "ramdisk_size=6666 changes=slaxchanges"
 ENDOFTEXT
 
 echo Updating MBR to setup boot record...

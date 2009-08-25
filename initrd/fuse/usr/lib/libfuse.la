@@ -8,7 +8,7 @@
 dlname='libfuse.so.2'
 
 # Names of this library.
-library_names='libfuse.so.2.7.2 libfuse.so.2 libfuse.so'
+library_names='libfuse.so.2.7.3 libfuse.so.2 libfuse.so'
 
 # The name of the static archive.
 old_library='libfuse.a'
@@ -25,7 +25,7 @@ weak_library_names=''
 # Version information for libfuse.
 current=9
 age=7
-revision=2
+revision=3
 
 # Is this an already installed library?
 installed=yes

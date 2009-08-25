@@ -267,7 +267,7 @@ fs_options()
    NOAUTO=$(cmdline_parameter noauto)
    if [ "$NOAUTO" = "" ]; then NOAUTO="auto"; fi
    if [ "$2" = "fstab" ]; then echo -n "$NOAUTO," ; fi
-   if [ "$1" = "swap" ]; then echo "defaults,noauto"; return 0; fi
+   if [ "$1" = "swap" ]; then echo "defaults"; return 0; fi
    echo -n "noatime,users,suid,dev,exec"
 
    IOCHARSET=$(iocharset)
@@ -890,8 +890,10 @@ fstab_update()
    fstab_add_line $FSTABTMP sysfs /sys sysfs defaults
    list_cdrom_devices | while read DEVICE; do
       MNT=$(device_mountdir $DEVICE)
+      FS=$(device_filesystem $DEVICE)
+      if [ "$FS" = "" ]; then FS=iso9660; fi
       mkdir -p "$1/$MNT"
-      fstab_add_line $FSTABTMP $DEVICE $MNT iso9660 noauto,users,exec
+      fstab_add_line $FSTABTMP $DEVICE $MNT $FS noauto,users,exec
    done
    list_partition_devices | while read DEVICE; do
       MNT=$(device_mountdir $DEVICE)

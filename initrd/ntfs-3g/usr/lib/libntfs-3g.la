@@ -5,19 +5,19 @@
 # It is necessary for linking the library.
 
 # The name that we can dlopen(3).
-dlname='libntfs-3g.so.16'
+dlname='libntfs-3g.so.23'
 
 # Names of this library.
-library_names='libntfs-3g.so.16.0.0 libntfs-3g.so.16 libntfs-3g.so'
+library_names='libntfs-3g.so.23.0.0 libntfs-3g.so.23 libntfs-3g.so'
 
 # The name of the static archive.
 old_library='libntfs-3g.a'
 
 # Libraries that this one depends upon.
-dependency_libs=''
+dependency_libs=' -lpthread -lrt'
 
 # Version information for libntfs-3g.
-current=16
+current=23
 age=0
 revision=0
 
@@ -32,4 +32,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='//lib'
+libdir='/usr/lib'
