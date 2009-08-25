@@ -23,6 +23,7 @@ rcopy()
       echo "Error occured while trying to copy \"$1\" to \"$2\""
       echo "nevertheless your LiveCD may still work."
       echo "Possible reason: not enough free space in initrd or source doesn't exist"
+      echo "If space is your issue, see 'config' file to increase size of initrd."
       echo "---------------------------"
    fi
 }
@@ -51,8 +52,15 @@ MOUNTDIR=/tmp/initrd_mountdir_$$
 INITRD_TREE=/tmp/initrd_tree_$$
 
 if [ ! -d "kernel-modules/$KERNEL" ]; then
-   echo "The directory ./kernel-modules/$KERNEL doesn't exist. Please create it and copy"
-   echo "squashFS and unionFS modules for your kernel version to it."
+   echo "The directory `pwd`/kernel-modules/$KERNEL doesn't exist."
+   echo "Please create it and copy squashfs.ko and unionfs.ko modules"
+   echo "for your kernel (`uname -r`) to this directory."
+   exit 1
+fi
+
+if [ "`ls -1 rootfs/lib`" = "" ]; then
+   echo "cannot find essential libc libraries."
+   echo "please add ld-linux and libc.so to `pwd`./rootfs/lib"
    exit 1
 fi
 
@@ -84,12 +92,12 @@ touch $INITRD_TREE/etc/{m,fs}tab
 cp {linuxrc,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
 chmod a+x $INITRD_TREE/linuxrc
 
-cp static-binaries/modprobe $INITRD_TREE/sbin
-cp static-binaries/busybox $INITRD_TREE/bin
-cp static-binaries/{unionctl,uniondbg} $INITRD_TREE/bin # symlink will be copied as original file
+cp -R rootfs/* $INITRD_TREE
 ln -s busybox $INITRD_TREE/bin/ash
 ln -s busybox $INITRD_TREE/bin/sh
+ln -s busybox $INITRD_TREE/bin/bash
 ln -s busybox $INITRD_TREE/bin/[
+ln -s bin $INITRD_TREE/sbin
 
 LMK="lib/modules/$KERNEL"
 
@@ -164,6 +172,6 @@ debug "deleting directory $MOUNTDIR"
 rmdir $MOUNTDIR
 
 debug "deleting directory $INITRD_TREE"
-rm -Rf $INITRD_TREE
+#rm -Rf $INITRD_TREE
 
 debug "$INITRDIMG.gz created"

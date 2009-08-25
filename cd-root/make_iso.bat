@@ -1,6 +1,7 @@
+@ECHO OFF
 REM  ----------------------------------------------------
-REM  Batch file to create bootable ISO in MS DOS and Windows
-REM  usage: make_iso c:\slax.iso
+REM  Batch file to create bootable ISO in Windows
+REM  usage: make_iso.bat c:\new-slax.iso
 REM  author: Tomas M. <http://www.linux-live.org>
 REM  ----------------------------------------------------
 
@@ -13,7 +14,7 @@ REM  so we need to restore it from backup.
 copy /Y boot\isolinux.bi_ boot\isolinux.bin
 if not "%errorlevel%"=="0" goto error2
 
-tools\DOS\mkisofs.exe @tools\DOS\config -o "%1" -A "%CDLABEL%" -V "%CDLABEL%" .
+tools\WIN\mkisofs.exe @tools\WIN\config -o "%1" -A "%CDLABEL%" -V "%CDLABEL%" .
 goto theend
 
 :error1
@@ -27,4 +28,5 @@ goto theend
 
 :theend
 echo.
+echo New ISO should be created now.
 pause

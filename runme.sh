@@ -2,7 +2,7 @@
 #
 # run this script to create a LiveCD in /tmp/livecd.iso
 # Your kernel image has to be in $ROOT/boot/vmlinuz or $ROOT/vmlinuz
-# 
+#
 
 export PATH=.:./tools:../tools:/usr/sbin:/usr/bin:/sbin:/bin:/
 
@@ -15,8 +15,15 @@ cd $CHANGEDIR
 
 . liblinuxlive || exit 1
 
+# only root can continue, because only root can read all files from your system
+allow_only_root
+
+
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
+echo -ne "Enter path for the kernel you wana use [hit enter for $VMLINUZ]: "
+read NEWKERNEL
+if [ "$NEWKERNEL" != "" ]; then VMLINUZ="$NEWKERNEL"; fi
 if [ "`ls $VMLINUZ 2>>$DEBUG`" = "" ]; then echo "cannot find $VMLINUZ"; exit 1; fi
 
 header "Creating LiveCD from your Linux"
@@ -31,7 +38,7 @@ echo "copying cd-root to $CDDATA, using kernel from $VMLINUZ"
 echo "Using kernel modules from /lib/modules/$KERNEL"
 cp -R cd-root/* $CDDATA
 cp -R tools $CDDATA
-cp -R !info/* $CDDATA
+cp -R DOC/* $CDDATA
 cp $VMLINUZ $CDDATA/boot/vmlinuz
 
 echo "creating initrd image..."

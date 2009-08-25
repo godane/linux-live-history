@@ -1,3 +1,45 @@
+ 5.4.0
+ 
+ * fixed some very important bug in unionfs (by Junjiro Okajima, sponsored by SLAX)
+   that's the reason for the significant version number increase
+ * added deb2mo script, thanks to Peter Chabada
+ * changed tmpfs size from 80% to 60%, I agree that it's better and safer
+   (if there is a lot of RAM, 60% is big enough, if there is not much RAM
+    then 60% is safe, better not enough free space instead of silent hang)
+ * modified copy2ram feature to preserve directory structure for modules
+ * fixed a typo in linuxrc (properly setup /etc/filesystems)
+ * added glibc libraries to initrd, busybox is not statically compiled anymore.
+   - now we can include dynamically compiled binaries in initrd, cool!
+ * added blkid binary
+ * fstab_update rebuilded. We don't need to mount partitions to discover
+   filesystem, blkid is good in this. Also minor fixes applied
+ * uselivemod tries to find out whether our module is stored inside the union.
+   If so, then we can't insert it, it has to be copied to memory first. So is done.
+ * uselivemod now installs (unpacks) the module to filesystem if union is not in /
+
+
+ 5.2.0
+
+ * added unionfs.ko CVS 20060210-1338
+ * fixed nohd boot option to exclude also swap devices
+ * fixed #autoremove label for swap devices detected during boot
+ * added new syslinux and isolinux binaries, fixed isolinux.bi_
+ * added better mkisofs.exe binary, doesn't work in DOS anymore,
+   only in Windows 9x/me/nt/xp. This fixes make_iso.bat.
+ * include kernel version number in error message when modprobe_module fails
+ * better error message if squashfs and unionfs kernel modules are not found
+ * added /etc/filesystems with vfat and ext3 entries, to prevent msdos and ext2
+   from mounting prior these ones.
+ * probe usb modules if probeusb boot parameter is present
+   (useful in combination with "changes=" parameter to store changes to USB)
+ * ask for kernel during runme.sh - so always correct kernel is used
+
+
+ 5.1.9
+
+ * added debug=0 to mount union parameters to force zero debug.
+
+
  5.1.8
  
  * fix isolinux.cfg to display correct splash

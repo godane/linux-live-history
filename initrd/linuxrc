@@ -27,6 +27,12 @@ INITRAMDISK=$MOUNTDIR/live
 # we need cdrom support, isofs support, unionfs support, etc
 modprobe_essential_modules
 setup_dma
+echo -e "ext3\nvfat\n*" >/etc/filesystems
+
+# in some cases, we need USB modules soon
+if [ "`cmdline_parameter probeusb`" != "" ]; then
+   modprobe_usb_modules
+fi
 
 $DEBUGCMD
 
@@ -43,12 +49,12 @@ else false; fi
 
 # mount tmpfs only in the case when changes= boot parameter was empty
 # or we were not able to mount the storage device
-if [ $? -ne 0 ]; then mount -t tmpfs -o "size=80%" tmpfs $MEMORY; fi
+if [ $? -ne 0 ]; then mount -t tmpfs -o "size=60%" tmpfs $MEMORY; fi
 
 mkdir -p $CHANGES
 mkdir -p $COPY2RAM
 mkdir -p $IMAGES
-mount -t unionfs -o dirs=$CHANGES=rw unionfs $UNION
+mount -t unionfs -o debug=0,dirs=$CHANGES=rw unionfs $UNION
 if [ $? -ne 0 ]; then fatal "can't setup union in /union directory"; fi
 
 $DEBUGCMD
@@ -60,7 +66,7 @@ DATA="`find_live_data_dir $MOUNTDIR`";
 if [ "$DATA" = "" ]; then
    modprobe_usb_modules;
    echolog -n "searching for usb devices .."
-   for i in 1 2 3 4 5 6 7 8; do # max 36 seconds
+   for i in 1 2 3 4 5 6 7 8; do # max 36 seconds, prolong the delay each time
       echolog -n "."
       create_block_devices >/dev/null
       DATA="`find_live_data_dir $MOUNTDIR`";
@@ -68,7 +74,12 @@ if [ "$DATA" = "" ]; then
       sleep $i;
    done
 fi
-if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found. Are you using unsupported SCSI?"; fi
+if [ "$DATA" = "" ]; then fatal "
+Data for LiveCD not found. Searching for livecd.sgn file, not found.
+You are maybe using an unsupported boot device
+(for example a CD-ROM connected to SCSI or PCMCIA interface)
+Try to copy all data from your boot media to your IDE harddisk,
+eg. to /mnt/sda1/alldata/ or C:\\alldata\\. Then boot again."; fi
 echolog "found in $DATA"
 
 $DEBUGCMD
@@ -104,14 +115,14 @@ copy_rootchanges $DATA $UNION
 $DEBUGCMD
 
 echo "creating /etc/fstab"
-activate_fstab $UNION
+fstab_update $UNION
 
 # More likely these directories aren't there.
 # Even if they are, this won't hurt.
 mkdir -p $UNION/proc
 mkdir -p $UNION/sys
-mkdir -p $UNION/tmp
 mkdir -p $UNION/dev
+mkdir -m 0777 -p $UNION/tmp
 
 $DEBUGCMD
 
@@ -132,7 +143,7 @@ fi
 
 header "linux live end"
 pivot_root . $INITRAMDISK
-exec $CHROOT . sbin/init <dev/console >dev/console 2>&1; fi
+exec $CHROOT . sbin/init <dev/console >dev/console 2>&1
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
