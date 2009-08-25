@@ -12,11 +12,8 @@ if [ "$1" = "" -o "$2" = "" ]; then
    exit 1
 fi
 
-if [ -a ./liblinuxlive ]; then
-   . ./liblinuxlive
-else
-   . /usr/lib/liblinuxlive || exit 1
-fi
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 1
 
 TMPDIR=/tmp/tgz2mo$$
 

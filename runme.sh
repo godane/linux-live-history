@@ -21,7 +21,7 @@ allow_only_root
 
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
-echo -ne "Enter path for the kernel you wana use [hit enter for $VMLINUZ]: "
+echo -ne "Enter path for the kernel you wanna use [hit enter for $VMLINUZ]: "
 read NEWKERNEL
 if [ "$NEWKERNEL" != "" ]; then VMLINUZ="$NEWKERNEL"; fi
 if [ "`ls $VMLINUZ 2>>$DEBUG`" = "" ]; then echo "cannot find $VMLINUZ"; exit 1; fi

@@ -1,3 +1,19 @@
+ 5.4.6
+
+ * modified unsquashfs to force overwrite of existing files
+   (added -f option and sent patch to Phillip - unsquashfs author)
+ * mo2dir now uses unsquashfs -f, so it works even without squashfs support in kernel!
+ * modified mo2dir dir2mo and other scripts to work from ./tools/ directory
+   even without installing the scripts and even if ./tools/ is not current directory
+ * fixed some typos in error messages
+ * fixed load= parameter which were broken by changes made in 5.4.5
+ * modules are now found in /base /modules and /optional directories
+   and all its subdirectories!
+ * load= and noload= now officially work as regexp, you may use * which
+   is translated to '.*'. Moreover if you have subdirectories of modules,
+   you may load or noload all the trees by a single argument
+
+
  5.4.5
 
  * fixed list_modules function to properly handle noload parameter

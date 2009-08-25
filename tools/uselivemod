@@ -14,11 +14,8 @@ if [ "$MODULE" = "" ]; then
    exit
 fi
 
-if [ -a ./liblinuxlive ]; then
-   . ./liblinuxlive
-else
-   . /usr/lib/liblinuxlive || exit 1
-fi
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 1
 
 allow_only_root
 IMAGES=/mnt/live/memory/images

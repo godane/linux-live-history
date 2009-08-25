@@ -54,7 +54,7 @@ INITRD_TREE=/tmp/initrd_tree_$$
 if [ ! -d "kernel-modules/$KERNEL" ]; then
    echo "The directory `pwd`/kernel-modules/$KERNEL doesn't exist."
    echo "Please create it and copy squashfs.ko and unionfs.ko modules"
-   echo "for your kernel (`uname -r`) to this directory."
+   echo "for your kernel ($KERNEL) to this directory."
    exit 1
 fi
 

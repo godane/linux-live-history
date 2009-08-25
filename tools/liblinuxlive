@@ -207,9 +207,11 @@ list_modules()
 {
    LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
    NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
-   ls -A1d $1/base/*.mo $1/modules/*.mo $1/optional/*.mo 2>/dev/null | while read LINE; do
-      MODNAME="`basename $LINE .mo`"
-      if [ "$LOAD" -a "`echo $LINE | grep optional`" -a "`echo $MODNAME | egrep -v \"$LOAD\"`" ]; then continue; fi
+   find $1/base $1/modules $1/optional -name "*.mo" 2>/dev/null | while read LINE; do
+      MODNAME="`echo $LINE | cut -b ${#1}- | cut -b 2-`"
+      if [ "`echo $LINE | grep /optional/`" ]; then
+         if [ ! "$LOAD" -o ! "`echo $MODNAME | egrep \"$LOAD\"`" ]; then continue; fi
+      fi
       if [ "$NOLOAD" -a "`echo $MODNAME | egrep \"$NOLOAD\"`" ]; then continue; fi
       echo $LINE
    done
@@ -219,6 +221,7 @@ list_modules()
 # $1 = union absolute path
 # $2 = module.mo full path
 # $3 = destination folder, where images will be mounted to
+# $4 = preffix length strip (number of characters)
 #
 union_insert_module()
 {
@@ -229,7 +232,7 @@ union_insert_module()
    if [ 0$? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
    union_insert_dir $1 $TARGET
    if [ 0$? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
-   basename $TARGET
+   echo $2 | cut -b $4- | cut -b 2-
 }
 
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
@@ -241,7 +244,7 @@ union_insert_modules()
 {
    list_modules $2 | while read MODULE; do
       echo -n " -> "
-      union_insert_module $1 $MODULE $3
+      union_insert_module $1 $MODULE $3 ${#2}
    done
 }
 
