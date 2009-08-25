@@ -13,7 +13,7 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
 
   Sample kernel config file can be found if you boot Slax and see /proc/config.gz
 
-  * Your distro must use kernel 2.6.20 or higher (in order to use sqlzma patch)
+  * Your distro must use kernel 2.6.24 or higher (in order to use sqlzma patch)
 
   * all the following things must be compiled directly into kernel:
      (these options are usually compiled so you shouldn't have problems)

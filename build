@@ -69,8 +69,15 @@ echo "creating compressed images..."
 for dir in $MKMOD; do
     if [ -d $ROOT/$dir ]; then
       echo "base/$dir.lzm ..."
-      create_module $ROOT/$dir $CDDATA/$LIVECDNAME/base/$dir.lzm -keep-as-directory
+      echo -ne > exclude.txt
+      for i in $EXCLUDE; do
+         part=$(echo "x/$i" | tr -s / | sed -r "s:x/[^/]+/::")
+         if [ -e "$ROOT/$dir/$part" ]; then echo "$ROOT/$dir/$part" >> exclude.txt; fi
+      done
+      cat exclude.txt
+      create_module $ROOT/$dir $CDDATA/$LIVECDNAME/base/$dir.lzm -keep-as-directory -ef exclude.txt
       if [ $? -ne 0 ]; then exit; fi
+      rm exclude.txt
       echo
     fi
 done

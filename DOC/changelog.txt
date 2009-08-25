@@ -1,3 +1,10 @@
+ 6.2.1
+ 
+ * bootinst.sh renamed to liloinst.sh
+ * added EXCLUDE variable to .config
+ * fixed /etc/fstab inclusion in the etc.lzm module ... it must be excluded
+ 
+
  6.2.0
  
  * don't use udba=none (defaults now to udba=reval) because of FUSE
