@@ -132,4 +132,4 @@ echo -n "copying selected modules to RAM... "
 # base
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-doN­‰·# moduleÖ›‰· -aA1b "$LIVP
+doN­‰·# moduleÖ›‰· -aA1b "$LIVˆ
