@@ -1,3 +1,8 @@
+ 6.2.9
+ 
+ * fixed a bug in unsquashfs, it didn't work well on SMP machines
+
+
  6.2.8
  
  * don't umount filesystems if fatal() function is called, so we can
