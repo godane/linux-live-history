@@ -1,3 +1,10 @@
+ 5.4.5
+
+ * fixed list_modules function to properly handle noload parameter
+ * fixed fstab_update_line to skip commented lines (starting with #)
+ * copy both zlib_deflate and zlib_inflate kernel modules to initrd
+
+
  5.4.4
  
  * added noload cheatcode, to disable loading specified slax modules (even those from /base/ and /modules)

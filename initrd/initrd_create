@@ -108,6 +108,7 @@ cp kernel-modules/$KERNEL/squashfs.ko* $INITRD_TREE/$LMK/kernel/fs
 
 #copy filesystem modules, if not directly copied into kernel
 rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/lib/zlib_deflate $INITRD_TREE 2>>$DEBUG
 rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>>$DEBUG
 
 rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>>$DEBUG

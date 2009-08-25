@@ -205,12 +205,12 @@ union_insert_dir()
 #
 list_modules()
 {
-   LOAD="`cmdline_value load | sed -r 's/\*/.\*/g'`"
-   NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g'`"
+   LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
+   NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
    ls -A1d $1/base/*.mo $1/modules/*.mo $1/optional/*.mo 2>/dev/null | while read LINE; do
       MODNAME="`basename $LINE .mo`"
-      if [ "$LOAD" != "*" -a "`echo $LINE | grep optional`" != "" -a "`echo $LOAD | egrep \"(^|,)$MODNAME(\\\$|,|[[:space:]])\"`" = "" ]; then continue; fi
-      if [ "`echo $NOLOAD | egrep \"(^|,|;)$MODNAME(\\\$|,|;|[[:space:]])\"`" != "" ]; then continue; fi
+      if [ "$LOAD" -a "`echo $LINE | grep optional`" -a "`echo $MODNAME | egrep -v \"$LOAD\"`" ]; then continue; fi
+      if [ "$NOLOAD" -a "`echo $MODNAME | egrep \"$NOLOAD\"`" ]; then continue; fi
       echo $LINE
    done
 }
@@ -375,7 +375,7 @@ modprobe_usb_modules()
    modprobe_module ohci-hcd
    modprobe_module uhci-hcd
    modprobe_module usb-storage
-   sleep 5
+   sleep 2
    create_block_devices
 }
 
@@ -408,7 +408,7 @@ setup_dma()
 #
 fstab_update_line()
 {
-   if [ "`cat \"$1\" | egrep \"^[[:space:]]*[^[:space:]]+[[:space:]]+$3\"`" = "" ]; then
+   if [ "`cat \"$1\" | egrep \"^[[:space:]]*[^#[:space:]]+[[:space:]]+$3\"`" = "" ]; then
       echo "$2" "$3" "$4" "$5" 0 0 "$FSTABLLFLAG" >>$1
    fi
 }
