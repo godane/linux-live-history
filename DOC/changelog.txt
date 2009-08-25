@@ -1,3 +1,12 @@
+ 6.0.4
+
+ * mo2lzm - first try to mount the .mo module instead of unpacking it.
+   only if that fails, unsquashfs to tmp directory
+ * linuxrc - support bin/chroot and sbin/chroot (for gentoo)
+ * changed default LIVECDNAME to 'livecd', I forgot 'slax' inthere
+ * implemented changes to make_iso.bat script
+
+
  6.0.3
 
  * I forgot to include all required directories in the MKMOD variable

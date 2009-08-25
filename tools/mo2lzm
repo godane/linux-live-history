@@ -18,6 +18,14 @@ allow_only_root
 TMP=/tmp/mo2lzm$$
 mkdir -p $TMP
 
-lzm2dir "$1" $TMP # it's backward compatible so it will read old mo format
+# try to mount it first, if we have squashfs support in kernel
+mount -o loop -t squashfs "$1" $TMP 2>/dev/null
+
+# if mounting fails, unpack it to tmp. This consumes disk space
+if [ $? -ne 0 ]; then
+   lzm2dir "$1" $TMP
+fi
+
 dir2lzm $TMP "$2"
+umount $TMP 2>/dev/null
 rm -Rf $TMP

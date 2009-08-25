@@ -1,9 +1,5 @@
 linux - slax - LIVECDNAME - v liblinuxlive to upravit
 
-lzm2mo bla bla ... zkotrolovat jestli to funguje vsechno
-uselivemod by mel akceptovat lzm aj .mo
-nicmene vetsina by mela odmitnout s .mo pracovat
-
 vysunovani CDROM u rebootu - nekteri rikaji ze ani pre2 nefunguje dobre
 
 nohotplug should affect USB modules probing 

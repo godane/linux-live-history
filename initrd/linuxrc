@@ -178,6 +178,8 @@ if [ ! -e /dev/console ]; then mknod /dev/console c 5 1; fi
 cp -fdR /dev .
 
 # find chroot and init
+if [ -x bin/chroot ]; then  CHROOT=/bin/chroot; fi
+if [ -x sbin/chroot ]; then  CHROOT=/sbin/chroot; fi
 if [ -x usr/bin/chroot ]; then  CHROOT=/usr/bin/chroot; fi
 if [ -x usr/sbin/chroot ]; then CHROOT=/usr/sbin/chroot; fi
 if [ "$CHROOT" = "" ]; then fatal "Can't find executable chroot command"; fi
