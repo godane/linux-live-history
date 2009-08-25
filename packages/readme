@@ -1,0 +1,6 @@
+devfsd package for Slackware distribution
+
+You'll need to install it by using
+  installpkg devfsd-1.3.25-i486-4.tgz
+in the case you're using Slackware 10 or newer to build your Live CD
+(Slackware 9.1 and older contains devfsd as a standard part)

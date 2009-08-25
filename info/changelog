@@ -1,3 +1,14 @@
+ 4.2
+
+ * modified dir2img to properly handle third parameter.
+   It defaults to /data for tree without /data
+   and it defaults to / for tree with /data
+ * initrd size changed to 9999 KB
+ * fixed echolog calling from /mnt/tmp/init
+ * don't copy ext3, ntfs or reiserfs kernel modules to initrd if they doesn't exist
+   (this caused fatal errors during initrd_create)
+
+
  4.1.4
 
  * added some more requirements to be accurate
@@ -5,7 +16,7 @@
  * added 2.6 kernels todo
  * added isolinux 2.10
  * modified create_bootiso.sh to allow creating ISO from ro CD
- (untested yet, but should work!)
+ * added devfsd package to /packages directory
 
 
  4.1.3

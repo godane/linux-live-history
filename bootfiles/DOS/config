@@ -6,7 +6,7 @@ initrd=\initrd.gz    # this file gets loaded as 'initial ramdisk'
 init=linuxrc         # start /linuxrc script from initrd.gz image
 load_ramdisk=1       # 
 prompt_ramdisk=0     # we do not need to be prompted
-ramdisk_size=7777    # our initrd.gz is 7777 KB of size when unpacked
+ramdisk_size=9999    # our initrd.gz is 9999 KB of size when unpacked
 
 max_loop=255         # overide default to allow inserting up to 127 modules
 

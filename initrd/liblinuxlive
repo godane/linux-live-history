@@ -1,14 +1,25 @@
-../tools/liblinuxlivefi
+../tools/liblinuxlivees.conf # workaround to avoid error messages
+
+echolog "creating init script in /tmp/init..."
+
+echo >/mnt/$LINUXINIT
+chmod 0755 /mnt/$LINUXINIT
+
+NEWROOTPASS="`cmdline_value passwd`"
+if [ "$NEWROOTPASS" = "ask" ]; then
+   echolog -ne "\nEnter new password for root: "
+   read -s NEWROOTPASS
+fi
 
 if [ ! "$NEWROOTPASS" = "" ]; then
    echolog "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
 fi
 
 echo '
-echolog "freeing ramdisk..."
+echo "freeing ramdisk..."
 umount -nl /mnt/ramdisk
 /sbin/blockdev --flushbufs /dev/rd/0
-echolog "'"`header \"starting init\"`"'"
+echo "'"`header \"starting init\"`"'"
 exec /sbin/init <dev/console >dev/console 2>&1
 ' >>/mnt/$LINUXINIT
 
@@ -27,17 +38,7 @@ echolog "You are not supposed to be here, something went wrong!"
 echolog "calling /mnt/usr/bin/chroot failed?"
 echolog "Press Ctrl+Alt+Del for reboot."
 while [ 1 = 1 ]; do bash; done
-DDATA $IMGRO $IMGRW $CP2RAM $CHANGES
-
-echolog -n "copying selected modules to RAM... "
-
-# base
-ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
-   echolog "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-done
-
-# modules
-ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
+dules" 2>/dev/null | while read IMG; do
    echolog "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
 
@@ -124,5 +125,5 @@ cat $MOUNTS | while read DEVICE; do
    if [ "$LINE" = "" ]; then continue; fi
 
    umount "$DEVICE" 1>/dev/null 2>/dev/null
-   if [ "$?" = 0N­‰·then
-   Ö›‰·INERO=${LINEˆ
+   iN­‰·"$?" = 0Ö›‰·then
+      Lˆ

@@ -267,17 +267,30 @@ modprobe_module()
   return $err
 }
 
-# Mount all CDs to $1
-# $1 = mount directory, in which all CDs will be mounted,    eg. /mnt/mnt
-# return: echo all mounted devices
+# List all CD-ROMs
+# by using /dev entries (mounted devfs filesystem)
 #
-mount_all_cds()
+list_all_cdroms()
 {
    CDIR=/dev/cdroms
    if [ ! -d "$CDIR" ]; then return 0; fi
    ls -aAb1 "$CDIR" | while read FILE ; # list all files in directory
    do
-      CDDEV="`readlink -f $CDIR/$FILE`"
+      echo "$CDIR/$FILE"
+   done
+}
+
+# Mount all CDs to $1
+# $1 = mount directory, in which all CDs will be mounted, eg. /mnt/mnt
+# return: echo all mounted devices
+# This won't include empty CD-ROMs!
+#
+mount_all_cds()
+{
+   list_all_cdroms | while read DEVICE ;
+   do
+      FILE="`basename $DEVICE`"
+      CDDEV="`readlink -f $DEVICE`"
       mount_device "$CDDEV" "$1/$FILE" ro
       echolog "$CDDEV"
    done
@@ -336,8 +349,10 @@ rcopy()
       cp --parent -R "$1" "$2"
    fi
    if [ "$?" -ne 0 ]; then
+      echo "---------------------------"
       echo "Error occured while trying to copy \"$1\" to \"$2\""
-      echo "Possible reason: not enough free space"
-      exit
+      echo "nevertheless your LiveCD may still work."
+      echo "Possible reason: not enough free space in initrd or source doesn't exist"
+      echo "---------------------------"
    fi
 }

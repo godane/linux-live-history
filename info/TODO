@@ -1,0 +1,20 @@
+The future of Linux Live scripts will look like this:
+
+- some kernel requirements (devfs for example) will
+  dissappear. /dev tree will be maintained by sysfs and udev,
+  devfsd daemon won't be necessary.
+
+  One will be able to use ANY (reasonable) 2.6 kernel configuration
+
+  And this also means that I will be able to use Slackware's official
+  (precompiled) 2.6 kernels, which will save alot of work and brings
+  better compatibility for .ko modules (the official Slackware kernel
+  configuration is well known). People won't need to compile own kernel
+  or to install my precompiled version to their LiveCD.
+
+- unionfs filesystem (www.filesystems.org) will be used to overmount CD
+  and to insert modules instead of ovlfs, which seems to be not developed
+  for many years. Unionfs will also allow me to remove already-inserted
+  modules, it will provide the functionality to create the whole LiveCD
+  more flexible. SLAX's base filesystem (/base/) will be separable
+  to many different modules.

@@ -64,9 +64,15 @@ LMK="lib/modules/$KERNEL"
 rcopy /$LMK/kernel/fs/ovlfs $MOUNTDIR
 
 #copy filesystem modules, if not directly copied into kernel
-rcopy /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
-rcopy /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
-rcopy /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
+if [ -d /$LMK/kernel/fs/ntfs ]; then
+   rcopy /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
+fi
+if [ -d /$LMK/kernel/fs/ext3 ]; then
+   rcopy /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
+fi
+if [ -d /$LMK/kernel/fs/reiserfs ]; then
+   rcopy /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
+fi
 
 #usb modules
 rcopy /$LMK/kernel/drivers/usb/usbcore.* $MOUNTDIR 2>/dev/null

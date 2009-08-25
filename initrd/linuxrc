@@ -125,6 +125,7 @@ fi
 
 # copy entire CD to harddisk and use it from there
 if [ ! "$TOHD" = "" ]; then
+   TOHDOK=0
    echolog "Remounting $TOHD read-write"
    remount /mnt/mnt/$TOHD rw
    if [ $? -eq 0 ]; then
@@ -275,10 +276,20 @@ cat $MOUNTS | while read DEVICE; do
    fi
 done
 
+list_all_cdroms | while read DEVICE ;
+do
+  FILE=/mnt/"`basename $DEVICE`"
+  CDDEV="`readlink -f $DEVICE`"
+  mkdir -p /mnt/$FILE
+  if [ "`cat /mnt/etc/fstab | grep $CDDEV`" = "" ]; then
+     echo "$CDDEV $FILE iso9660 noauto,owner,ro 0 0" >>/mnt/etc/fstab
+  fi
+done
+
 list_swaps >>/mnt/etc/fstab
 
 echo >/mnt/etc/mtab
-touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
+touch -t 197001010000.00 /mnt/etc/modules.conf # workaround to avoid error messages
 
 echolog "creating init script in /tmp/init..."
 
@@ -296,10 +307,10 @@ if [ ! "$NEWROOTPASS" = "" ]; then
 fi
 
 echo '
-echolog "freeing ramdisk..."
+echo "freeing ramdisk..."
 umount -nl /mnt/ramdisk
 /sbin/blockdev --flushbufs /dev/rd/0
-echolog "'"`header \"starting init\"`"'"
+echo "'"`header \"starting init\"`"'"
 exec /sbin/init <dev/console >dev/console 2>&1
 ' >>/mnt/$LINUXINIT
 
