@@ -10,28 +10,29 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      - initrd (CONFIG_BLK_DEV_INITRD=y)
 
      You can use untouched Vanila Linux kernel from Slackware!
+     
+   * all the following things must be compiled in the kernel or as a 
+     kernel modules:
+     - loop
+     - isofs (if you will boot your live distro from CDROM)
+     - ehci-hcd, ohci-hcd, uhci-hcd, usb-storage (if you will boot your live distro from USB)
 
-   * unionFS module must be compiled for your kernel. Download the source
-     from here: http://www.filesystems.org/project-unionfs.html and
-     compile unionfs.ko module. You don't need it if linux-live contains
-     a precompiled kernel module for you (in initrd/kernel-modules directory)
-
-   * SquashFS filesystem (http://squashfs.sourceforge.net) is needed
-     to compress all data. It's available only as a patch for kernel
-     but it can be used to compile a kernel module squashfs.ko. You will
-     need mksquashfs command either, it's a part of squashfs tools.
+   * all these modules must be available:
+     - unionfs.ko (http://www.filesystems.org/project-unionfs.html)
+     - squashfs.ko (http://squashfs.sourceforge.net)
+     You will need mksquashfs command either, it's a part of squashfs tools.
 
    * Your distro must be running kernel 2.6.9 or higher
      and udev must be installed and working.
      
-   * You must patch your distro so it won't test the status of root directory
+   * You must modify your distro so it won't test the status of root directory
      (whether it is or is not writable). For example, Slackware is testing 
-     the status of the root partition and if it's read-write, it will display
-     a message and will wait for user input. This is something we don't like,
-     right? Unionfs can't be remounted ro, so I can't avoid this in linux live
-     scripts. I have to patch Slackware rc scripts (rc.S) to skip this test.
-     You will need to do something similar for your distro.
+     the status of the root partition during boot and if it's read-write, 
+     it will display a message and will wait for user input. This is something 
+     we don't like, right? Unionfs can't be remounted ro, so I can't avoid 
+     this in linux live scripts. I have to patch Slackware rc scripts (rc.S)
+     to skip this test. You will need to do something similar for your distro.
 
-   * Your distro must have /usr/sbin/chroot
+   * Your distro must have /usr/bin/chroot
 
   These requirements could change with new kernel or unionfs versions.

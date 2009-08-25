@@ -3,7 +3,7 @@
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 . liblinuxlive
 
-header "linuxrc-start"
+header "starting Linux Live scripts <http://www.linux-live.org/>"
 echolog "logging all messages to /var/log/livedbg"
 
 echolog "mounting /proc and /sys filesystems"
@@ -85,12 +85,16 @@ mkdir -p $UNION/tmp
 mkdir -p $UNION/dev
 mkdir -p $UNION/boot
 
+umount /sys # we don't need it anymore
 if [ ! -e $UNION/dev/console ]; then mknod $UNION/dev/console c 5 1; fi
 pivot_root . $INITRAMDISK
-exec /usr/sbin/chroot . sbin/init <dev/console >dev/console 2>&1
+
+header "linux live end"
+
+if [ -x /usr/bin/chroot ]; then exec /usr/bin/chroot . sbin/init <dev/console >dev/console 2>&1; fi
+if [ -x /usr/sbin/chroot ]; then exec /usr/sbin/chroot . sbin/init <dev/console >dev/console 2>&1; fi
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
-echolog "calling $UNION/usr/bin/chroot failed?"
 echolog "Press Ctrl+Alt+Del for reboot."
 ash

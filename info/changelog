@@ -1,3 +1,10 @@
+ 5.0.7
+
+ * linuxrc: umount /sys before chroot, because Slackware won't moot /sys
+   if it's mounted somewhere and it's a good idea to umount it anyway.
+ * linuxrc: chroot is called from /usr/bin/chroot at first, if there is 
+   no such executable then linux-live scripts try /usr/sbin/chroot
+
  5.0.6
 
  * added img2mo tool to convert old format module to new one
