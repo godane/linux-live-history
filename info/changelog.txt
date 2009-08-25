@@ -1,3 +1,21 @@
+ 5.1.7
+ 
+ * added support for 2.6.13.2 linux kernel, using test26 config from Slackware
+ * added memtest v1.60
+ * liblinuxlive: added a special #comment to activate_fstab
+ * liblinuxlive: copy only usable files when copy2ram is used
+
+
+ 5.1.6
+ 
+ * modified error message if no CD DATA are found.
+ * added support for 2.6.12.5 linux kernel
+ * default log file is now created in /tmp/linux-live-debug.log
+ * fixed uselivemod script (it didn't start rc.d scripts)
+ * updated mksquashfs to version 2.2
+ * added ifconfig and dmesg support to busybox
+
+
  5.1.4
  
  * uselivemod: requires unionfs to be compiled with -DSETUP_BROKEN_LOSETUP=1

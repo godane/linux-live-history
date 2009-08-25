@@ -51,7 +51,7 @@ MOUNTDIR=/tmp/initrd_mountdir_$$
 INITRD_TREE=/tmp/initrd_tree_$$
 
 if [ ! -d "kernel-modules/$KERNEL" ]; then
-   echo "The directory kernel-modules/$KERNEL doesn't exist. Please create it and copy"
+   echo "The directory ./kernel-modules/$KERNEL doesn't exist. Please create it and copy"
    echo "squashFS and unionFS modules for your kernel version to it."
    exit 1
 fi

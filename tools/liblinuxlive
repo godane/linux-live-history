@@ -5,6 +5,14 @@
 #
 
 # ===========================================================
+# variables
+# ===========================================================
+
+# linux live flag to fstab, if fstab line doesn't contain it,
+# never remove it from fstab automatically (user added it)
+FSTABLLFLAG="# allow autochange"
+
+# ===========================================================
 # user interface functions
 # ===========================================================
 
@@ -41,9 +49,11 @@ header()
 fatal()
 {
    header "Fatal error occured - $1"
-   echolog "Something went wrong and we can't continue booting :("
-   echolog "You may explore the system by using simple commands like ls, lsmod, mount, etc."
-   echolog "You may also try to hit Ctrl+D. Booting will continue. Use at your own risk."
+   echolog "Something went wrong and we can't continue. This should never happen."
+   echolog "Please explore the system by using simple commands like mount or dmesg"
+   echolog "and if you found how to fix the bug, let me know at bugs@linux-live.org."
+   echolog "This way we can make linux live scripts even better. Thank you."
+   echolog "If you hit Ctrl+D now, the booting will continue. But use at your own risk."
    echolog "To be safe, hit Ctrl+Alt+Delete to reboot."
    echolog
    ash
@@ -229,14 +239,18 @@ union_insert_modules()
    done
 }
 
-# Copy modules to RAM directory
+# Copy LiveCD modules to RAM directory
+# will copy only /boot, and module files from $1
 # $1 = data directory
 # $2 = target directory in RAM
 #
 copy_to_ram()
 {
-   cp -R $1/* $2
-   if [ "$?" -ne 0 ]; then fatal "can't copy to RAM, not enough memory?"; fi
+   cp -R "$1/boot" "$2"
+   list_modules "$1" | while read MODULE; do
+      cp "$MODULE" "$2"
+      if [ "$?" -ne 0 ]; then fatal "can't copy to RAM, not enough memory?"; fi
+   done
 }
 
 # Copy content of "rootcopy" directory on the CD to $2 (union, usually)
@@ -392,7 +406,7 @@ activate_fstab()
    list_cdrom_devices | while read DEVICE; do
       MOUNTDIR="/mnt/`basename $DEVICE`_cdrom"
       mkdir -p $1/$MOUNTDIR
-      echo "$DEVICE $MOUNTDIR iso9660 noauto,users,exec 0 0" >>$FSTAB
+      echo "$DEVICE $MOUNTDIR iso9660 noauto,users,exec 0 0 $FSTABLLFLAG" >>$FSTAB
    done
 
    list_partition_devices | while read DEVICE; do
@@ -410,14 +424,14 @@ activate_fstab()
       FS="`cat /proc/mounts | grep $DEVICE | grep $MOUNTDIR | cut -d \" \" -f 3 | head -n 1`"
       umount "$1/$MOUNTDIR" 2>/dev/null
       if [ $? -eq 0 ]; then
-         echo "$DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec 0 0" >>$FSTAB
+         echo "$DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec 0 0 $FSTABLLFLAG" >>$FSTAB
       else # remove empty directory
          rmdir "$1/$MOUNTDIR" 2>/dev/null
       fi
    done
 
    fdisk -l 2>/dev/null | grep -i "Linux swap" | egrep "^/dev/" \
-     | cut -f 1 -d " " | sed -r "s/(.+)/\\1 swap swap defaults 0 0/" >>$FSTAB
+     | cut -f 1 -d " " | sed -r "s/(.+)/\\1 swap swap defaults 0 0 $FSTABLLFLAG/" >>$FSTAB
 
    echo "/dev/fd0 /mnt/floppy auto noauto,users,suid,dev,exec 0 0" >>$FSTAB
    mkdir -p $1/mnt/floppy

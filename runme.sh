@@ -10,16 +10,17 @@ CHANGEDIR="`dirname \`readlink -f $0\``"
 echo "Changing current directory to $CHANGEDIR"
 cd $CHANGEDIR
 
-. liblinuxlive || exit 1
-. config || exit 1
-
+. ./config || exit 1
 ./install $ROOT
+
+. liblinuxlive || exit 1
 
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
 if [ "`ls $VMLINUZ 2>>$DEBUG`" = "" ]; then echo "cannot find $VMLINUZ"; exit 1; fi
 
 header "Creating LiveCD from your Linux"
+echo "some debug information can be found in $DEBUG"
 
 mkdir -p $CDDATA/base
 mkdir -p $CDDATA/modules

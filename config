@@ -27,4 +27,4 @@ ROOT=
 COMPRESS=1
 
 # Enable debug by setting the following parameter to "logfile.log"
-DEBUG=/dev/null
+DEBUG=/tmp/linux-live-debug.log

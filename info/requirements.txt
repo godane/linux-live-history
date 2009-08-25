@@ -16,7 +16,7 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      - tmpfs (CONFIG_TMPFS=y)
      - ramdisk (CONFIG_BLK_DEV_RAM=y)
      - initrd (CONFIG_BLK_DEV_INITRD=y)
- 
+
     You can use untouched Vanila Linux kernel 2.6 from Slackware!
     (but in that case you have to compile unionfs and squashfs modules yourself)
 

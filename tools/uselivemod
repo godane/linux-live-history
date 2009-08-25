@@ -25,11 +25,11 @@ MOD="`union_insert_module / \"$1\" $IMAGES`"
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 1; fi
 
 # all executables in /etc/rc.d/ from this module will be started
-# with two arguments: start mo. This happens only by this script (uselivemod),
+# with two arguments: "start" "mo". This happens only by this script (uselivemod),
 # not in the case when module is loaded during OS startup.
 find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
    if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
-      ${SETUP##$IMAGES/$MOD} start mo
+      ${SCRIPT##$IMAGES/$MOD} start mo
    fi
 done
 
