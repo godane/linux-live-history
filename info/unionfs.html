@@ -47,6 +47,8 @@ link="#0000FF" vlink="#0000FF">
 
 <h2>Definitions</h2>
 
+This page shows an example of using unionfs, implemented in SLAX Linux Live CD.
+
 <p><a href=http://unionfs.filesystems.org>Unionfs</a>, developed at Stony Brook university in 2004, is a stackable unification file system, which can merge the contents of several directories (so called branches) while 
 keeping their physical content separate. It allows any mix of read-only and read-write branches, as well as insertion and deletion of branches on the fly. Unionfs can be used in 
 several ways, for example to unify home directories from multiple filesystems on different disk partitions, or to merge several CDs to create a unified view of a photo archive. In 
@@ -68,9 +70,9 @@ Two steps are required to disable debug at all:</p>
 	<li>edit Makefile, and empty the variable UNIONFS_DEBUG_CFLAG (remove &quot;-g&quot; from the end of line)</li>
 	<li>create a file called fistdev.mk in the directory with sources, and add this text to it: <br>
 
-	EXTRACFLAGS=-DNODEBUG</li>
+	EXTRACFLAGS=-DUNIONFS_NDEBUG</li>
 </ul>
-<p>The compiled kernel module will be about 200 KB big without debug info, compared to 5 MB with it.</p>
+<p>The compiled kernel module will be about 80 KB big without debug info, compared to 5-7 MB with it.</p>
 <p>Another important thing is to download and extract sources for your running kernel (compilation won't work without them) and then modify LINUXSRC variable in Makefile, adding 
 path where you actually extracted it (this can be autodetected in some cases).</p>
 <p>Finally, use the following commands to build and install unionfs module into /lib/modules/$(KernelVersion)/kernel/fs/unionfs:</p>
@@ -102,20 +104,23 @@ Some simple example follows, use unionctl command without any argument to see al
 <p>In the case when you change the content of branches themselves, execute the following command to force revalidation of the union:</p>
 <pre>uniondbf -g /mnt/union</pre>
 <h2>Writing to union</h2>
-<p>Merging read-only directories is useful in many cases, but the union itself remains read-only too, until a read-write branch is added to it. In 
-that case, all changes are stored in leftmost branch (using copy-up method, see below) and file deletions are done by using one of the three methods available:</p>
-<ul>
-	<li>
+
+<p>Merging read-only directories is useful in many cases, but the union
+itself remains read-only too, until a read-write branch is added to it.
+In  that case, all changes are stored in leftmost branch (using copy-up
+method, see below) and file deletions are done by using one of the two
+methods available:</p> <ul> 	<li>
 
 	<p>WHITEOUT mode, inserts a .wh (whiteout) file to mask out a real file</li>
 	<li>
 	<p>DELETE_ALL mode, tries to delete all instances of a file from all branches</li>
-	<li>
-	<p>DELETE_FIRST, only deletes the first instance (possibly exposing instances below)</li>
 </ul>
-<p>WHITEOUT mode is used as default. Copy-up is a special method used to handle file modifications in union. A file from ro branch can't be modified, so it is copied to upper (left) 
-read-write branch at the time when the modification should begin. Then the modification is possible and modified file remains in rw branch.<br>
-<br>
+
+<p>WHITEOUT mode is used as default. Copy-up is a special method used to
+handle file modifications in union. A file from ro branch can't be
+modified, so it is copied to upper (left)  read-write branch at the time
+when the modification should begin. Then the modification is possible
+and modified file remains in rw branch.<br> <br>
 
 To add a rw branch at the top of union in our example, type</p>
 <pre>$ unionctl /mnt/union --add --before /mnt/cdrom1 --mode rw /mnt/changes</pre>
@@ -129,17 +134,31 @@ To add a rw branch at the top of union in our example, type</p>
 techniques to allow virtual modifications and to save all changes in memory. SLAX is using these techniques for very long time, starting at the end of 2003 with ovlfs and 
 implementing unionfs at the end of 2004. SLAX 5, released in April 2005, can give you an impression of what miracles could be, thanks to unionfs, created.</p>
 <h2>SLAX internals</h2>
-<p>You need three essential things to boot Linux: Kernel image (which represents the operating system itself), partition or image with root filesystem (which contains initial 
-program) and some Linux loader (which reads Kernel into memory and executes it). SLAX CD is booting by using isolinux.bin loader, it contains driver for filesystem on the CD and 
+<p>You need three essential things to boot Linux: Kernel image (which represents the operating system itself), partition or image file (eg. initrd.gz) with root filesystem and initial 
+program and some Linux loader (which reads Kernel into memory and executes it at the beginning). SLAX CD is booting by using isolinux.bin loader, it contains driver for filesystem on the CD and 
 thus is able to read Linux Kernel (file vmlinuz) and root filesystem image (file initrd.gz) from CD to the memory.</p>
 
-<p>When loaded in memory and executed, Linux kernel creates a virtual disk (called Initial ramdisk) in computer's RAM, extracts initrd.gz to it and mounts it as a root filesystem. 
-Initial ramdisk used in SLAX is only 4.4 MB big and contains only basic software and drivers needed to handle SLAX startup. The most difficult part follows, so read carefully.</p>
-<p>File /linuxrc (found in ramdisk) is executed by Linux Kernel as an initial program. Linuxrc's job is pretty tricky.&nbsp; It creates an empty union in /union directory, it 
-mounts tmpfs to /memory directory, and then it locates SLAX CD by mounting all CDs and disks and by searching for a file livecd.sgn. You may be surprised, but the cdrom is mounted 
-in /union/mnt/! After that, all necessary images (*.mo) from 
-SLAX CD are mounted to directories /memory/images/*.mo and all these mountpoints are, by using unionctl, added to union as an individual read-only branches. Union is then extended by a special 
-directory /memory/changes in read-write mode.</p>
+<p>When loaded in memory and executed, Linux kernel creates a virtual
+disk (called Initial ramdisk) in computer's RAM, extracts initrd.gz to
+it and mounts it as a root filesystem.  Initial ramdisk used in SLAX is
+only 4.4 MB big and contains only basic software and drivers needed to
+handle SLAX startup. The most difficult part follows, so read
+carefully.</p>
+
+<p>File /linuxrc (found in ramdisk) is executed by Linux Kernel as an
+initial program. Linuxrc's job is pretty tricky.&nbsp; It creates an
+empty union in /union directory, it  mounts tmpfs to /memory directory,
+and then it creates /memory/changes (the new directory is in tmpfs now,
+not in ramdisk). Union is mounted to /union and /memory/changes is added 
+to it as a rw branch.</p>
+
+<p>Then linuxrc locates SLAX CD by mounting all CDs and disks and by searching
+for a file livecd.sgn. You may be surprised, but the cdrom is mounted 
+in /union/mnt/! After that, all necessary images (*.mo) from  SLAX CD
+are mounted to directories /memory/images/*.mo and all these mountpoints
+are, by using unionctl, added to union as an individual read-only
+branches, after the first branch (rw changes).</p>
+
 <pre>/(initrd, 4MB)
      |
      |---- /memory(tmpfs, 80% of RAM)

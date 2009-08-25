@@ -1,3 +1,9 @@
+ 5.1.8
+ 
+ * fix isolinux.cfg to display correct splash
+ * updated unionfs.html documentation
+
+
  5.1.7
  
  * added support for 2.6.13.2 linux kernel, using test26 config from Slackware
