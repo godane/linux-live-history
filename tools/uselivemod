@@ -1,48 +1,52 @@
 #!/bin/bash
 # Use module while running LiveCD
 # include it into live directory structure on the fly
-# Or install it if no union is found at /
 #
 # Author: Tomas M. <http://www.linux-live.org>
 
 MODULE="$1"
 
-if [ "$MODULE" = "" ]; then
+if [ "$MODULE" = "" -o ! -e "$MODULE" ]; then
    echo
    echo "Use module on the fly while running Live CD"
-   echo "Usage: $0 module.mo"
-   exit
+   echo "Usage: $0 module.lzm"
+   exit 1
+fi
+
+if [ "`echo $MODULE | fgrep -i .lzm`" = "" ]; then
+   echo
+   echo "`basename $MODULE`: Module must end with .lzm"
+   echo "If you have .mo extension, convert it by using mo2lzm"
+   exit 2
 fi
 
 PATH=.:$(dirname $0):/usr/lib:$PATH
-. liblinuxlive || exit 1
+. liblinuxlive || exit 3
 
 allow_only_root
 IMAGES=/mnt/live/memory/images
 MODULES=/mnt/live/memory/modules
 
 # are we even using union?
-unionctl --query / >/dev/null 2>&1
+unionctl / --list 2>/dev/null >/dev/null
 if [ $? -ne 0 ]; then
-   echo "Installing (unpacking) module $MODULE"
-   mo2dir $MODULE /
-   /sbin/ldconfig
-   exit 0
+   echo "not in the live mode, can't continue. Try lzm2dir"
+   exit 4
 fi
 
 mkdir -p "$MODULES"
 
-# test whether the module file is stored in union
-# if yes, then we must move it somewhere else (to RAM)
-unionctl --query "$MODULE" >/dev/null 2>&1
-if [ $? -eq 0 ]; then
+# Test whether the module file is stored in union
+# if yes, then we must move it somewhere else (to RAM) else it can't be added
+unionctl / --whereis "$MODULE"
+if [ $? -ne 0 ]; then
    echo "module file is stored inside the union, moving to $MODULES first..."
    TARGET="$MODULES/`basename \"$MODULE\"`"
    mv "$MODULE" "$TARGET"
    if [ $? -ne 0 ]; then
       echo "error copying module to memory, not enough free RAM? try df" >&2
       rm "$TARGET"
-      return 2
+      exit 6
    fi
    MODULE="$TARGET"
 fi
@@ -51,11 +55,11 @@ MOD="`union_insert_module / \"$MODULE\" $IMAGES`"
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 3; fi
 
 # all executables in /etc/rc.d/ from this module will be started
-# with two arguments: "start" "mo". This happens only by this script (uselivemod),
+# with two arguments: "start" "lzm". This happens only by this script (uselivemod),
 # not in the case when module is loaded during OS startup.
 find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
    if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
-      ${SCRIPT##$IMAGES/$MOD} start mo
+      ${SCRIPT##$IMAGES/$MOD} start lzm
    fi
 done
 

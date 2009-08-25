@@ -2,8 +2,9 @@ Binaries and libraries are from the following Slackware packages:
 
    aaa_elflibs-10.2.0-i486-1.tgz
    bin-11.0-i486-1.tgz
-   glibc-solibs-2.3.6-i486-2.tgz
    e2fsprogs-1.38-i486-2.tgz
+   glibc-solibs-2.3.6-i486-2.tgz
+   pciutils-2.2.3-i486-2.tgz
+   util-linux-2.12r-i486-2.tgz
 
-
-                                                Tomas M.
+Source code can be downloaded from ftp.slackware.org

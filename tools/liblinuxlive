@@ -1,6 +1,6 @@
 #!/bin/ash
 
-# Functions library :: for Linux Live scripts 5.x.y
+# Functions library :: for Linux Live scripts 6.x.y
 # Author: Tomas M. <http://www.linux-live.org>
 #
 
@@ -20,8 +20,10 @@ CHANGES=$MEMORY/changes
 COPY2RAM=$MEMORY/copy2ram
 IMAGES=$MEMORY/images
 INITRAMDISK=$MOUNTDIR/live
-ISOMOUNT=$MOUNTDIR/iso
-LIVECDSGN=livecd.sgn
+LOOPMOUNT=$MOUNTDIR/tmp
+
+# this will be replaced by build script, so don't change the following line!
+LIVECDNAME="linux"
 
 # ===========================================================
 # user interface functions
@@ -42,9 +44,16 @@ echolog()
 {
    if [ "$1" != "" ]; then
       echogreen "* "
-      echo "LIVECD:" "$@" >>/var/log/livedbg
+      log "LIVECD:" "$@" 
       echo "$@"
    fi
+}
+
+# log
+# store given text in /var/log/livedbg
+log()
+{
+   echo "$@" >>/var/log/livedbg
 }
 
 # debug
@@ -76,7 +85,7 @@ fatal()
    echolog "Something went wrong and we can't continue. This should never happen."
    echolog "Please reboot your computer with Ctrl+Alt+Delete ..."
    echolog
-   umount -a -r
+   umount -a -r 2>/dev/null
    mount -t proc proc /proc
    mount -t sysfs sysfs /sys
    ash < /dev/console
@@ -105,13 +114,14 @@ egrep_o()
 }
 
 # look into cmdline and echo $1 back if $1 is set
-# $1 = value name, case sensitive, for example livecd_subdir
+# $1 = value name, case sensitive, for example changes
 # $2 = file to use instead /proc/cmdline, optional
 #
 cmdline_parameter()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
+   log "searching for boot param: $1"
    cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1(\$|=|[[:space:]]+))" | egrep_o "($1)"
 }
 
@@ -123,6 +133,7 @@ cmdline_value()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
+   log "searching for bootparam value: $1"
    cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1=([^[:space:]]+))" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
 }
 
@@ -138,27 +149,7 @@ cmdline_value()
 modprobe_module()
 {
   if [ "$1" = "" ]; then return 1; fi
-  PRINTK=`cat /proc/sys/kernel/printk`
-  echo "0" >/proc/sys/kernel/printk
-
-  KERNEL="`uname -r`"; LSMOD=/tmp/_lsmod
-  MODULEDEPS="`cat /lib/modules/$KERNEL/modules.dep | egrep \"$1\\.ko(\\.gz)?:\"`"
-
-  for MODULE in `echo $MODULEDEPS | cut -d ":" -f 2-` `echo $MODULEDEPS | cut -d ":" -f 1`; do
-     TMPMOD="/tmp/`basename $MODULE .gz`";
-     # if the module is not loaded already
-     if [ "`cat $LSMOD 2>/dev/null | egrep \"^$TMPMOD\\\$\"`" = "" ]; then
-        gunzip -c $MODULE 2>/dev/null >$TMPMOD
-        if [ 0$? -ne 0 ]; then cp $MODULE $TMPMOD; fi # can't gunzip? copy
-        insmod $TMPMOD $2 >/dev/null 2>/dev/null; err=$?
-        if [ 0$err -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi # module log
-        rm $TMPMOD
-     fi
-  done
-
-  echo "$PRINTK" >/proc/sys/kernel/printk
-  if [ 0$err -ne 0 ]; then echolog "error inserting module $1 ($err) for your kernel `uname -r`"; fi
-  return $err
+  modprobe $1 $2 2>/dev/null
 }
 
 # Mount device $1 to $2
@@ -196,7 +187,7 @@ fumount()
 {
    while [ "$1" ]; do
       umount "$1" >/dev/null 2>&1
-      if [ 0$? -ne 0 ]; then
+      if [ $? -ne 0 ]; then
          umount -l "$1" >/dev/null 2>&1
       fi
       shift
@@ -210,14 +201,14 @@ fumount()
 # Create module
 # call mksquashfs with apropriate arguments
 # $1 = directory which will be compressed to squashfs module
-# $2 = output .mo file
+# $2 = output filesystem module file
 # $3 = optional -keep-as-directory argument
 #
 create_module()
 {
    mksquashfs "$1" "$2" $3 >/dev/null
-   if [ 0$? -ne 0 ]; then return 1; fi
-   chmod oga-x "$2" # remove execute attrib
+   if [ $? -ne 0 ]; then return 1; fi
+   chmod oga-wx "$2" # remove execute attrib
 }
 
 # Mountpoint exits with 0 if $1 is mountpoint, else exits with 1
@@ -228,8 +219,8 @@ mountpoint()
    cat /proc/mounts | cut -d " " -f 2 | egrep "^$1\$" >/dev/null 2>&1
 }
 
-# Mount .mo module to destination directory
-# $1 = path to .mo livecd compressed module
+# Mount filesystem module to destination directory
+# $1 = path to the compressed module
 # $2 = destination folder
 #
 mount_module()
@@ -261,7 +252,7 @@ list_modules()
 {
    LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
    NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
-   find $1/base $1/modules $1/optional -name "*.mo" 2>/dev/null | sort | while read LINE; do
+   find $1/base $1/modules $1/optional -name "*.lzm" 2>/dev/null | sort | while read LINE; do
       MODNAME="`echo $LINE | cut -b ${#1}- | cut -b 2-`"
       if [ "`echo $LINE | grep /optional/`" ]; then
          if [ ! "$LOAD" -o ! "`echo $MODNAME | egrep -i \"$LOAD\"`" ]; then continue; fi
@@ -271,9 +262,9 @@ list_modules()
    done
 }
 
-# Insert one single .mo module to the union
+# Insert one single filesystem module to the union
 # $1 = union absolute path
-# $2 = module.mo full path
+# $2 = module full path
 # $3 = destination folder, where images will be mounted to
 # $4 = preffix length strip (number of characters)
 #
@@ -283,15 +274,15 @@ union_insert_module()
    if mountpoint $TARGET >/dev/null 2>&1; then return; fi # skip mounted modules
    mkdir -p $TARGET
    mount_module $2 $TARGET
-   if [ 0$? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
+   if [ $? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
    union_insert_dir $1 $TARGET
-   if [ 0$? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
+   if [ $? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
    echo "$2" | cut -b $4- | cut -b 2-
    echolog "$2" >/dev/null
    return 0
 }
 
-# Insert all .mo modules, in $2 directory and subdirectories, to the union
+# Insert all filesystem modules, in $2 directory and subdirectories, to the union
 # $1 = union absolute path (starting with /)
 # $2 = LiveCD data dir (with directories /base, /modules, etc.)
 # $3 = destination folder, where images will be mounted to
@@ -377,8 +368,11 @@ list_block_devices()
 find_filepath()
 {
    DIR="$1/`basename $2`"
-   mount_device $2 $DIR
-   if [ 0$? -ne 0 ]; then rmdir $DIR 2>/dev/null; return 1; fi
+   mountpoint $DIR >/dev/null 2>&1
+   if [ $? -ne 0 ]; then
+      mount_device $2 $DIR; 
+      if [ $? -ne 0 ]; then rmdir $DIR 2>/dev/null; return 1; fi
+   fi
    FOUND="`ls -A1d $DIR/$3 2>/dev/null | head -n 1`"
    if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null; return 1
    else echo "$FOUND" | tr -s '/'; return 0; fi
@@ -393,9 +387,9 @@ find_file()
 {
    # if parameter is just a device, echo it and exit
    if [ -b "$2" -o -c "$2" -o "$2" = "" ]; then echo "$2"; return; fi
-   # if path doesn't start with /dev/, find the path exactly on all devices
 
-   # split DEV/PATH parts
+   # If path doesn't start with /dev/, find the path exactly on all devices.
+   # First, split DEV/PATH parts
    DEVPART="`echo \"$2\" | egrep_o \"(^/dev/[^/]+)\"`"
 
    if [ "$DEVPART" = "" ]; then
@@ -403,7 +397,7 @@ find_file()
       PATHPART="$2";
       list_block_devices | while read DEVICE; do
          find_filepath $1 $DEVICE $PATHPART
-         if [ 0$? -eq 0 ]; then return 0; fi
+         if [ $? -eq 0 ]; then return 0; fi
       done
    else
       # try to find PATHPART only on the given device
@@ -418,30 +412,28 @@ find_file()
 
 # Create block devices to /dev described by /sys entries
 #
-create_block_devices()
+mdev_start_hotplug()
 {
    echolog "creating /dev entries for block devices"
-   ls -A1d /sys/block/*/dev /sys/block/*/*/dev 2>/dev/null | grep -v loop | while read BLOCK; do
-      DEVICE="/dev/`basename \`dirname $BLOCK\``"
-      if [ ! -b $DEVICE ]; then
-         MINORMAJOR="`head -n 1 $BLOCK | tr ':' ' '`"
-         mknod $DEVICE b $MINORMAJOR
-      fi
-   done
+   mdev -s
+   echo /bin/mdev > /proc/sys/kernel/hotplug
 }
 
 # modprobe kernel modules needed for the LiveCD
 #
 modprobe_essential_modules()
 {
+   PRINTK=`cat /proc/sys/kernel/printk`
+   echo "0" >/proc/sys/kernel/printk
+
    echolog "starting loop device support"
    modprobe_module loop max_loop=255
    echolog "starting cdrom filesystem support"
    modprobe_module isofs
    echolog "starting squashfs support"
    modprobe_module squashfs
-   echolog "starting unionfs support"
-   modprobe_module unionfs
+   echolog "starting aufs support"
+   modprobe_module aufs
    echolog "starting vfat support"
    modprobe_module nls_cp437
    modprobe_module nls_iso8859-1
@@ -449,23 +441,39 @@ modprobe_essential_modules()
    modprobe_module vfat
    echolog "starting ntfs support"
    modprobe_module ntfs
-   create_block_devices
+
+   echo "$PRINTK" >/proc/sys/kernel/printk
 }
 
 # modprobe kernel modules needed for USB masstorage devices
 #
 modprobe_usb_modules()
 {
-   SLEEP="`cmdline_value probeusb | sed -r 's/[^0-9]*([0-9]+).*/\1/'`"
-   if [ "$SLEEP" = "" ]; then SLEEP=5; fi
+   PRINTK=`cat /proc/sys/kernel/printk`
+   echo "0" >/proc/sys/kernel/printk
 
-   echolog "starting USB support"
-   modprobe_module ehci-hcd
-   modprobe_module ohci-hcd
-   modprobe_module uhci-hcd
+   LSPCI="`lspci -v | grep -i prog-if`"
+   if [ "`echo $LSPCI | egrep -i [eou]hci`" = "" ]; then
+      return
+   fi
+
+   echolog "starting USB support..."
+   if [ "`echo $LSPCI | grep -i ehci`" != "" ]; then
+      modprobe_module ehci-hcd
+   fi
+   if [ "`echo $LSPCI | grep -i ohci`" != "" ]; then
+      modprobe_module ohci-hcd
+   fi
+   if [ "`echo $LSPCI | grep -i uhci`" != "" ]; then
+      modprobe_module uhci-hcd
+   fi
    modprobe_module usb-storage
+
+   SLEEP="`cmdline_value waitusb | sed -r 's/[^0-9]*([0-9]+).*/\1/'`"
+   if [ "$SLEEP" = "" ]; then SLEEP=10; fi
+
    sleep $SLEEP
-   create_block_devices
+   echo "$PRINTK" >/proc/sys/kernel/printk
 }
 
 # enable/disable CD autoejecting when unmounted
@@ -537,6 +545,7 @@ fstab_update()
       # add special options for NTFS
       if [ "$FS" = "ntfs" ]; then
          OPT=",ro"
+#	 FS="ntfs-3g"
          if [ "$IOCHARSET" != "" ]; then OPT="$OPT,nls=$IOCHARSET"; fi
       fi
 

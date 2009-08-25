@@ -1,5 +1,0 @@
-All available discs and CDROMs are mounted during the boot process.
-When done, linuxrc script is looking for this livecd.sgn file.
-It tells linuxrc where to mount the live filesystem from.
-
-Don't delete this file, else your LiveCD won't work.

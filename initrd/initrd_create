@@ -3,7 +3,7 @@
 #
 # Author:	  Tomas M. <http://www.linux-live.org>
 
-. ../config || exit 1
+. ../.config || exit 1
 
 # rcopy is a recursive cp, which copies also symlink's real source
 # $1 = source (may be a regular file or symlink)
@@ -11,21 +11,28 @@
 #
 rcopy()
 {
-   if [ -L "$1" ]; then
-      REALPATH="`readlink -f \"$1\"`"
-      cp --parent -R "$REALPATH" "$2"
-      ln -sf "$REALPATH" "$2/$1"
+   CWD=`pwd`
+   cd $ROOT
+   SOURCE="${1:${#ROOT}}"
+   DEST="$2"
+   if [ -L "$SOURCE" ]; then
+      REALPATH="`readlink -f \"$SOURCE\"`"
+      cp --parent -R "$REALPATH" "$DEST"
+      ln -sf "$REALPATH" "$DEST/$SOURCE"
    else
-      cp --parent -R "$1" "$2"
+      cp --parent -R "$SOURCE" "$DEST"
    fi
    if [ "$?" -ne 0 ]; then
+      echo ""
       echo "---------------------------"
-      echo "Error occured while trying to copy \"$1\" to \"$2\""
-      echo "nevertheless your LiveCD may still work."
-      echo "Possible reason: not enough free space in initrd or source doesn't exist"
-      echo "If space is your issue, see 'config' file to increase size of initrd."
+      echo "Error occured while trying to copy \"$SOURCE\""
+      echo "Possible reason: not enough free space in initrd OR source doesn't exist."
+      echo "If space is your issue, see '.config' file to increase size of initrd."
+      echo "If source file doesn't exist, it's a big problem. See DOC/requirements.txt"
       echo "---------------------------"
+      exit 1
    fi
+   cd $CWD
 }
 
 # copy file/dir only if it exists, else skip with no error
@@ -50,11 +57,10 @@ debug()
 
 MOUNTDIR=/tmp/initrd_mountdir_$$
 INITRD_TREE=/tmp/initrd_tree_$$
+INITRDIMG=initrd
 
-if [ ! -d "kernel-modules/$KERNEL" ]; then
-   echo "The directory `pwd`/kernel-modules/$KERNEL doesn't exist."
-   echo "Please create it and copy squashfs.ko and unionfs.ko modules"
-   echo "for your kernel ($KERNEL) to this directory."
+if [ ! -d $ROOT/$LMK ]; then
+   echo "cannot find your kernel modules (*.ko) in $ROOT/$LMK"
    exit 1
 fi
 
@@ -81,22 +87,17 @@ for i in 1 2 3 4 5 6; do
   mknod $INITRD_TREE/dev/tty$i c 4 $i;
 done
 
-loops=255
-while [ $loops -ge 0 ]; do
-   mknod $INITRD_TREE/dev/loop$loops b 7 $loops
-   loops=$(($loops-1))
-done
-
 debug "copying files to the rootdisk"
 touch $INITRD_TREE/etc/{m,fs}tab
-cp {linuxrc,cleanup,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
-chmod a+x $INITRD_TREE/linuxrc
-chmod a+x $INITRD_TREE/cleanup
+cat liblinuxlive | sed -r 's/^LIVECDNAME=.*/LIVECDNAME="'$LIVECDNAME'"/' > $INITRD_TREE/liblinuxlive
+cp {linuxrc,cleanup} $INITRD_TREE
+chmod ago+x $INITRD_TREE/{linuxrc,cleanup}
 
 cp -R rootfs/* $INITRD_TREE
 ln -s busybox $INITRD_TREE/bin/ash
 ln -s busybox $INITRD_TREE/bin/sh
 ln -s busybox $INITRD_TREE/bin/bash
+ln -s busybox $INITRD_TREE/bin/echo
 ln -s busybox $INITRD_TREE/bin/[
 ln -s busybox $INITRD_TREE/bin/mount
 ln -s busybox $INITRD_TREE/bin/umount
@@ -109,50 +110,45 @@ ln -s busybox $INITRD_TREE/bin/head
 ln -s busybox $INITRD_TREE/bin/cat
 ln -s busybox $INITRD_TREE/bin/grep
 ln -s busybox $INITRD_TREE/bin/sleep
+ln -s busybox $INITRD_TREE/bin/sed
+ln -s busybox $INITRD_TREE/bin/mdev
 ln -s bin $INITRD_TREE/sbin
 
-LMK="lib/modules/$KERNEL"
-
-#necessary modules and dependency files
+# necessary modules and dependency files
 mkdir -p $INITRD_TREE/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/unionfs.ko* $INITRD_TREE/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/squashfs.ko* $INITRD_TREE/$LMK/kernel/fs
+rcopy $ROOT/$LMK/kernel/fs/aufs $INITRD_TREE
+rcopy $ROOT/$LMK/kernel/fs/squashfs $INITRD_TREE
 
-#copy filesystem modules, if not directly copied into kernel
-rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/lib/zlib_deflate $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>>$DEBUG
+# copy filesystem modules, if not directly copied into kernel
+rcopy_ex $ROOT/$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/lib/zlib_deflate $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/block/loop.* $INITRD_TREE 2>>$DEBUG
 
-rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/fs/fat $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/fs/vfat $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/fs/ntfs $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/fs/ext3 $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/fs/reiserfs $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/isofs $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/fat $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/vfat $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/ntfs $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/ext3 $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/reiserfs $INITRD_TREE 2>>$DEBUG
 
 # add language support for filesystems
-rcopy_ex /$LMK/kernel/fs/nls/ $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_cp437.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_iso8859-1.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_iso8859-2.* $INITRD_TREE 2>>$DEBUG
 
-#usb modules
-rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/drivers/usb/host/ehci-hcd* $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/drivers/usb/host/ohci-hcd* $INITRD_TREE 2>>$DEBUG
-rcopy_ex /$LMK/kernel/drivers/usb/host/uhci-hcd* $INITRD_TREE 2>>$DEBUG
+# usb modules
+rcopy_ex $ROOT/$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ehci-hcd.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ohci-hcd.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/uhci-hcd.* $INITRD_TREE 2>>$DEBUG
 
-#disk (scsi, ide, raid, pcmcia) modules
-#rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE
-#rcopy_ex /$LMK/kernel/drivers/ide $INITRD_TREE
-#rcopy_ex /$LMK/kernel/drivers/pcmcia $INITRD_TREE
-
-if [ "$COMPRESS" = 1 ]; then
-   debug "gzipping kernel modules"
-   find $INITRD_TREE -name "*.ko" | xargs -r gzip --best
-fi
+debug "unpacking all kernel modules for initrd"
+find $INITRD_TREE -name "*.ko.gz" | xargs -r gunzip
 
 debug "generating module dependency files"
 depmod -b $INITRD_TREE $KERNEL
 
-debug "creating empty image file $INITRDIMG"
+debug "creating empty image file for initrd"
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >>$DEBUG 2>&1
 
 debug "making filesystem"

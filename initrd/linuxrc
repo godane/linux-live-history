@@ -9,15 +9,19 @@ echolog "mounting /proc and /sys filesystems"
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 ln -sf /proc/mounts /etc/mtab # this allows us to use umount -a
+mount -o remount,rw / # for the case we forgot rw boot option
 
-# in some cases, we need USB modules soon
-if [ "`cmdline_parameter probeusb`" != "" ]; then
-   modprobe_usb_modules
-fi
+# use mdev to create /dev/ devices and setup it as a hotplug-handler
+mdev_start_hotplug
 
 # setup DEBUGCMD variable. If debug boot option is present, call debug()
 # function several times during script's execution
 if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
+
+if [ "$DEBUGCMD" != "" ]; then
+   # debug must support USB keyboard as well
+   modprobe_usb_modules
+fi
 
 $DEBUGCMD
 
@@ -25,7 +29,7 @@ $DEBUGCMD
 RAMSIZE="`cmdline_value ramsize`"
 if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
 
-# cdrom support, isofs support, unionfs support, etc
+# cdrom support, isofs support, aufs support, etc
 modprobe_essential_modules
 setup_dma
 echo -e "ext3\next2\nvfat\n*" >/etc/filesystems
@@ -36,83 +40,74 @@ mkdir -p $MEMORY
 $DEBUGCMD
 
 echolog "setup directory for changes"
-CHANGESPATH="`cmdline_value changes`"
-CHANGESPATH="`find_file $MOUNTDIR $CHANGESPATH`"
+CHANGESARG="`cmdline_value changes`"
+CHANGESPATH="`find_file $MOUNTDIR $CHANGESARG`"
 echolog $CHANGESPATH
-mount_device $CHANGESPATH $MEMORY # silently ignored if changespath is empty
 
-# mount tmpfs only in the case when changes= boot parameter was empty
-# or we were not able to mount the storage device
+# if changes= argument is present, but we can't find specified file,
+# load USB modules and try again
+if [ "$CHANGESARG" != "" -a "$CHANGESPATH" = "" ]; then
+   modprobe_usb_modules
+   CHANGESPATH="`find_file $MOUNTDIR $CHANGESARG`"
+fi
+
+mount_device $CHANGESPATH $MEMORY # if empty or failed, mount tmpfs:
 if [ $? -ne 0 ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY; fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
-echolog "setup union directory"
+echolog "setup union directory (using aufs)"
 
 mkdir -p $CHANGES
-if [ 0$? -ne 0 ]; then
-   fatal "it seems you're using a Read-Only filesystem"
+if [ $? -ne 0 ]; then
+   fatal "a Read-Only filesystem is not supported"
 fi
 
 mkdir -p $IMAGES
-mount -t unionfs -o dirs=$CHANGES=rw unionfs $UNION
-if [ $? -ne 0 ]; then fatal "can't setup union"; fi
+mount -t aufs -o br:$CHANGES=rw aufs $UNION
+if [ $? -ne 0 ]; then fatal "can't setup union (aufs)"; fi
 
 $DEBUGCMD
 
-# try to find livecd data directory. If not found, try modprobing
-# USB kernel modules and repeat the find procedure again
-echolog "looking for data modules"
+# try to find livecd data directory.
+echolog "looking for data directory"
 
 DATAFROM="`cmdline_value from`"
 DATAFROM="`find_file $MOUNTDIR $DATAFROM`"
 
-# when from= is used, search for livecd.sgn
+# when from= is used, search for liveCDdata.
 if [ "$DATAFROM" ]; then
-   mount_device $DATAFROM $ISOMOUNT
-   if [ 0$? -eq 0 -a -e "$ISOMOUNT/$LIVECDSGN" ]; then
-      echolog "found in $DATAFROM"
-      DATA=$ISOMOUNT
+   mount_device $DATAFROM $LOOPMOUNT # we must mount again, if loop device
+   if [ $? -eq 0 -a -d "$LOOPMOUNT/$LIVECDNAME" ]; then
+      echolog "found in $LOOPMOUNT"
+      DATA=$LOOPMOUNT/$LIVECDNAME
    fi
 fi
 
 if [ "$DATA" = "" ]; then
-   # from= is not used or it didn't contain livecd.sgn
-   DATA="`find_file $MOUNTDIR $LIVECDSGN`"
-   if [ "$DATA" != "" ]; then
-      DATA="`dirname \"$DATA\"`"
-   fi
+   # from= is not used or it didn't contain liveCDdata
+   DATA="`find_file $MOUNTDIR $LIVECDNAME`"
 fi
 
 if [ "$DATA" = "" ]; then
-   # data still not found, probe for USB devices and wait
-   modprobe_usb_modules;
-   echolog -n "waiting for usb devices .."
-   for i in 1 2 3 4 5 6 7 8; do # max 36 seconds, prolong the delay each time
-      echo -n "."
-      create_block_devices >/dev/null
-      DATA="`find_file $MOUNTDIR $LIVECDSGN`";
-      if [ "$DATA" != "" ]; then
-         DATA="`dirname \"$DATA\"`"
-         break;
-      fi
-      sleep $i;
-   done
+   # Still nothing found? Try USB devices
+   modprobe_usb_modules
+   DATA="`find_file $MOUNTDIR $LIVECDNAME`"
 fi
 
 $DEBUGCMD
 
-if [ "$DATA" = "" ]; then fatal "
-LiveData not found. Searching for $LIVECDSGN file, but the file was not found.
+if [ "$DATA" = "" ]; then fatal \
+"LiveData not found. Searching for $LIVECDNAME directory.
 You are maybe using an unsupported boot device (eg. SCSI or PCMCIA CD-ROM)
-Try to copy all data from CD/USB to your IDE harddisk, for example
-to /mnt/sda1/ in Linux or C:\\ in Windos. Then boot again."
+Try to copy the directory $LIVECDNAME from CD/USB to your IDE/SATA harddisk,
+for example to /mnt/sda1/ in Linux or C:\\ in Windos. Then boot again."
 fi
 
-echolog "LiveData mounted to $DATA"
+echolog "Using $LIVECDNAME data from $DATA"
 
 $DEBUGCMD
 
-# If toram or copy2ram boot parameter is present, copy all .mo modules to RAM.
+# If toram or copy2ram boot parameter is present, copy all fs modules to RAM.
 # (skip modules from /optional/ which are not listed in load= boot option)
 # Finaly modify DATA variable so it will point to correct directory
 if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
@@ -131,12 +126,9 @@ if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]
    cd_autoeject 0
 fi
 
-mkdir -p $UNION/boot
-mount -o bind $DATA $UNION/boot
-
 $DEBUGCMD
 
-# DATA contains path to the base directory of all .mo images which need
+# DATA contains path to the base directory of all fs modules which need
 # to be mounted and inserted into live filesystem. Do it now.
 echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
@@ -147,7 +139,7 @@ union_insert_modules $UNION $MEMORY $IMAGES
 
 $DEBUGCMD
 
-echolog "copying rootchanges"
+echolog "copying content of rootcopy directory"
 cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 
 $DEBUGCMD
@@ -158,11 +150,15 @@ fstab_update $UNION
 
 # More likely these directories aren't there.
 # Even if they are, this won't hurt.
+mkdir -p $UNION/boot
 mkdir -p $UNION/proc
 mkdir -p $UNION/sys
 mkdir -p $UNION/dev
 mkdir -p $UNION/tmp
 chmod 0777 $UNION/tmp
+
+# boot will contain whatever was in ./boot directory in the bootable media
+mount -o rbind `dirname $DATA`/boot $UNION/boot
 
 $DEBUGCMD
 
@@ -172,19 +168,30 @@ $DEBUGCMD
 echolog "changing root directory..."
 
 cd $UNION
+
 umount /sys # we won't need it anymore
 mkdir -p $INITRAMDISK
-if [ ! -e dev/console ]; then mknod dev/console c 5 1; fi
 
-if [ -x $UNION/usr/sbin/chroot ];
-  then CHROOT=/usr/sbin/chroot
-  else CHROOT=/usr/bin/chroot
-fi
+# Copy all dev files (found by mdev) to unioned dev directory
+# so at least disk devices exist (your Linux may need them)
+if [ ! -e /dev/console ]; then mknod /dev/console c 5 1; fi
+cp -fdR /dev .
 
+# find chroot and init
+if [ -x usr/bin/chroot ]; then  CHROOT=/usr/bin/chroot; fi
+if [ -x usr/sbin/chroot ]; then CHROOT=/usr/sbin/chroot; fi
+if [ "$CHROOT" = "" ]; then fatal "Can't find executable chroot command"; fi
+
+if [ -x bin/init ]; then INIT=bin/init; fi
+if [ -x sbin/init ]; then INIT=sbin/init; fi
+if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
+
+# time to end Linux Live scripts and start the distribution itself
 header "linux live end, starting the Linux distribution"
-pivot_root . $INITRAMDISK
-exec $CHROOT . sbin/init <dev/console >dev/console 2>&1
 
-header "ERROR!"
-echolog "You are not supposed to be here, something went wrong!"
-echolog "Even Ctrl+Alt+Del won't help you in kernel panic."
+mount -o remount,ro .
+pivot_root . $INITRAMDISK
+exec $CHROOT . $INIT <dev/console >dev/console 2>&1
+
+header "!!ERROR!!"
+fatal "You are not supposed to be here, something went wrong!"

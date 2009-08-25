@@ -1,19 +1,23 @@
 
  Linux Live scripts
 
-   These scripts are used to create LiveCD iso image from your real
-   Linux distribution. Just install your distro somewhere, unpack these
-   scripts somewhere in $DISTRO/tmp, login as root and run  runme.sh. It
-   will produce /tmp/livecd.iso
+   These scripts are used to create Slax Live CD. It may be used to make
+   a bootable CD from your real Linux distribution as well. Just install
+   your distro somewhere, unpack these scripts somewhere in $DISTRO/tmp,
+   login as root, make changes to .config file and finally run ./build
 
+   The most important is the LIVECDNAME variable in .config file, please
+   change it from 'slax' to your own name.
+
+   ./build script will create /tmp/slax.iso (or whatever the name you choosed)
    Burn it and boot it.
 
 
- Some documentation:
+ Documentation and changelog:
 
-   cat ./DOC/changelog.txt
    cat ./DOC/requirements.txt
-   vi ./config
+   cat ./DOC/changelog.txt
+   vi ./.config
 
  Author:
 

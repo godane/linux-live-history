@@ -1,3 +1,92 @@
+ 6.0.1
+
+ * minor update of some messages
+ * fixed a bug in linuxrc, missing 'then' command, ough!
+ * added missing rev command to initrd, ough!
+ * modified unionctl to work with busybox
+ 
+
+ 6.0.0
+ 
+ * added bootinst.sh and bootinst.bat scripts to make your disk boot Slax
+ * internal: ISOMOUNT variable renamed to LOOPMOUNT
+ * new boot parameter waitusb=10 (how long to wait after modprobe usb modules, in seconds)
+ * modprobe USB modules requires even longer time then delay_use from /sys.
+   Default is 10 seconds now, can be modified by waitusb (see above)
+ * modprobe USB modules only if really needed. This means:
+   - if debug parameter is present (we need usb keyboard)
+   - if changes= parameter exists and find_file didn't find the specified file
+   - if LiveCD data can't be found (the error message modified a bit)
+ * probeusb boot parameter no longer needed and thus removed
+ * log all boot parameters we are asking for to /var/log/livedbg
+ * updated uselivemod script, should work now
+ * added newest version of unionctl script from aufs cvs
+ * added newest syslinux which supports subdirectories and FAT32
+
+
+ 6.0.0-pre6
+
+ * fixed a typo caused by previous fix regarding /usr/sbin/chroot
+ * fixed a bug while calling /sbin/mdev as a hotplug handler where it didn't exist
+ * added few comments to linuxrc
+ * search for bin/init as well as for sbin/init
+ * show useful error message if something goes wrong with chroot or init
+ * your distro doesn't need to use udev anymore (/dev/ devices are created from /sys)
+
+
+ 6.0.0-pre5
+ 
+ * fixed a bug while calling make_iso.sh (the ISO was not created)
+ * fixed a bug where people using /usr/sbin/chroot wasn't able to run
+   the LiveCD properly (thanks to ghcooper!) 
+ 
+
+ 6.0.0-pre4
+
+ * fixed a problem when using changes= and from= at the same time and the
+   changes.dat file is located at the same partition like 'from='.
+   Thanks to Robert Tate!
+
+
+ 6.0.0-pre3
+ 
+ * included stripped list of PCI IDs
+ * modprobe only the USB modules which are needed. lspci -v is used 
+   to recognize which  module (driver) should be used, eg. uhci, ohci, ehci
+ * CD restructuralized, it should now contain only 'boot' and 'slax' directories
+ * kernel modules in initrd are no more gzipped
+ * many nls kernel modules are no longer included in initrd, only these: cp437,iso8859-1,iso8859-2
+ * modprobe - using native busybox function now which handles dependencies much better
+   (this also fixes a bug in modprobe_module, some kernel modules were inserted in wrong order)
+ * you don't need to patch startup scripts of your distro in order to remove 
+   remounting root partition rw (like in old linux-live <6); thanks to aufs!
+ 
+
+ 6.0.0-pre2
+
+ * installing of linux-live scripts now install to /usr/bin instead of /usr/sbin
+ * .mo extension renamed to .lzm (stands for Live Zipped Module, or LZMA compressed module)
+ * runme.sh renamed to 'build'
+ * config file renamed to '.config'
+ * added new config option to config file: LIVECDNAME; defaults to 'slax'
+   (this allows you to create own liveCD with own branding)
+ * create_block_devices replaced by mdev (busybox applet)
+ * using newer (better) LZMA patches, thanks to Junjiro Okajima!
+ * removed loop devices from initrd creation (/dev/loop*)
+ * aufs and squashfs kernel modules are now copied directly from system's
+   directory (see LMK config option in .config file),
+   no need to copy them to linux live scripts anymore
+
+
+ 6.0.0-pre1
+ 
+ * using squashfs with LZMA patches
+ * using aufs instead of unionfs, thanks to Junjiro Okajima!
+ * squashfs smp fixes thanks to Junjiro Okajima!
+ * added $ROOT to initrd_create, to make sure kernel modules with drivers
+   are copied from correct source directory
+
+
  5.5.0
  
  * fixed another bug in cleanup script 

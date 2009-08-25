@@ -1,22 +1,25 @@
 #!/bin/bash
-# install/uninstall all scripts from /tools to /usr/sbin and /usr/lib
-# so the user is able to use all these commands while running his/her Live Linux
+# Install/Uninstall Linux Live scripts to /usr/bin and /usr/lib
+# so the user is able to use all these commands while running his/her 
+# Live Linux. This installer is automatically executed by build script.
 #
-# install script is automatically called by runme.sh
+# Why to install Linux Live scripts to your distribution? Well, you don't have to.
+# You only have to, if you wish to use linux-live functions while you
+# actually run the LiveCD created by these scripts.
 #
-# Author: does it worth for such a short script ... hm... ok, Tomas M. :^)
+# Author: Tomas M. <http://www.linux-live.org>
 #
 
 ROOT="$1"
 N="`basename $0`"
 
 if [ "$N" = "install" ]; then
-   mkdir -p $ROOT/usr/sbin
+   mkdir -p $ROOT/usr/bin
    mkdir -p $ROOT/usr/lib
-   ls -1 ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
-   ls -1 ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
+   ls -1 ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/bin; done
+   cat ./tools/liblinuxlive | sed -r 's/^LIVECDNAME=.*/LIVECDNAME="'$LIVECDNAME'"/' > $ROOT/usr/lib/liblinuxlive
 else
-   ls -1 ./tools | egrep -v "^lib" | while read FILE; do rm -v $ROOT/usr/sbin/$FILE; done
+   ls -1 ./tools | egrep -v "^lib" | while read FILE; do rm -v $ROOT/usr/bin/$FILE; done
    ls -1 ./tools | egrep "^lib" | while read FILE; do rm -v $ROOT/usr/lib/$FILE; done
 fi
 

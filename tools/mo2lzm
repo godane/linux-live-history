@@ -1,0 +1,23 @@
+#!/bin/bash
+# Convert old MO to new LZM module format
+# Author: Tomas M. <http://www.linux-live.org>
+#
+
+if [ "$2" = "" ]; then
+   echo
+   echo "Convert old format module .mo (ver < 6) to new .lzm format ( ver >= 6 )"
+   echo "Usage: $0 oldmod.mo newmod.lzm"
+   exit
+fi
+
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 1
+
+allow_only_root
+
+TMP=/tmp/mo2lzm$$
+mkdir -p $TMP
+
+lzm2dir "$1" $TMP # it's backward compatible so it will read old mo format
+dir2lzm $TMP "`echo $1 | sed -r 's/\.mo$//'`".lzm
+rmdir $TMP

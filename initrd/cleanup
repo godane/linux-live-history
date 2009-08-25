@@ -10,7 +10,7 @@ export PATH=.:/mnt/live:/usr/sbin:/usr/bin:/sbin:/bin
 header "starting Linux Live shutdown procedures..."
 
 cd $INITRAMDISK
-pivot_root . $UNION <dev/console >dev/console 2>&1
+pivot_root . $UNION < dev/console > dev/console 2>&1
 
 fumount $UNION/proc
 fumount $UNION/sys
@@ -32,11 +32,12 @@ CD=$(cat /proc/sys/dev/cdrom/info 2>/dev/null | grep name | grep "$MNT")
 if [ "$CD" ]; then
    echo "Ejecting CD-ROM..."
    /bin/eject -m /dev/$MNT >/dev/null 2>&1
-   sleep 3
+   echo "CD tray will be closed in 6 seconds..."
+   sleep 6
    /bin/eject -t /dev/$MNT >/dev/null 2>&1
 fi
 
-# $1 = action, eg. poweroff, halt or reboot
-# Seems to me like 'halt' doesn't work as expected, replaced by poweroff
+echo $1
+# $1 = action, eg. poweroff or reboot
 if [ "$1" = "" ]; then reboot; fi
 if [ "$1" = "halt" ]; then poweroff; else $1; fi

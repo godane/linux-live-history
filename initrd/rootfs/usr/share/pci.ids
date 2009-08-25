@@ -1,0 +1,98 @@
+# Hacked list of PCI ID's for 'lspci' command for linux live scripts.
+# This list only contains [EUO]HCI controllers from http://pciids.sourceforge.net/pci.ids
+# It's used only in Linux Live scripts during system startup
+# to recognize which USB controllers should be loaded (EHCI | OHCI | UHCI).
+#
+1002  ATI Technologies Inc
+	4345  EHCI USB Controller
+	4347  OHCI USB Controller #1
+	4348  OHCI USB Controller #2
+	4386  SB600 USB Controller (EHCI)
+	4387  SB600 USB (OHCI0)
+	4388  SB600 USB (OHCI1)
+	4389  SB600 USB (OHCI2)
+	438a  SB600 USB (OHCI3)
+	438b  SB600 USB (OHCI4)
+1033  NEC Corporation
+	0035  USB
+		807d 0035  PCI-USB2 (OHCI subsystem)
+	0072  uPD72874 IEEE1394 OHCI 1.1 3-port PHY-Link Ctrlr
+	00e0  USB 2.0
+		807d 1043  PCI-USB2 (EHCI subsystem)
+	00f2  uPD72874 IEEE1394 OHCI 1.1 3-port PHY-Link Ctrlr
+104c  Texas Instruments
+	8009  FireWire Controller
+		104d 8032  8032 OHCI i.LINK (IEEE 1394) Controller
+	802b  PCI7410,7510,7610 OHCI-Lynx Controller
+		1028 014e  PCI7410,7510,7610 OHCI-Lynx Controller (Latitude D800)
+	802e  PCI7x20 1394a-2000 OHCI Two-Port PHY/Link-Layer Controller
+	8032  OHCI Compliant IEEE 1394 Host Controller
+	803a  PCIxx12 OHCI Compliant IEEE 1394 Host Controller
+	ac8f  PCI7420/7620 Combo CardBus, 1394a-2000 OHCI and SD/MS-Pro Controller
+10b9  ALi Corporation
+	5237  USB 1.1 Controller
+		104d 810f  VAIO PCG-U1 USB/OHCI Revision 1.0
+	5251  M5251 P1394 OHCI 1.0 Controller
+	5253  M5253 P1394 OHCI 1.1 Controller
+10de  nVidia Corporation
+	00e8  nForce3 EHCI USB 2.0 Controller
+# Shares chip with :0576. The VT82C576M has :1571 instead of :0561.
+	3038  VT82xxxxx UHCI USB 1.1 Controller
+1166  Broadcom
+	0220  OSB4/CSB5 OHCI USB Controller
+	0221  CSB6 OHCI USB Controller
+# uninitialized SRCU32 RAID Controller
+	1087  631xESB/632xESB UHCI Redirection
+# 8086:0009 revision 5, 82558B based
+	24c2  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #1
+# Both share the same uhci
+	24c4  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #2
+# Both laptop models share the same modem
+	24c7  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #3
+# Both share the same uhci
+# Both share the same ide controller
+	24cd  82801DB/DBM (ICH4/ICH4-M) USB2 EHCI Controller
+# Both share the same ehci
+	24d2  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #1
+	24d4  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #2
+	24d7  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #3
+	24dd  82801EB/ER (ICH5/ICH5R) USB2 EHCI Controller
+	24de  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #4
+	2658  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #1
+	2659  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #2
+	265a  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #3
+	265b  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #4
+	265c  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB2 EHCI Controller
+# based on the PTGD1-LA motherboard
+	2688  631xESB/632xESB/3100 Chipset UHCI USB Controller #1
+	2689  631xESB/632xESB/3100 Chipset UHCI USB Controller #2
+	268a  631xESB/632xESB/3100 Chipset UHCI USB Controller #3
+	268b  631xESB/632xESB/3100 Chipset UHCI USB Controller #4
+	268c  631xESB/632xESB/3100 Chipset EHCI USB2 Controller
+	27c8  82801G (ICH7 Family) USB UHCI #1
+	27c9  82801G (ICH7 Family) USB UHCI #2
+	27ca  82801G (ICH7 Family) USB UHCI #3
+	27cb  82801G (ICH7 Family) USB UHCI #4
+	27cc  82801G (ICH7 Family) USB2 EHCI Controller
+	2830  82801H (ICH8 Family) USB UHCI #1
+	2831  82801H (ICH8 Family) USB UHCI #2
+	2832  82801H (ICH8 Family) USB UHCI #3
+	2834  82801H (ICH8 Family) USB UHCI #4
+	2835  82801H (ICH8 Family) USB UHCI #5
+	2836  82801H (ICH8 Family) USB2 EHCI #1
+	283a  82801H (ICH8 Family) USB2 EHCI #2
+	2934  USB UHCI Controller #1
+	2935  USB UHCI Controller #2
+	2936  USB UHCI Controller #3
+	2937  USB UHCI Controller #4
+	2938  USB UHCI Controller #5
+	2939  USB UHCI Controller #6
+	293a  USB2 EHCI Controller #1
+	293c  USB2 EHCI Controller #2
+C 0c  Serial bus controller
+	00  FireWire (IEEE 1394)
+		10  OHCI
+	03  USB Controller
+		00  UHCI
+		10  OHCI
+		20  EHCI
