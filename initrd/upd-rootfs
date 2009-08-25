@@ -33,14 +33,10 @@ updateit()
    done
 }
 
-echo "Update (overwrite) all binaries and libraries in ./rootfs/ and ./ntfs-3g/?"
+echo "Update (overwrite) all binaries and libraries in ./rootfs/ ?"
 echo "Hit Ctrl+C to abort or Enter to continue..."
 read junk
 
 cd rootfs
-updateit
-cd ..
-
-cd ntfs-3g
 updateit
 cd ..

@@ -66,7 +66,7 @@ echolog()
 # store given text in /var/log/livedbg
 log()
 {
-   echo "$@" >>/var/log/livedbg 2>/dev/null
+   echo "$@" 2>/dev/null >>/var/log/livedbg
 }
 
 # show information about the debug shell
@@ -153,7 +153,7 @@ mount_initrd_loops()
 {
    debug_log "mount_initrd_loops" "$*"
    if [ -e /usr.lzm ]; then
-      mount -n -t squashfs -o loop /usr.lzm /usr
+      mount_device /usr.lzm /usr loop,ro
    fi
 }
 
@@ -265,16 +265,20 @@ fs_options()
    debug_log "fs_options" "$*"
    local NOAUTO IOCHARSET
 
-   if [ "$1" = "swap" ]; then echo "noauto,defaults"; return 0; fi
-
    NOAUTO=$(cmdline_parameter noauto)
    if [ "$NOAUTO" = "" ]; then NOAUTO="auto"; fi
    if [ "$2" = "fstab" ]; then echo -n "$NOAUTO," ; fi
+   if [ "$1" = "swap" ]; then echo "defaults"; return 0; fi
    echo -n "noatime,users,suid,dev,exec"
 
    IOCHARSET=$(iocharset)
 
-   if [ "$1" = "vfat" -a "$IOCHARSET" ]; then echo ",iocharset=$IOCHARSET"; fi
+   if [ "$1" = "vfat" ]; then
+      echo -n ",quiet,umask=0,check=s,shortname=mixed"
+      if [ "$IOCHARSET" ]; then
+         echo ",iocharset=$IOCHARSET"
+      fi
+   fi
 
    if [ "$1" = "ntfs" ]; then
       echo -n ",ro"
@@ -298,7 +302,7 @@ device_filesystem()
    local NTFS
 
    if [ -e /usr/bin/ntfsmount ]; then NTFS="ntfs-3g"; else NTFS="ntfs"; fi
-   blkid -s TYPE "$1" | cut -d = -f 2 | tr -d ' "' | sed "s/msdos/vfat/" | sed "s/ntfs/$NTFS/"
+   blkid -s TYPE "$1" -o value | sed "s/msdos/vfat/" | sed "s/ntfs/$NTFS/"
 }
 
 # Mount device $1 to $2
@@ -314,6 +318,7 @@ mount_device()
 
    # make sure we have enough arguments
    if [ "$2" = "" ]; then return 1; fi
+   if [ "$1" = "" ]; then rmdir "$2" 2>/dev/null; return 1; fi
    mkdir -p "$2"
 
    DEV="$1"
@@ -333,9 +338,8 @@ mount_device()
       ERR=$?
    fi
 
-   # not enough loop devices? try to create one. Usually kernel can't use it anyway
-   # if minor>max_loop, but Slax uses loop.c patch for kernel so it IS usable.
-   # The patch used in Slax should be in official Linux Kernel 2.6.22.
+   # not enough loop devices? try to create one.
+   # This will work only with newest kernels. Tested with 2.6.23-rc2.
    if [ $ERR -eq 2 ]; then
        LOOPDEV=$(mknod_next_loop_dev)
        OPTIONS=$(echo "$OPTIONS" | sed -r "s/,loop//")
@@ -354,93 +358,36 @@ mount_device()
    return $ERR
 }
 
-# Force unmount of all parameters
-# First try normal umount, if that fails, remount read-only and do lazy-umount.
-# $1..$n = directories to be unmounted
+# unmount all parameters. If the parameter is not mountpoint but
+# it's a file or directory, umount the device where the file/dir is stored.
+#
+# First try normal umount, if that fails then remount read-only
+# If -l parameter is specified, do lazy-umount when normal umount fails
+# $1..$n = files/directories/devices to be unmounted
 #
 fumount()
 {
    debug_log "fumount" "$*"
-   local TARGET # LOOPS LOOP
+   local TARGET LAZY
 
    while [ "$1" ]; do
-      TARGET="$1"
-#      LOOPS=$(cat /proc/mounts | egrep "(^|[[:space:]])$TARGET([[:space:]]|\$)" | cut -d " " -f 1 | grep /dev/loop)
-      umount -n "$TARGET" >/dev/null 2>&1
-      if [ $? -ne 0 ]; then
-         mount -n -o remount,ro -t ignored ignored "$TARGET" >/dev/null 2>&1
-         umount -n -l "$TARGET" >/dev/null 2>&1
-      fi
-
-      # umount has own -d option to free up the loop device(s),
-      # but it may fail (I guess it's when /etc/mtab is not used during mount)
-# -------
-# This is commented out, as I think it's no longer needed, because fumount
-# is only called in busybox, which should use -d all the time correctly.
-# I will leave this here for a while, as I think I'll reimplement it sometime
-# in the future, just for the case. It wouldn't currently work 100% correctly
-# anyway, as LOOPS may be incorrect:
-#
-#      for LOOP in $LOOPS ; do
-#         debug_log "losetup -d $LOOP"
-#         losetup -d "$LOOP" 2>/dev/null
-#      done
-# -------
-      shift
-   done
-}
-
-# Grow Changes is used to expand the loopback XFS filesystem to a bigger size.
-# It appends zeros at the end of the loop file and then it uses xfs_growfs.
-# It is executed only if the actual file size is smaller then requested.
-# $1 = xfs filesystem file path
-# $2 = requested size in MB, must be at least 17 MB
-# $3 = verbose and slower? (optional, empty value means quiet and faster)
-#
-grow_changes()
-{
-   debug_log "grow_changes" "$*"
-   local REQSIZE FILESIZE CURSIZE GROWDIR
-
-   REQSIZE=$(echo "$2" | sed -r "s/[^0-9]//g")
-   FILESIZE=$(stat -c '%s' "$1")
-   if [ ! -f "$1" -o "$REQSIZE" = "" -o "$FILESIZE" = "" ]; then return 1; fi
-   CURSIZE=$(($FILESIZE/1024/1024))
-
-   # if current filesize is not in 1024 blocks, round up
-   if [ $(($FILESIZE % 1024)) -ne 0 ]; then
-      CURSIZE=$(($CURSIZE+1))
-   fi
-
-   # works only with a regular existing file which is smaller then REQSIZE
-   if [ $REQSIZE -gt 16 -a $REQSIZE -gt $CURSIZE ]; then
-      if [ "$3" ]; then # verbose and slower, using sync
-         while [ $REQSIZE -gt $CURSIZE ]; do
-            echo -ne "- grow changes: $(($CURSIZE * 100 / $REQSIZE))% done\r"
-            dd if=/dev/zero of="$1" bs=1M seek=$CURSIZE count=1 2>/dev/null
-            if [ $? -ne 0 ]; then break; fi # not enough space can't stop us
-            CURSIZE=$(($CURSIZE + 1))
-            sync
-         done
-      else # direct seek, will create a hole if the filesystem supports it
-         dd if=/dev/zero of="$1" bs=1 seek="$REQSIZE"M count=0 2>/dev/null
-      fi
- 
-      echo "- creating/growing XFS filesystem..."
-      mkfs.xfs "$1" >/dev/null 2>&1 # this command will not overwrite any existing filesystem
-      if [ $? -ne 0 ]; then # the filesystem already exists, grow it (if it's xfs)
-         GROWDIR=/tmp/grow_changes$$
-         mkdir -p $GROWDIR
-         mount_device "$1" $GROWDIR
-         if [ $? -eq 0 ]; then
-            xfs_growfs $GROWDIR >/dev/null 2>&1
-            fumount $GROWDIR
-            rmdir $GROWDIR
+      if [ "$1" = "-l" ]; then LAZY="yes"; shift; fi
+      TARGET=$(readlink -f "$1")
+      if ! ismountpoint "$TARGET"; then
+         if [ -f "$TARGET" -o -d "$TARGET" ]; then
+            TARGET=$(df "$TARGET" | tail -n 1 | tr -s " " | cut -d " " -f 6)
          fi
       fi
-   else # REQSIZE < 17 MB or < CURSIZE
-      return 2
-   fi
+
+      if [ "$TARGET" != "" ]; then
+         umount -n "$TARGET" >/dev/null 2>&1
+         if [ $? -ne 0 ]; then
+            mount -n -o remount,ro -t ignored ignored "$TARGET" >/dev/null 2>&1
+            if [ "$LAZY" ]; then umount -n -l "$TARGET" >/dev/null 2>&1; fi
+         fi
+      fi
+      shift
+   done
 }
 
 # ===========================================================
@@ -456,20 +403,21 @@ grow_changes()
 create_module()
 {
    debug_log "create_module" "$*"
+   rm -f "$2" # overwrite, never append to existing file
    mksquashfs "$1" "$2" $3 >/dev/null
    if [ $? -ne 0 ]; then return 1; fi
    chmod oga-wx "$2" # remove execute attrib
 }
 
-# Mountpoint exits with 0 if $1 is mountpoint, else exits with 1
-# $1 = directory
+# ismountpoint exits with 0 if $1 is mountpoint, else exits with 1
+# $1 = directory or loop_file
 #
-mountpoint()
+ismountpoint()
 {
-   debug_log "mountpoint" "$*"
+   debug_log "ismountpoint" "$*"
    local MDIR
 
-   MDIR=$(readlink -f $1)
+   MDIR=$(readlink -f "$1")
    cat /proc/mounts | cut -d " " -f 2 | egrep "^$MDIR\$" >/dev/null 2>&1
 }
 
@@ -480,18 +428,19 @@ mountpoint()
 mount_module()
 {
    debug_log "mount_module" "$*"
-   mount -n -t squashfs -o loop,ro "$1" "$2"
+   mount_device "$1" "$2" loop,ro
 }
 
 # Insert a directory tree $2 to an union specified by $1
 # Top-level read-write branch is specified by it's index 0
+# Using =rr enables aufs to optimize real readonly branches
 # $1 = union absolute path (starting with /)
 # $2 = path to data directory
 #
 union_insert_dir()
 {
    debug_log "union_insert_dir" "$*"
-   mount -n -o remount,add:1:$2=ro aufs $1
+   mount -n -o remount,add:1:$2=rr aufs $1
 }
 
 # Find LZM modules in given dir
@@ -536,7 +485,7 @@ union_insert_module()
    local TARGET
 
    TARGET="$3/$(basename $2)"
-   if mountpoint $TARGET >/dev/null 2>&1; then return; fi # skip mounted modules
+   if ismountpoint $TARGET; then return 1; fi # skip already used modules
    mkdir -p $TARGET
    mount_module $2 $TARGET
    if [ $? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
@@ -555,9 +504,11 @@ union_insert_module()
 union_insert_modules()
 {
    debug_log "union_insert_modules" "$*"
+   local INSERTED
+
    list_modules $2 | while read MODULE; do
-      echolog -n " -> "
-      union_insert_module $1 $MODULE $3 ${#2}
+      INSERTED=$(union_insert_module $1 $MODULE $3 ${#2})
+      if [ "$INSERTED" != "" ]; then echolog " -> $INSERTED"; fi
    done
 }
 
@@ -603,7 +554,7 @@ list_mounted_directories()
    debug_log "list_mounted_directories" "$*"
    if [ "$MOUNTDIR" ]; then
       ls -1 $MOUNTDIR | while read DIR; do
-         if mountpoint $MOUNTDIR/$DIR >/dev/null 2>&1; then echo $DIR; fi
+         if ismountpoint $MOUNTDIR/$DIR; then echo $DIR; fi
       done
    fi
 }
@@ -632,7 +583,7 @@ list_swap_devices()
 {
    debug_log "list_swap_devices" "$*"
    if [ "$(cmdline_parameter nohd)" != "" -o "$(cmdline_parameter noswap)" != "" ]; then return 1; fi
-   blkid -t TYPE="swap" | cut -d : -f 1
+   blkid -t TYPE="swap" -o device
 }
 
 # List all block devices
@@ -670,7 +621,7 @@ find_filepath()
    local DIR FOUND PRESERVE
 
    DIR=$(device_mountdir $1)
-   mountpoint $DIR >/dev/null 2>&1
+   ismountpoint $DIR
    if [ $? -eq 0 ]; then
       PRESERVE="true"
    else
@@ -710,18 +661,21 @@ find_filepath()
 find_file()
 {
    debug_log "find_file" "$*"
-   local DEVICE DEVPART PATHPART
+   local FIND DEVICE DEVPART PATHPART
+
+   # allow using /mnt/... as well as /dev/...
+   FIND=$(echo "$1" | sed -r "s:^/mnt/:/dev/:")
 
    # if parameter is just a device, echo it and exit
-   if [ -b "$1" -o -c "$1" -o "$1" = "" ]; then echo "$1"; return; fi
+   if [ -b "$FIND" -o -c "$FIND" -o "$FIND" = "" ]; then echo "$FIND"; return; fi
 
    # If path doesn't start with /dev/, try to find the exact path on all devices
    # First, split DEV/PATH parts
-   DEVPART=$(echo "$1" | egrep -o "^/dev/[^/]+")
+   DEVPART=$(echo "$FIND" | egrep -o "^/dev/[^/]+")
 
    if [ "$DEVPART" = "" ]; then
-      # no device is specified. Search all devices for filename $1
-      PATHPART="$1";
+      # no device is specified. Search all devices for filename $FIND
+      PATHPART="$FIND";
       for DEVICE in $(list_mounted_directories) $(list_block_devices); do
          if ! grep -q ":$DEVICE@$PATHPART:" /tmp/_findfile 2>/dev/null; then
             find_filepath "$DEVICE" "$PATHPART"
@@ -731,7 +685,7 @@ find_file()
       done
    else
       # try to find PATHPART only on the given device
-      PATHPART=$(echo "$1" | sed -r 's:^/dev/[^/]+(.*):\1:')
+      PATHPART=$(echo "$FIND" | sed -r 's:^/dev/[^/]+(.*):\1:')
       find_filepath $DEVPART $PATHPART
    fi
 }
@@ -783,7 +737,7 @@ modprobe_essential_modules()
    debug_log "modprobe_essential_modules" "$*"
 
    echolog "starting loop device support"
-   modprobe_module loop max_loop=255
+   modprobe_module loop
    echolog "starting cdrom filesystem support"
    modprobe_module isofs
    echolog "starting squashfs support"
@@ -863,7 +817,7 @@ killall_unneeded()
    local LIST PID
 
    PID=$1
-   for pid in $(ps | grep -v "PID" | egrep -v "\[.*\]" | fgrep -v mount | fgrep -v ntfs | sed -r "s/^[[:space:]]*([0-9]+).*/\\1/"); do
+   for pid in $(ps | grep -v "PID" | egrep -v "\[.*\]" | fgrep -v mount | fgrep -v posixovl | fgrep -v ntfs | sed -r "s/^[[:space:]]*([0-9]+).*/\\1/"); do
       if [ $pid -lt $PID ]; then
          LIST="$LIST $pid"
       fi
@@ -924,7 +878,7 @@ fstab_update()
    mkdir -p $1/etc $1/mnt
    cat $FSTAB 2>/dev/null | grep -v "$FSTABLLFLAG" >$FSTABTMP
 
-   fstab_add_line $FSTABTMP tmpfs / tmpfs defaults
+   fstab_add_line $FSTABTMP aufs / aufs defaults
    fstab_add_line $FSTABTMP devpts /dev/pts devpts gid=5,mode=620
    fstab_add_line $FSTABTMP proc /proc proc defaults
    fstab_add_line $FSTABTMP sysfs /sys sysfs defaults

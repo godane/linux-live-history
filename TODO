@@ -1,5 +1,15 @@
 Linux Live Scripts TODO list
 ============================
 
+-(k)uselivemod: make sure to free the loop device as well as there is
+ no way to free them in clenaup. Or perhaps there is, ls -1 /sys/block/loop* ?
+ that would need to mount sysfs in cleanup (or don't unmount it in linuxrc)
+
+- fstab-update - include correct filesystem for / ... it is forcing tmpfs
+  now, which is very confusing. This may be problematic because fsck in the
+  distro will try to 'check' the filesystem, while it may be aufs in any
+  particular time.
+
 - bootinst.sh/.bat, bootlilo - make the 'Slax' string customizable, and modify
   it the same way like liblinuxlive
+

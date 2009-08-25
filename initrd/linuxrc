@@ -13,7 +13,8 @@ ln -sf /proc/mounts /etc/mtab    # this allows us to use umount -a
 
 header "starting Linux Live scripts <http://www.linux-live.org/>"
 
-# don't print kernel messages to konsole now
+# Don't print kernel messages to konsole now.
+# Syslog will reset printk settings, no need to remember it here anymore.
 echo "0" >/proc/sys/kernel/printk
 
 # Load essential drivers, like CDROM drivers, aufs/squashfs etc,
@@ -86,47 +87,59 @@ fi
 
 debug_shell
 
-# increase the size of changes file
-EXPANDTO=$(cmdline_value chexpand)
-if [ "$EXPANDTO" != "" -a -f "$CHANGESMNT" -a ! -d "$CHANGESMNT" ]; then
-   if ! touch $CHANGESMNT 2>/dev/null; then
-      echo "- can't expand changes, perhaps a read-only filesystem?"
-   else
-      echolog "expanding the file for changes to $EXPANDTO MB."
-      echo  "- this is done only the first time you run $LIVECDNAME"
-      echo  "- the procedure may take few minutes, wait please."
-      grow_changes "$CHANGESMNT" "$EXPANDTO" verbose
-   fi
-fi
+mount_device "$CHANGESMNT" $MEMORY # removes $MEMORY if CHANGESMNT is wrong
 
-mount_device $CHANGESMNT $MEMORY # if empty or fails, mount tmpfs:
-if [ $? -ne 0 ]; then 
-   # Find out how much of RAM do we like to use to save filesystem changes
+# test if the filesystem is writable so changes can be stored to it
+touch $MEMORY/empty 2>/dev/null && \
+rm -f $MEMORY/empty 2>/dev/null
+
+# if changes can't be mounted or the filesystem is not writable,
+# fallback to the default: tmpfs
+if [ $? -ne 0 ]; then
+   echolog "changes not writable, using memory only"
+   fumount $MEMORY
+   mkdir -p $MEMORY # mount_device might removed it
+
    RAMSIZE=$(cmdline_value ramsize)
    if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
-   mkdir -p $MEMORY # mount_device could remove it
    mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY
    XINO=$MEMORY
+   mkdir -p $CHANGES
 else
-   # if xfs filesystem is given, issue xfs_growfs to use maximum space
-   xfs_growfs $MEMORY >/dev/null 2>&1
+   # So it is writable, we will keep the filesystem mounted.
+   # Check if it supports links and chmod.
+   # If not, overmount CHANGES using posixovl
+   echolog "testing the filesystem for posix compatibility"
+   touch $MEMORY/.empty1 && \
+   ln -sf $MEMORY/.empty1 $MEMORY/.empty2 2>/dev/null && \
+   chmod +x $MEMORY/.empty1 2>/dev/null  && \
+   test -x $MEMORY/.empty1 && \
+   chmod -x $MEMORY/.empty1 2>/dev/null  && \
+   test ! -x $MEMORY/.empty1 && \
+   rm $MEMORY/.empty1 $MEMORY/.empty2 2>/dev/null
+
+   if [ $? -ne 0 ]; then
+      echolog "not compatible - starting posixovl"
+      rm $MEMORY/.empty1 $MEMORY/.empty2 2>/dev/null
+      mkdir -p $CHANGES
+      posixovl -F $CHANGES
+   fi
 fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
 echolog "setup union directory (using aufs, with udba=none)"
 
-mkdir -p $CHANGES
-if [ $? -ne 0 ]; then
-   fatal "a Read-Only filesystem for 'changes' is not supported."
-fi
+debug_shell
 
-# Store the xino file in memory in all cases, it's faster and safer
+mkdir -p $IMAGES
+
+# store the xino file in memory in all cases, it's faster and safer
 if [ "$XINO" != "$MEMORY" ]; then
    mkdir -p $XINO
    mount -n -t tmpfs tmpfs $XINO
 fi
 
-mkdir -p $IMAGES
+# mount aufs using the writable branch as the first one (leftmost/topmost)
 mount -t aufs -o nowarn_perm,udba=none,xino=$XINO/.aufs.xino,br:$CHANGES=rw aufs $UNION
 if [ $? -ne 0 ]; then fatal "can't setup union (aufs)"; fi
 

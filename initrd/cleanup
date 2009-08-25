@@ -21,7 +21,7 @@ if [ ! "$RE_EXEC_CLEANUP" ]; then
    echo "changing root back to initrd"
    pivot_root . $UNION
    echo "re-executing cleanup script"
-   exec chroot . /cleanup <dev/console >dev/console 2>&1
+   exec chroot . /cleanup "$@" <dev/console >dev/console 2>&1
    fatal "Something was wrong because we should never be here!"
 fi
 
@@ -29,10 +29,10 @@ fi
 killall_unneeded $(pidof cleanup)
 
 echo "unmounting union"
-fumount $UNION/proc
-fumount $UNION/sys
-fumount $UNION/dev/pts
-fumount $UNION/dev
+fumount -l $UNION/dev/pts
+fumount -l $UNION/dev
+fumount -l $UNION/proc
+fumount -l $UNION/sys
 fumount $UNION/boot
 fumount $UNION
 
@@ -43,6 +43,7 @@ echo "unmounting mountpoints"
 fumount $COPY2RAM
 fumount $ISOMOUNT
 fumount $XINO
+fumount $CHANGES
 fumount $MEMORY
 
 fumount $MOUNTDIR/*

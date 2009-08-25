@@ -93,11 +93,13 @@ mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
 
 debug "creating some essential devices in rootdisk"
 mknod $INITRD_TREE/dev/console c 5 1
+mknod $INITRD_TREE/dev/fb0 c 29 0
 mknod $INITRD_TREE/dev/null c 1 3
 mknod $INITRD_TREE/dev/zero c 1 5
 mknod $INITRD_TREE/dev/ram b 1 1
 mknod $INITRD_TREE/dev/systty c 4 0
 mknod $INITRD_TREE/dev/tty c 5 0
+mknod $INITRD_TREE/dev/fuse c 10 229
 for i in 1 2 3 4 5 6; do
   mknod $INITRD_TREE/dev/tty$i c 4 $i;
 done
@@ -108,10 +110,21 @@ cat liblinuxlive | sed -r 's/^LIVECDNAME=.*/LIVECDNAME="'$LIVECDNAME'"/' > $INIT
 cp {linuxrc,cleanup} $INITRD_TREE
 chmod ago+x $INITRD_TREE/{linuxrc,cleanup}
 
+#cp -a bootsplash/* $INITRD_TREE
+
+# handle the fuse filesystems here
+#
+if [ "$USEPOSIXOVL" = "yes" -o "$USENTFS3G" = "yes" ]; then
+   cp -a fuse/* $INITRD_TREE
+fi
+
+if [ "$USEPOSIXOVL" = "yes" ]; then
+   cp -a posixovl/* $INITRD_TREE
+fi
+
 if [ "$USENTFS3G" = "yes" ]; then
    cp -a ntfs-3g/* $INITRD_TREE
 fi
-
 
 # new busybox doesn't need the following links at all, but it's better
 # if we need to call a busybox binary from within a different shell then ash
@@ -177,7 +190,7 @@ if [ "$ADDLOCALE" != "" ]; then
 fi
 
 debug "unpacking all kernel modules for initrd"
-find $INITRD_TREE -name "*.ko.gz" | xargs -r gunzip
+find $INITRD_TREE -noleaf -name "*.ko.gz" | xargs -r gunzip
 
 debug "generating module dependency files"
 depmod -b $INITRD_TREE $KERNEL

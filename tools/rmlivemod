@@ -22,7 +22,7 @@ MODULES=/mnt/live/memory/modules
 mount -t aufs -n -o remount,del:$IMAGES/$MODULE aufs /
 if [ $? -ne 0 ]; then
    echo "Can't remove the module from live filesystem, some files"
-   echo "from the module are opened or used right now."
+   echo "from the module are opened or used right now. See lsof and dmesg"
    exit 1
 fi
 umount $IMAGES/$MODULE

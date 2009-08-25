@@ -4,8 +4,7 @@ boot param: nohd ... don't see any harddisk devices at all
 boot param: toram ... copy data from boot device to RAM and then run LiveCD from RAM
 boot param: copy2ram ... alias for toram
 boot param: noauto ... disable automount of devices (add 'noauto' to fstab entries)
-bootparam value: changes= ... all changes you made while running liveCD are stored in the given device/file. Default: empty
-bootparam value: chopt= ... value 'eie' causes the changes file from previous boot param to expand itself (fill up the device) if empty (zero size). Default: nothing
+bootparam value: changes= ... all changes you made while running liveCD are stored in the given device/file/directory. Default: empty
 bootparam value: from= ... data for LiveCD are loaded from given device or loop file. Default: the first device found
 bootparam value: ramsize= ... how much RAM will be used to save changes, if changes= parameter is not used. Default: 60%
 bootparam value: load= ... which lzm modules should be loaded from /optional directory. Default: empty

@@ -1,3 +1,38 @@
+ 6.1.5
+ 
+ * re-executing of cleanup script caused the $1 argument to be lost. Fixed.
+ * added bootsplash (kind of, a splashy replacement) but not activated by default.
+   maybe it will not be actovated at all... It's just a try (and splash is useless anyway, imho)
+ * create_module(): never append to existing file, always overwrite (rm -f)
+ * find_file(): allow /mnt/sda1/slaxsave.dat for example (/mnt will be replaced by /dev)
+ * removed max_loop boot parameter entirely. New kernel doesn't need this anymore
+   Tested on 2.6.23-rc2.
+ * implemented posixovl overlay. It's started if the branch doesn't support links.
+   WARNING! You must use newer version of aufs in order for posixovl to work, because older aufs
+   doesn't have some FUSE workarounds and can't simply see the posixovl mount.
+ * if 'changes=directory' is used and the directory exists but is not writable (eg is on CD), silently skip changes= at all.
+ * added few more mount options for vfat mouts, to make posixovl work better over vfat
+ * removed chexpand boot parameter. changes=loop_device.xfs is now deprecated, simply create a directory
+   and use changes=/path/to/directory ... if VFAT or NTFS is used to store changes, it will be overlayed
+   by posixovl. Still, a Linux filesystem for 'directory' is recommended! though.
+ * mountpoint() renamed to ismountpoint() as the 'mountpoint' binary doesn't
+   work with loop files, only with directories
+ * fumount no longer performs lazy-unmounts automatically, you have to specify -l.
+ * It's now able to unmount eg. /dev/sda1 device correctly if /mnt/sda1/filename is given as an argument
+ * removed mo2lzm script; people should STOP USING IT! I hate myself for releasing it anyway.
+ * modified dir2lzm script, added many checks in order to warn user to make
+   his module bit better
+ * remove noauto from swap devices, because a hybernated swap can't be used
+   by swapon anyway (hybernation modifies swap signature). It's SAFE to swapon.
+   Thanks to ElecCham for heads up!
+   Note: noauto boot parameter is still mandatory - with it, noauto is used only.
+ * add squashfs branches with =rr flag instead of =ro to aufs
+ * fstab-update now marks the root filesystem as 'aufs' instead of tmpfs, which is more correct technically,
+   but will make some people confused.
+ * mount_module now calls mount_device function, in order to bypass the 256 loop
+   limitation correctly
+
+
  6.1.4
  
  * KDE with HAL does no more need the stupid suffixes for mountpoints 
