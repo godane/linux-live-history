@@ -19,6 +19,7 @@ cd $CHANGEDIR
 allow_only_root
 
 
+# search for kernel
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
 echo -ne "Enter path for the kernel you wanna use [hit enter for $VMLINUZ]: "

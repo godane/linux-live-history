@@ -7,8 +7,9 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
   If you don't wish to compile anything, go to www.linux-live.org
   and download precompiled Linux kernel with everything included.
 
-  * Your distro must use kernel 2.6.9 or higher and udev must be installed 
-    and working (because devices from /dev are not copied to LiveCD)
+  * Your distro must use kernel 2.6.9 or higher
+  * udev must be installed and working in your distribution
+    (because devices from /dev are not copied to LiveCD)
 
   * all the following things must be compiled directly into kernel:
      (these options are usually compiled so you shouldn't have problems)
@@ -18,7 +19,7 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      - initrd (CONFIG_BLK_DEV_INITRD=y)
 
     You can use untouched Vanila Linux kernel 2.6 from Slackware!
-    (but in that case you have to compile unionfs and squashfs modules yourself)
+    but in that case you have to compile unionfs and squashfs modules yourself
 
   * all the following things must be compiled in the kernel or must be
      available as a kernel modules (.ko):
@@ -31,10 +32,9 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      - unionfs.ko (http://www.filesystems.org/project-unionfs.html)
      - squashfs.ko (http://squashfs.sourceforge.net)
 
-     If you compile them yourself, mkdir ./initrd/kernel-modules/2.6.x/
-     and copy squashfs.ko and unionfs.ko to it. Then run runme.sh
-
-     mksquashfs command is in ./tools and is dinamicaly linked with glibc.
+     If you compile them yourself, make sure unionfs.ko doesn't contain
+     debug info so it can fit 4MB initrd image. Copy your .ko modules to
+     linux live scripts to ./initrd/kernel-modules/2.6.* (create the dir!)
 
      In general, you don't need to compile anything unless you wish to use
      some own kernel configuration, or you wish to use newer version of
@@ -50,7 +50,8 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
      this in linux live scripts. I have to patch Slackware rc scripts (rc.S)
      to skip the test. You will need to do something similar for your distro.
 
-  * some distributions can't handle compressed kernel modules well (eg.debian?)
-    In that case, modify 'config' file and disable gzipping (set COMPRESS=0)
+  * some distributions can't handle compressed kernel modules well, for
+    example debian-based distros like debian itself or ubuntu
+    In this case, modify 'config' file and disable gzipping (set COMPRESS=0)
 
   These requirements could change with new kernel or unionfs versions.

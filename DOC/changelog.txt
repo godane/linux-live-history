@@ -1,3 +1,16 @@
+ 5.4.7
+
+ * finding livecd.sgn rewritten, now it doesn't search in subdirectories
+ * implemented fromiso cheatcode, use eg. fromiso=/dev/sda1/slax.iso
+   or eg. fromiso=/dev/sda1/slaxcd/
+ * changes= cheatcode modified to accept device names with path,
+   eg. changes=/dev/sda1/changes.ch
+ * removed default squashfs.ko and unionfs.ko kernel modules.
+   People don't read documentation and are confused that my *.ko modules 
+   don't work with their kernels.
+ * added 'noauto' boot argument, to disable automounting of disks
+
+
  5.4.6
 
  * modified unsquashfs to force overwrite of existing files
@@ -23,7 +36,7 @@
 
  5.4.4
  
- * added noload cheatcode, to disable loading specified slax modules (even those from /base/ and /modules)
+ * added noload cheatcode, to disable loading specified modules (even those from /base/ and /modules)
  * added ramsize= cheatcode, to specify how much RAM is used to store changes (defaults to ramsize=60%)
  * added make_disk.sh script to create bootable Live disk (eg. for USB devices)
 
@@ -41,8 +54,8 @@
  
  * updated blkid libraries
  * updated busybox, this fixes several issues with mount
- * added make_disk.bat script to create bootable SLAX disk in Windows
-   (eg. to install SLAX to USB stick or any FAT32 partition in win)
+ * added make_disk.bat script to create bootable disk in Windows
+   (eg. to install the LiveCD to USB stick or any FAT32 partition in win)
  * updated to latest unionfs snapshot (fix hardlinks count)
  * updated mksquashfs and unsquashfs binaries in tools directory
  * mo2dir shows correct error message if we try to use it on module inside union

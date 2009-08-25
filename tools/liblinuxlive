@@ -16,12 +16,21 @@ FSTABLLFLAG="# AutoUpdate"
 # user interface functions
 # ===========================================================
 
+# echogreen will echo $@ in green color
+# $1 = text
+#
+echogreen()
+{
+   echo -ne "[0;32m""$@""[0;39m"
+}
+
 # echolog
 # $1 = text to show and to write to /var/log/messages
 #
 echolog()
 {
    echo "LIVECD:" "$@" >>/var/log/livedbg
+   echogreen "* "
    echo "$@"
 }
 
@@ -35,7 +44,8 @@ debug()
    echo ": Debugging started. Here is the root shell for you."
    echo ": Type your desired command or hit Ctrl+D to continue booting."
    echo
-   ash
+   ash < /dev/console
+   echo
 }
 
 # header
@@ -43,7 +53,7 @@ debug()
 #
 header()
 {
-   echolog "[0;1m$1[0;0m"
+   echo "[0;1m""$@""[0;0m"
 }
 
 fatal()
@@ -53,6 +63,9 @@ fatal()
    echolog "Something went wrong and we can't continue. This should never happen."
    echolog "Please reboot your computer with Ctrl+Alt+Delete ..."
    echolog
+   umount -a -r
+   mount -t proc proc /proc
+   mount -t sysfs sysfs /sys
    ash < /dev/console
 }
 
@@ -74,7 +87,8 @@ allow_only_root()
 #
 egrep_o()
 {
-   cat | egrep "$1" | sed -r "s/.*($1).*/\\1/"
+   SED="`echo \"$1\" | sed -r 's/\\//\\\\\\//g'`"
+   cat | egrep "$1" | sed -r "s/.*($SED).*/\\1/"
 }
 
 # look into cmdline and echo $1 back if $1 is set
@@ -85,7 +99,7 @@ cmdline_parameter()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep_o "$1"
+   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep_o "($1)"
 }
 
 # look into cmdline and echo value of $1 option
@@ -96,7 +110,7 @@ cmdline_value()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep_o "=.*" | cut -b 2- | tail -n 1
+   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
 }
 
 # ===========================================================
@@ -135,21 +149,26 @@ modprobe_module()
 }
 
 # Mount device $1 to $2
-# $1 = /dev device to mount, eg. /dev/hda1
+# $1 = /dev device to mount, eg. /dev/hda1, or loop file, or directory
 # $2 = mountpoint, eg. /mnt/hda1
-# $3 = mount options, for example "loop", "ro", or "remount,rw"
-# $4 = filesystem type
+# $3 = optional mount options, for example "ro", or "remount,rw"
+# $4 = optional filesystem type
 #
 mount_device()
 {
-  mkdir -p $2
-  if [ "$3" != "" ]; then OPTIONS="-o $3"; else OPTIONS=""; fi
-  if [ "$4" != "" ]; then FILESYSTEM="-t $4"; else FILESYSTEM=""; fi
+  # make sure we have enough arguments
+  if [ "$2" = "" ]; then return 1; fi
+
+  mkdir -p "$2"
+  if [ -f "$1" ]; then LOOP="-o loop"; else LOOP=""; fi
+  if [ -d "$1" ]; then LOOP="-o rbind"; fi
+  if [ "$OPTIONS" ]; then OPTIONS="-o $3"; else OPTIONS=""; fi
+  if [ "$4" ]; then FILESYSTEM="-t $4"; else FILESYSTEM=""; fi
 
   PRINTK=`cat /proc/sys/kernel/printk`
   echo "0" >/proc/sys/kernel/printk
 
-  mount $FILESYSTEM $1 $2 $OPTIONS >/dev/null 2>/dev/null
+  mount $FILESYSTEM "$1" "$2" $OPTIONS $LOOP >/dev/null 2>/dev/null
   err=$?
 
   if [ 0$err -ne 0 ]; then rmdir $2 2>/dev/null; fi
@@ -172,6 +191,14 @@ create_module()
    mksquashfs "$1" "$2" $3 >/dev/null
    if [ 0$? -ne 0 ]; then return 1; fi
    chmod oga-x "$2" # remove execute attrib
+}
+
+# Mountpoint exits with 0 if $1 is mountpoint, else exits with 1
+# $1 = directory
+#
+mountpoint()
+{
+   cat /proc/mounts | cut -d " " -f 2 | egrep "^$1\$" >/dev/null 2>&1
 }
 
 # Mount .mo module to destination directory
@@ -226,7 +253,7 @@ list_modules()
 union_insert_module()
 {
    TARGET="$3/`basename $2`"
-   if mountpoint $TARGET >/dev/null 2>&1; then continue; fi # skip mounted modules
+   if mountpoint $TARGET >/dev/null 2>&1; then return; fi # skip mounted modules
    mkdir -p $TARGET
    mount_module $2 $TARGET
    if [ 0$? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
@@ -243,7 +270,7 @@ union_insert_module()
 union_insert_modules()
 {
    list_modules $2 | while read MODULE; do
-      echo -n " -> "
+      echolog -n " -> "
       union_insert_module $1 $MODULE $3 ${#2}
    done
 }
@@ -312,21 +339,49 @@ list_block_devices()
    list_partition_devices
 }
 
-# Try to mount all disks, partitions and cdroms and Find where the LiveCD is.
-# If LiveCD found in the device, echo dirname of it's directory,
-# and leave the device mounted. Mounting is not ro, but without any argument.
-# $1 = directory where devices will be mounted
+# Find file-path on given device
+# Mounts the device in $1 and returns path if found,
+# else unmounts and exits
+# $1 = mountpoint, eg. /mnt
+# $2 = device
+# $3 = path/filename
 #
-find_live_data_dir()
+find_filepath()
 {
-   list_block_devices | while read DEVICE; do
-      DIR="/$1/`basename $DEVICE`"
-      mount_device $DEVICE $DIR
-      if [ 0$? -ne 0 ]; then continue; fi
-      FOUND=`ls -A1d $DIR/livecd.sgn $DIR/*/livecd.sgn 2>/dev/null | head -n 1`
-      if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null
-      else dirname "$FOUND"; return 1; fi
-   done
+   DIR="$1/`basename $2`"
+   mount_device $2 $DIR
+   if [ 0$? -ne 0 ]; then rmdir $DIR 2>/dev/null; return 1; fi
+   FOUND="`ls -A1d $DIR/$3 2>/dev/null | head -n 1`"
+   if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null; return 1
+   else echo "$FOUND" | tr -s '/'; return 0; fi
+}
+
+# Find file in computer by mounting disks or other storage devices in $1
+# and searching for $2 in the mounted directory
+# $1 = mountpoint, eg. /mnt
+# $2 = filename or device-path or devicepath/filename
+#
+find_file()
+{
+   # if parameter is just a device, echo it and exit
+   if [ -b "$2" -o -c "$2" -o "$2" = "" ]; then echo "$2"; return; fi
+   # if path doesn't start with /dev/, find the path exactly on all devices
+
+   # split DEV/PATH parts
+   DEVPART="`echo \"$2\" | egrep_o \"(^/dev/[^/]+)\"`"
+
+   if [ "$DEVPART" = "" ]; then
+      # no device is specified, search all devices for filename $1
+      PATHPART="$2";
+      list_block_devices | while read DEVICE; do
+         find_filepath $1 $DEVICE $PATHPART
+         if [ 0$? -eq 0 ]; then return 0; fi
+      done
+   else
+      # try to find PATHPART only on the given device
+      PATHPART="`echo \"$2\" | egrep_o \"^/dev/[^/]+/(.*)\"`"
+      find_filepath $1 $DEVPART $PATHPART
+   fi
 }
 
 # ===========================================================
@@ -378,7 +433,7 @@ modprobe_usb_modules()
    modprobe_module ohci-hcd
    modprobe_module uhci-hcd
    modprobe_module usb-storage
-   sleep 2
+   sleep 3
    create_block_devices
 }
 
@@ -424,6 +479,9 @@ fstab_update_line()
 fstab_update()
 {
    IOCHARSET="`cmdline_value iocharset`"
+   AUTO="`cmdline_parameter noauto`"
+   if [ "$AUTO" = "" ]; then AUTO="auto"; fi
+
    FSTAB="$1/etc/fstab"
    mkdir -p $1/etc $1/mnt
    cat $FSTAB 2>/dev/null | grep -v "$FSTABLLFLAG" >$FSTAB~
@@ -461,7 +519,7 @@ fstab_update()
          if [ "$FS" = "swap" ]; then
             fstab_update_line $FSTAB~ $DEVICE swap swap defaults
          else
-            fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec$OPT
+            fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR $FS $AUTO,users,suid,dev,exec$OPT
             mkdir -p "$1/$MOUNTDIR"
          fi
       fi

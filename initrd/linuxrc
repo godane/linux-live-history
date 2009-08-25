@@ -8,6 +8,7 @@ header "starting Linux Live scripts <http://www.linux-live.org/>"
 echolog "mounting /proc and /sys filesystems"
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
+ln -sf /proc/mounts /etc/mtab # this allows us to use umount -a
 
 # setup DEBUGCMD variable. If debug boot option is present, call debug()
 # function several times during script's execution
@@ -23,6 +24,8 @@ CHANGES=$MEMORY/changes
 COPY2RAM=$MEMORY/copy2ram
 IMAGES=$MEMORY/images
 INITRAMDISK=$MOUNTDIR/live
+ISOMOUNT=/$MOUNTDIR/iso
+LIVECDSGN=livecd.sgn
 
 # amount of RAM to store changes
 RAMSIZE="`cmdline_value ramsize`"
@@ -38,31 +41,31 @@ if [ "`cmdline_parameter probeusb`" != "" ]; then
    modprobe_usb_modules
 fi
 
-$DEBUGCMD
-
-# $UNION will be used as a root directory, livecd modules will be added soon.
-echolog "setup union on $UNION"
 mkdir -p $UNION
 mkdir -p $MEMORY
 
-CHANGESDEV="`cmdline_value changes`"
-if [ "$CHANGESDEV" != "" ]; then
-   # if starting with /dev/, mount the device
-   if [ "`echo $CHANGESDEV | egrep \"^/dev/\"`" != "" ]; then
-      CHANGESPATH="`echo $CHANGESDEV | cut -d \"/\" -f 4`"
-      CHANGESDEV="`echo $CHANGESDEV | cut -d \"/\" -f 1-3`"
-      echo "mounting $CHANGESDEV to $MEMORY"
-      mount_device $CHANGESDEV $MEMORY
-   else false; fi
-else false; fi
+$DEBUGCMD
+
+echolog -n "setup directory for changes "
+CHANGESPATH="`cmdline_value changes`"
+CHANGESPATH="`find_file $MOUNTDIR $CHANGESPATH`"
+echo $CHANGESPATH
+mount_device $CHANGESPATH $MEMORY # silently ignored if changespath is empty
 
 # mount tmpfs only in the case when changes= boot parameter was empty
 # or we were not able to mount the storage device
 if [ $? -ne 0 ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY; fi
 
+# $UNION will be used as a root directory, livecd modules will be added soon
+echolog "setup union on $UNION"
+
 mkdir -p $CHANGES
+if [ 0$? -ne 0 ]; then
+   fatal "it seems you're using a Read-Only filesystem"
+fi
+
 mkdir -p $IMAGES
-mount -t unionfs -o debug=0,dirs=$CHANGES=rw unionfs $UNION
+mount -t unionfs -o dirs=$CHANGES=rw unionfs $UNION
 if [ $? -ne 0 ]; then fatal "can't setup union in /union directory"; fi
 
 $DEBUGCMD
@@ -70,26 +73,48 @@ $DEBUGCMD
 # try to find livecd data directory. If not found, try modprobing
 # USB kernel modules and repeat the find procedure again
 echolog "looking for data modules"
-DATA="`find_live_data_dir $MOUNTDIR`";
+
+FROMISO="`cmdline_value fromiso`"
+FROMISO="`find_file $MOUNTDIR $FROMISO`"
+
+# when fromiso is used, search for livecd.sgn
+if [ "$FROMISO" ]; then
+   mount_device $FROMISO $ISOMOUNT
+   if [ 0$? -eq 0 -a -e "$ISOMOUNT/$LIVECDSGN" ]; then
+      echolog "found in $FROMISO"
+      DATA=$ISOMOUNT
+   fi
+fi
+
 if [ "$DATA" = "" ]; then
+   # fromiso is not used or it didn't contain livecd.sgn
+   DATA="`find_file $MOUNTDIR $LIVECDSGN`"
+   DATA="`dirname \"$DATA\"`"
+fi
+
+if [ "$DATA" = "" ]; then
+   # data still not found, probe for USB devices and wait
    modprobe_usb_modules;
-   echolog -n "searching for usb devices .."
+   echolog -n "waiting for usb devices .."
    for i in 1 2 3 4 5 6 7 8; do # max 36 seconds, prolong the delay each time
-      echolog -n "."
+      echo -n "."
       create_block_devices >/dev/null
-      DATA="`find_live_data_dir $MOUNTDIR`";
+      DATA="`find_file $MOUNTDIR $LIVECDSGN`";
       if [ "$DATA" != "" ]; then break; fi
       sleep $i;
    done
 fi
 
+$DEBUGCMD
+
 if [ "$DATA" = "" ]; then fatal "
-Data for LiveCD not found. Searching for livecd.sgn file, not found.
-You are maybe using an unsupported boot device
-(for example a CD-ROM connected to SCSI or PCMCIA interface)
-Try to copy all data from your boot media to your IDE harddisk,
-eg. to /mnt/sda1/alldata/ or C:\\alldata\\. Then boot again."; fi
-echolog "found in $DATA"
+LiveData not found. Searching for $LIVECDSGN file,but file not found.
+You are maybe using an unsupported boot device (eg. SCSI or PCMCIA CD-ROM)
+Try to copy all data from CD/USB to your IDE harddisk, for example
+to /mnt/sda1/alldata/ in Linux or C:\\alldata\\ in Windos. Then boot again."
+fi
+
+echolog "LiveData mounted to $DATA"
 
 $DEBUGCMD
 
@@ -101,12 +126,12 @@ if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]
    mkdir -p $COPY2RAM
 
    # make sure it's in RAM even with changes= parameter
-   if [ "$CHANGESDEV" != "" ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $COPY2RAM; fi
+   if [ "$CHANGESPATH" ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $COPY2RAM; fi
    copy_to_ram $DATA $COPY2RAM
 
    cd_autoeject 1
    umount $DATA 2>/dev/null
-   if [ $? -ne 0 ]; then umount `dirname $DATA` 2>/dev/null; fi
+   umount $MOUNTDIR/* 2>/dev/null
    rmdir $MOUNTDIR/* 2>/dev/null # mounted device names are empty, remove them
    DATA=$COPY2RAM
    cd_autoeject 0
@@ -128,12 +153,12 @@ union_insert_modules $UNION $MEMORY $IMAGES
 
 $DEBUGCMD
 
-echo "copying rootchanges"
+echolog "copying rootchanges"
 cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 
 $DEBUGCMD
 
-echo "creating /etc/fstab"
+echolog "creating /etc/fstab"
 fstab_update $UNION
 
 # More likely these directories aren't there.
