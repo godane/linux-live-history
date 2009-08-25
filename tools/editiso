@@ -1,0 +1,54 @@
+#!/bin/bash
+# Insert/remove files (modules) into/from CD filesystem (iso)
+# Author: Tomas M. <http://www.linux-live.org>
+#
+
+if [ "$2" = "" ]; then
+   echo
+   echo "Add or remove files from ISO filesystem specified by 'source'"
+   echo "Usage: $0 [ options ] iso_source /path/new.iso"
+   echo
+   echo " The options are"
+   echo " -r <file|dir>             ... remove a file from the ISO"
+   echo "                               (path is relative to the ISO root)"
+   echo " -a <path_in_iso=file|dir> ... add a file to the ISO, save it to 'path_in_iso'"
+   echo "                               (path_in_iso is relative to the ISO root"
+   echo "                               and if ommited, defaults to root /)"
+   echo
+   echo " For example, to remove vmlinuz from the ISO and place new slax.ico to the root"
+   echo " (from the file /home/tom/slax.ico), execute the following command:"
+   echo " $0 -r /vmlinuz -a /slax.ico=/home/tom/slax.ico /slax-orig.iso /new.iso"
+   echo
+   exit
+fi
+
+CDNAME="OwnLiveCD"
+ISOLINUXBIN=/tmp/isolinux$$.bin
+
+while [ ! "$3" = "" ]; do
+   if [ "$1" = "-r" ]; then EXCLUDE="$EXCLUDE -x $DATADIR/$2"; fi
+   if [ "$1" = "-a" ]; then GRAFT="$GRAFT `echo \"$2=$2\" | cut -d \"=\" -f 1-2`"; fi
+   shift; shift
+done
+
+# mount iso if not already mounted
+if [ ! -d "$DATADIR" ]; then
+   DATADIR=/tmp/livecd_data$$
+   mkdir -p "$DATADIR"
+   mount -o loop "$1" "$DATADIR"
+fi
+
+# isolinux.bin is changed during the ISO creation,
+# so we need to restore it from the backup.
+gunzip -c $DATADIR/isolinux.bin.gz >$ISOLINUXBIN
+
+mkisofs -o "$2" -v -J -R -D -A "$CDNAME" -V "$CDNAME" \
+-no-emul-boot -boot-info-table -boot-load-size 4 \
+-x "$DATADIR/isolinux.bin" -x "$DATADIR/isolinux.boot" $EXCLUDE \
+-b isolinux.bin -c isolinux.boot \
+-graft-points isolinux.bin=$ISOLINUXBIN $GRAFT "$DATADIR"
+
+# cleanup all temporary files and directories
+rm $ISOLINUXBIN
+umount "$DATADIR" 2>/dev/null >/dev/null
+if [ "$?" = "0" ]; then rmdir $DATADIR; fi

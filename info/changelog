@@ -1,3 +1,35 @@
+ 5.0.2
+ 
+ * linuxrc and liblinuxlive rewritten from the scratch
+ * busybox recompiled, it contains vi editor now.
+ * added nohd boot option to disable mounting harddiscs at all
+
+ * moduse renamed to uselivemod and rewritten
+ * dir2img renamed to dir2mo and rewritten
+ * img2dir renamed to mo2dir and rewritten
+ * tgz2img renamed to tgz2mo and rewritten
+
+ * when no live data found, try to modprobe USB storage modules
+ * when no live data found, modprobe ALL scsi modules, I hope it won't hang
+
+ * not implemented yet: tohd and fromhd boot options
+ * not implemented yet: toram (and copy2ram) boot option
+ 
+
+ 5.0.0
+ 
+ * added Linux 2.6 support !!!!
+ * added unionfs support
+ * added squashfs support
+ * added BusyBox binary, which reduces the size of initrd and makes
+   linux-live scripts more flexible; removed bash, added ash
+ * modinsert renamed to editiso and rewritten
+not yet:* fixed tohd boot option (--test?)
+ * added nodma boot option, to disable DMA support upon request for all cdroms and disks
+ * create_bootdisk.sh fixed incorrect error message about LILO not installed
+ * removed nolock boot parameter
+ 
+
  4.2.4
  
  * added installimg script to /tools/

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Author: Tomas Matejicek <http://www.linux-live.org>
+# Author: Tomas M. <http://www.linux-live.org>
 
 if [ "$1" = "" -o ! -b "$2"  -o ! -b "$3" ]; then
   echo
@@ -52,7 +52,7 @@ read-write
 append=\" probeusb $APPEND livecd_subdir=$SUBDIR \" " >$TMPLILOCONF
 
 lilo -v -C $TMPLILOCONF -S /dev/null
-if [ "$?" = "0" ]; then echo "ERROR installing LILO ! Your drive won't boot"; fi
+if [ "$?" -ne 0 ]; then echo "ERROR installing LILO ! Your drive won't boot"; fi
 
 umount $DATADIR 2>/dev/null >/dev/null
 if [ "$?" = "0" ]; then rmdir $DATADIR; fi

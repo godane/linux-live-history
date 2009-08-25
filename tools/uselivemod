@@ -1,0 +1,24 @@
+#!/bin/bash
+# Use module while running LiveCD
+# include it into live directory structure on the fly
+# Author: Tomas M. <http://www.linux-live.org>
+#
+
+if [ "$1" = "" ]; then
+   echo
+   echo "Use module on the fly while running Live CD"
+   echo "Usage: $0 module.mo"
+   exit
+fi
+
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
+union_insert_module /.. $1 /mnt/live/images
+
+# executable called "manual" is started only by this script (uselivemod)
+#
+#if [ -x "$IMG/manual" ]; then "$IMG/manual"; fi

@@ -1,36 +1,33 @@
+Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
 
-  To be able to create a Linux Live CD
-  you will need to meet all the following requirements:
+  To be able to create a Linux Live CD, your kernel must meet all the
+  following requirements:
 
    * all the following things must be compiled directly into kernel:
-     - devfs (CONFIG_DEVFS_FS=y)
      - ext2 (CONGIG_EXT2_FS=y)
      - tmpfs (CONFIG_TMPFS=y)
      - loop device (CONFIG_BLK_DEV_LOOP=y)
      - ramdisk (CONFIG_BLK_DEV_RAM=y)
      - initrd (CONFIG_BLK_DEV_INITRD=y)
-     - iso filesystem (CONFIG_ISO9660_FS=y)
-     -  with transparent decompression (CONFIG_ZISOFS=y)
 
-   * ovlfs module must be compiled for the kernel you are using.
-     Get the source at http://ovlfs.sourceforge.net, and be sure
-     that symlink /lib/modules/2.4.xx/build points to the correct
-     kernel source tree before compiling. Compiling could produce
-     some error messages, just ignore them. Install ovlfs to your system.
+   * unionFS module must be compiled for your kernel. Download the source
+     from here: http://www.filesystems.org/project-unionfs.html and
+     compile unionfs.ko module.
 
-     Or, download precompiled kernel with ovlfs from http://www.linux-live.org
+   * SquashFS filesystem (http://squashfs.sourceforge.net) is needed
+     to compress all data. It's available only as a patch for kernel
+     but it can be used to compile a kernel module squashfs.ko. You will
+     mksquashfs command either, it's a part of squashfs tools.
 
-   * mkzftree is used for img compression. Make sure you have it,
-     and also make sure your mkisofs works properly with -z option
-     (transparent decompression). This all is already done in Slackware's
-     cdrtools package.
+   * Your distro must be running kernel 2.6.9 or higher
+     and udev must be installed and working.
+     
+   * You must patch your distro so it won't test the status of root directory
+     (whether it is or is not writable). For example, Slackware is testing 
+     the status of the root partition and if it's read-write, it will display
+     a message and will wait for user input. This is something we don't like,
+     right? Unionfs can't be remounted ro, so I can't avoid this in linux live
+     scripts. I have to patch Slackware rc scripts (rc.S) to skip this test.
+     You will need to do something similar for your distro.
 
-   * devfsd must be installed and configured in your distribution
-     else your LiveCD won't be able to use devfs (can't open initial console error)
-     Unfortunately, devfsd package was removed from Slackware 10,
-     you can find it in ./devfsd/ directory for now.
-
-   * Don't install udev package else devfsd won't work!
-     use "removepkg udev" if you already installed it
-
-  These requirements could change with new kernel or ovlfs versions.
+  These requirements could change with new kernel or unionfs versions.

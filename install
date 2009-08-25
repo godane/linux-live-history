@@ -4,12 +4,14 @@
 #
 # this script is automatically called by runme.sh
 #
-# Author: does it worth for such a short script ... hm... ok, Tomas Matejicek.
+# Author: does it worth for such a short script ... hm... ok, Tomas M.
 #
 
-mkdir -p /usr/sbin
-mkdir -p /usr/lib
-ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE /usr/sbin; done
-ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE /usr/lib; done
+ROOT=$1
 
-echo "Linux Live scripts were installed successfuly"
+mkdir -p $ROOT/usr/sbin
+mkdir -p $ROOT/usr/lib
+ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
+ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
+
+echo "Linux Live scripts were installed successfuly to $1/"

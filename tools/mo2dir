@@ -1,0 +1,26 @@
+#!/bin/bash
+# convert .MO compressed file back into directory tree
+#
+# Author: Tomas M. <http://www.linux-live.org>
+#
+
+if [ ! -d "$2" ]; then
+   echo 
+   echo "Convert .MO compressed module back into directory tree"
+   echo "usage: $0 source_file.mo existing_output_directory"
+   exit 1
+fi
+
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
+TMPDIR=/tmp/mo2dir$$
+
+mkdir -p $TMPDIR
+mount_module "$1" "$TMPDIR"
+cp -R --preserve "$TMPDIR"/* "$2"
+umount "$TMPDIR"
+rmdir "$TMPDIR"

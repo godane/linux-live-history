@@ -1,89 +1,135 @@
 #!/bin/bash
 #
-# initrd_create:  make initrd rootdisk
+# initrd_create:  make initrd rootdisk by using busybox
 #
-# Author:	  Tomas Matejicek <http://www.linux-live.org>
+# Author:	  Tomas M. <http://www.linux-live.org>
 
 . ../config || exit 1
-. ./liblinuxlive || exit 1 
 
-KERNEL=`/bin/uname -r`
+# rcopy is a recursive cp, which copies also symlink's real source
+# $1 = source (may be a regular file or symlink)
+# $2 = target PARENT
+#
+rcopy()
+{
+   if [ -L "$1" ]; then
+      REALPATH="`readlink -f \"$1\"`"
+      cp --parent -R "$REALPATH" "$2"
+      ln -sf "$REALPATH" "$2/$1"
+   else
+      cp --parent -R "$1" "$2"
+   fi
+   if [ "$?" -ne 0 ]; then
+      echo "---------------------------"
+      echo "Error occured while trying to copy \"$1\" to \"$2\""
+      echo "nevertheless your LiveCD may still work."
+      echo "Possible reason: not enough free space in initrd or source doesn't exist"
+      echo "---------------------------"
+   fi
+}
 
-echo "creating empty image file initrd.img..."
+# copy file/dir only if it exists, else skip with no error
+# $1 = source (may not exist)
+# $2 = target PARENT
+#
+rcopy_ex()
+{
+   if [ -a "$1" ]; then
+      rcopy "$1" "$2"
+   fi
+}
+
+##################################################
+# Create INITRD image now:
+
+if [ ! -d "kernel-modules/$KERNEL" ]; then
+   echo "The directory kernel-modules/$KERNEL doesn't exist. Please create it and copy"
+   echo "squashFS and unionFS modules for your kernel version to it."
+   exit 1
+fi
+
+echo "creating empty image file initrd.img"
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >/dev/null 2>/dev/null
 
-echo "making filesystem..."
-mkfs -t ext2 -F -m 0 -i 1024 $INITRDIMG >/dev/null 2>/dev/null
+echo "making filesystem"
+mkfs -t ext2 -F -m 0 -b 1024 -i 1024 $INITRDIMG 2>/dev/null >/dev/null
 
-echo "creating empty directory $MOUNTDIR..."
+echo "creating empty directory $MOUNTDIR"
 rm -Rf $MOUNTDIR
 mkdir $MOUNTDIR
 
-echo "mounting initrd.img to it..."
+echo "mounting initrd.img to it"
 mount -o loop $INITRDIMG $MOUNTDIR
+if [ "$?" -ne 0 ]; then
+   echo "Error mounting initrd! Not enough free loop devices?"
+   exit 1
+fi
 
-echo "creating directories..."
+echo "creating directories"
 rmdir $MOUNTDIR/lost+found
-mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,sbin,lib,tmp,usr/bin,usr/sbin,var/log}
+mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
 
-echo "copying files to the rootdisk (this may take some time)..."
+echo "creating some essential devices in rootdisk"
+mknod $MOUNTDIR/dev/console c 5 1
+mknod $MOUNTDIR/dev/null c 1 3
+mknod $MOUNTDIR/dev/ram b 1 1
+mknod $MOUNTDIR/dev/systty c 4 0
+mknod $MOUNTDIR/dev/tty c 5 0
+mknod $MOUNTDIR/dev/tty1 c 4 1
+
+loops=255
+while [ $loops -ge 0 ]; do
+   mknod $MOUNTDIR/dev/loop$loops b 7 $loops
+   loops=$(($loops-1))
+done
+
+echo "copying files to the rootdisk"
 touch $MOUNTDIR/etc/{m,fs}tab
 cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
 chmod a+x $MOUNTDIR/linuxrc
 
-# find all lib dependences
-for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount mv cut \
-              mkdir rmdir ls ln echo cat grep egrep fdisk blockdev \
-	      pivot_root insmod lsmod modprobe depmod swapon eject tail tr \
-	      chroot readlink basename dirname test sleep [ ;
-do
-   for LOCATION in /bin /sbin /usr/bin /usr/sbin ;
-   do
-      if [ -r "$LOCATION/$BINARY" ]; then
-         rcopy "$LOCATION/$BINARY" "$MOUNTDIR"
-
-         list_libs "$LOCATION/$BINARY" | sort | uniq | while read LIB; do
-            if [ ! -a "$MOUNTDIR/$LIB" ]; then
-               rcopy "$LIB" "$MOUNTDIR"
-	    fi
-	 done
-      fi
-   done
-done
-
-# this line can be safely removed when using 2.6 kernel
-cp -R /sbin/*.old $MOUNTDIR/sbin 2>/dev/null
-
-#filesize script by using ls + cut
-echo -ne "#!/bin/bash\necho \`ls -ol \"\$1\"\` | cut -d \" \" -f 4" >$MOUNTDIR/bin/filesize
-chmod 0755 $MOUNTDIR/bin/filesize
+cp binaries/busybox $MOUNTDIR/bin
+cp binaries/unionctl $MOUNTDIR/bin
+ln -s busybox $MOUNTDIR/bin/ash
+ln -s busybox $MOUNTDIR/bin/sh
+ln -s busybox $MOUNTDIR/bin/[
 
 LMK="lib/modules/$KERNEL"
 
 #necessary modules and dependency files
-rcopy /$LMK/kernel/fs/ovlfs $MOUNTDIR
+mkdir -p $MOUNTDIR/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/unionfs.ko.gz $MOUNTDIR/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/squashfs.ko.gz $MOUNTDIR/$LMK/kernel/fs
 
 #copy filesystem modules, if not directly copied into kernel
+rcopy_ex /$LMK/kernel/lib/zlib_inflate $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/block/loop* $MOUNTDIR 2>/dev/null
+
+rcopy_ex /$LMK/kernel/fs/isofs $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/vfat $MOUNTDIR 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
 
 #usb modules
-rcopy_ex /$LMK/kernel/drivers/usb/usbcore.* $MOUNTDIR 2>/dev/null
 rcopy_ex /$LMK/kernel/drivers/usb/host $MOUNTDIR 2>/dev/null
 rcopy_ex /$LMK/kernel/drivers/usb/storage $MOUNTDIR 2>/dev/null
 
-#disk (ide, raid, pcmcia, pnp, ide-scsi) modules
-rcopy_ex /$LMK/kernel/drivers/ide $MOUNTDIR
-rcopy_ex /$LMK/kernel/drivers/pcmcia $MOUNTDIR
-rcopy_ex /$LMK/kernel/drivers/pnp $MOUNTDIR
-rcopy_ex /$LMK/kernel/drivers/scsi/ide-scsi.* $MOUNTDIR
+#disk (scsi, ide, raid, pcmcia) modules
+rcopy_ex /$LMK/kernel/drivers/scsi $MOUNTDIR
+#rcopy_ex /$LMK/kernel/drivers/ide $MOUNTDIR
+#rcopy_ex /$LMK/kernel/drivers/pcmcia $MOUNTDIR
 
-chroot $MOUNTDIR depmod -a 2>/dev/null # some dependences may be missing
+echo "generating module dependency files"
+depmod -b $MOUNTDIR
 
-echo "unmounting $MOUNTDIR and gzipping initrd.img..."
+echo "unmounting $MOUNTDIR"
 umount $MOUNTDIR
+
+echo "gzipping initrd.img"
 gzip --best $INITRDIMG
 
-echo "deleting directory $MOUNTDIR..."
+echo "deleting directory $MOUNTDIR"
 rm -Rf $MOUNTDIR
+
+echo "initrd.gz created"

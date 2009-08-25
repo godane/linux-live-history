@@ -1,7 +1,7 @@
 #!/bin/bash
 # Create bootable ISO from files in curent directory.
 # usage: create_bootiso /mnt/disk/freespace/resultFilename.iso
-# Author: Tomas Matejicek <http://www.linux-live.org>
+# Author: Tomas M. <http://www.linux-live.org>
 #
 
 CDLABEL="SLAX"

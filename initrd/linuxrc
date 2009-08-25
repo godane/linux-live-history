@@ -1,331 +1,97 @@
-#!/bin/bash
+#!/bin/ash
+
+# initrd:
+# /
+#   bin
+#   dev
+#   etc
+#   mnt
+#   union
+#        / mnt
+#             / live
+#                   / changes
+#   usr
+#   tmp
 
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 . liblinuxlive
 
-# storage files
-MOUNTS=/mounts.log
-MNTORDER=/mnt.order
-INSORDER=/ins.order
-STGFILE=/mnt/tmp/ovlfs.stor
-
-# paths
-LIVECDDATA=/mnt/mnt/livecd
-LIVECD_SGN=livecd.sgn
-IMGRO=$LIVECDDATA/imgro
-IMGRW=$LIVECDDATA/imgrw
-CP2RAM=$LIVECDDATA/cp2ram
-CHANGES=$LIVECDDATA/changes
-PROFILED=/mnt/etc/profile.d
-
-# init script, absolute path for chrooted filesystem
-LINUXINIT=/tmp/init
-
 header "linuxrc-start"
-
 echolog "logging all messages to /var/log/livedbg"
-echolog "creating root filesystem in /mnt"
-mount -t tmpfs -o "size=90%" tmpfs /mnt
-mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,sys,var/run,var/lock}
-mkdir -p /mnt/mnt/{ramdisk,livecd}
 
-# touch to avoid "overmounting" by ovlfs, which could sometimes cause errors
-# with locking. For example /etc/mtab locking or /root/.Xauthority locking
-touch /mnt/{etc,root,tmp,var/run,var/lock}/.disable_overmount
-
+echolog "mounting /proc and /sys filesystems"
 mount -t proc proc /proc
+mount -t sysfs sysfs /sys
 
-DEBUG="`cmdline_value debug`"
-if [ "$DEBUG" = "" ]; then
-   DEBUG="`cmdline_parameter debug`"
-   if [ ! "$DEBUG" = "" ]; then
-      DEBUG="cat /proc/self/environ /proc/mounts"
-   fi
-fi
+# setup DEBUGCMD variable
+if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
 
-$DEBUG
+$DEBUGCMD
 
-# mount /dev filesystem only if it's not already mounted by kernel
-if [ ! -r /dev/.devfsd ]; then
-   mount -t devfs devfs /dev
-   if [ ! "$?" = "0" ]; then
-      header "ERROR!"
-      echolog "devfs is not mounted in /dev and mount attempt failed"
-      echolog "Your kernel probably doesn't support devfs"
-      echolog "try cat /proc/filesystems | grep devfs"
-      echolog "Press Ctrl+Alt+Del for reboot."
-      while [ 1 = 1 ]; do bash; done
-   fi
-fi
+UNION=/union
+CHANGES=/changes
+MOUNT=$UNION/mnt
+IMAGES=$MOUNT/live/images
+TORAM=$MOUNT/live/toram
+INITRAMDISK=mnt/live/initramdisk
 
-# mount this very soon to allow modules to include device files
-mount -t devfs devfs /mnt/dev
+# we need cdrom support, isofs support, etc
+modprobe_essential_modules
+setup_dma
 
-if [ ! "`cmdline_parameter nolock`" = "" ]; then
-   echolog "CD locking disabled by nolock kernel parameter"
-   echo "0" >/proc/sys/dev/cdrom/lock
-fi
+$DEBUGCMD
 
-# to be able to boot from hdc=ide-scsi
-modprobe_module ide-scsi
+# $UNION will be used as a root directory, livecd modules will be added soon
+echolog "setup union on $UNION"
+mkdir -p $UNION
+mkdir -p $CHANGES
+mount -t tmpfs -o "size=90%" tmpfs $CHANGES
+mount -t unionfs -o dirs=$CHANGES unionfs $UNION
 
-if [ ! "`cmdline_parameter probeusb`" = "" ]; then
-   echolog "probing usb hardware"
-   modprobe_module usbcore
-   modprobe_module usb-storage
-   modprobe_module usb-uhci
-   modprobe_module uhci
-   modprobe_module usb-ohci
-   modprobe_module ehci-hcd
-   sleep 5
-fi
+$DEBUGCMD
 
-# call mount_all_cds function, to mount /dev/hdc hdd etc.
-echolog "mounting all available CDs"
-mount_all_cds /mnt/mnt >>$MOUNTS
+# try to find livecd data directory. If not found, try modprobing
+# USB or SCSI kernel modules and repead the find procedure again
+echolog "looking for data modules"
+if [ "$DATA" = "" ]; DATA="`find_live_data_dir $MOUNT`"; fi
+if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $MOUNT`"; fi
+if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $MOUNT`"; fi
+if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found"; fi
+echolog "found in $DATA"
 
-echolog "mounting other discs (ro)"
-mount_all_discs /mnt/mnt >>$MOUNTS
+$DEBUGCMD
 
-if [ ! "`cmdline_parameter floppy`" = "" ]; then
-   echolog "mounting floppy if available (ro)"
-   mount_device /dev/floppy/0 /mnt/mnt/floppy ro
-   echolog "/dev/floppy/0" >>$MOUNTS
-fi
+#
+# Now we know where our DATA are. We can copy them to RAM.
+# We will copy ALL from "base" and "modules" directory, and then
+# .mo files selected by load=... boot option
+# Finaly modify DATA variable so it will point to directory with copied .mo files
+# 
 
-LIVECD_SUBDIRECTORY=`cmdline_value livecd_subdirectory`
-LIVECD_SUBDIR=`cmdline_value livecd_subdir`
-# and choose the longer one:
-if [ ${#LIVECD_SUBDIR} -lt ${#LIVECD_SUBDIRECTORY} ]; then
-   LIVECD_SUBDIR="$LIVECD_SUBDIRECTORY"
-fi
+#TODO
 
-echolog "liveCD subdirectory is $LIVECD_SUBDIR";
+#
+# Now we know the path to all .mo images which needs to be mounted and inserted
+# to live filesystem. Do it for "base", "modules" and "optional" in $DATA
+#
 
-# search what mount directory is our CD in
-for DIR in /mnt/mnt/*
-do
-  if [ -r "$DIR/$LIVECD_SUBDIR/$LIVECD_SGN" ]; then
-     LIVECD_MOUNT="$DIR"
-     LIVECD_PATH="`dirname \"$DIR/$LIVECD_SUBDIR/x\"`"
-     echolog "LiveCD path is now $LIVECD_PATH"
-     break
-  fi
-done
-
-$DEBUG
-
-TOHD="`cmdline_value tohd`"
-FROMHD="`cmdline_value fromhd`"
-HDSUBDIR="`cmdline_value hdsubdir`"
-
-if [ "$HDSUBDIR" = "" ]; then
-   HDSUBDIR="LIVECD";
-fi
-
-# copy entire CD to harddisk and use it from there
-if [ ! "$TOHD" = "" ]; then
-   TOHDOK=0
-   echolog "Remounting $TOHD read-write"
-   remount /mnt/mnt/$TOHD rw
-   if [ $? -eq 0 ]; then
-      TOHDDIR=/mnt/mnt/$TOHD/$HDSUBDIR
-      mkdir -p $TOHDDIR 2>/dev/null
-      touch $TOHDDIR/slax.tmp 2>/dev/null
-      if [ $? -eq 0 ]; then
-         echolog "Copying the LiveCD source to $TOHDDIR..."
-         cp -Rf $LIVECD_PATH/* $TOHDDIR 2>/dev/null
-	 if [ $? -eq 0 ]; then
-            FROMHD=$TOHD
-	    TOHD_OK=1
-         fi
-         echolog "Remounting $TOHD read-only"
-         remount /mnt/mnt/$TOHD ro
-      fi
-   fi
-
-   if [ ! $TOHD_OK -eq 1 ]; then
-      header "ERROR!"
-      echolog "An error occured while copying CD to $TOHD."
-      echolog "Not enough free space? Wrong directory name? ($TOHD)"
-      echolog "The original source CD will be used."
-      echolog
-   fi
-fi
-
-# use already copied CD from harddisk
-if [ ! "$FROMHD" = "" ]; then
-   echolog "FROMHD parameter detected, using $FROMHD"
-   LIVECD_MOUNT="/mnt/mnt/$FROMHD"
-   LIVECD_PATH="/mnt/mnt/$FROMHD/$HDSUBDIR"
-fi
-
-# if no data found, run bash
-if [ ! -r "$LIVECD_PATH/$LIVECD_SGN" ]; then
-  header "ERROR!"
-  echolog "cannot find your compressed IMG files! Maybe you are trying"
-  echolog "to start the LiveCD from unsupported CDROM drive (scsi?)"
-  echolog "Or you entered wrong livecd_subdir= parameter?"
-  echolog "Or you entered wrong fromhd= parameter?"
-  echolog "Press Ctrl+Alt+Del for reboot."
-  while [ 1 = 1 ]; do bash; done
-fi
-
-echolog "liveCD found in $LIVECD_PATH"
-mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
-
-echolog -n "copying selected modules to RAM... "
-
-# base
-ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
-   echolog "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-done
-
-# modules
-ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
-   echolog "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
-done
-
-# optional modules (insert only modules specified by load= kernel boot parameter)
-cmdline_value load | tr "," "\\n" | while read IMG; do
-   ls -aA1b "$LIVECD_PATH/optional/$IMG"* 2>/dev/null | while read IMAGE; do
-         echolog "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
-   done
-done
-echolog
-
-echolog -n "unpacking .tar.gz from the CD... "
-ls -aA1b $LIVECD_PATH/packs | while read PACK;
-do
-   echolog -n "$PACK "
-   tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
-done
-echolog
-
-echolog -n "mounting all images... "
-cat $MNTORDER | while read IMG;
-do
-   echolog -n "`basename \" $IMG\"` "
-   mount_img $IMG $IMGRO $INSORDER -n
-done
-echolog
-
-$DEBUG
-
-header "creating live filesystem"
-
-echolog "Starting ovlfs support (by Arthur Naseef)"
-modprobe_module ovl
-mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
-
-if [ ! "$?" = "0" ]; then
-  header "ERROR!"
-  echolog "cannot overmount cdrom in pseudo-write mode."
-  echolog "Maybe your kernel doesn't support ovlfs?"
-  echolog "Press Ctrl+Alt+Del for reboot."
-  while [ 1 = 1 ]; do bash; done
-fi
-
-echolog -n "inserting images into filesystem... "
-cat $INSORDER | while read IMG;
-do
-   IMG=$IMGRW/${IMG:${#IMGRO}}
-   echolog -n "`basename \"$IMG\"` "
-   if [ -x $IMG/preinsert ]; then $IMG/preinsert; fi
-   make_links $IMG/data /mnt /mnt
-   if [ -x $IMG/postinsert ]; then $IMG/postinsert; fi
-done
-echolog
-
-$DEBUG
-
-if [ ! "`cmdline_parameter eject`" = "" ]; then
-   echolog "trying to eject LiveCD medium..."
-   eject "$LIVECD_MOUNT" >/dev/null 2>/dev/null
-   if [ ! "$?" = 0 ]; then
-      echolog "error, cdrom cannot be unmounted or doesn't support ejecting"
-   fi
-else
-   mount --rbind $LIVECD_PATH /mnt/boot
-fi
-
-if [ -d $PROFILED ]; then
-   echolog "exporting LIVECD variables to profile.d..."
-   echolog "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >$PROFILED/slax.sh
-   echolog "export LIVECD_PATH="${LIVECD_PATH:4} >>$PROFILED/slax.sh
-   chmod 755 /mnt/etc/profile.d/slax.sh
-   echolog "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >$PROFILED/slax.csh
-   echolog "setenv LIVECD_PATH "${LIVECD_PATH:4} >>$PROFILED/slax.csh
-   chmod 755 /mnt/etc/profile.d/slax.csh
-fi
-
-echolog "creating fstab..."
-
-echo "tmpfs /     tmpfs defaults 0 0" >/mnt/etc/fstab
-echo "proc  /proc proc  defaults 0 0" >>/mnt/etc/fstab
-
-cat $MOUNTS | while read DEVICE; do
-   LINE="`cat /proc/mounts | egrep \"^$DEVICE[[:space:]]\"`"
-   if [ "$LINE" = "" ]; then continue; fi
-
-   umount "$DEVICE" 1>/dev/null 2>/dev/null
-   if [ "$?" = 0 ]; then
-      LINERO=${LINE/ \/mnt/ }
-      LINEDEF=${LINERO/ ro / defaults }
-      echolog $LINEDEF >>/mnt/etc/fstab
-   fi
-done
-
-list_all_cdroms | while read DEVICE ;
-do
-  FILE=/mnt/"`basename $DEVICE`"
-  CDDEV="`readlink -f $DEVICE`"
-  mkdir -p /mnt/$FILE
-  if [ "`cat /mnt/etc/fstab | grep $CDDEV`" = "" ]; then
-     echo "$CDDEV $FILE iso9660 noauto,owner,ro 0 0" >>/mnt/etc/fstab
-  fi
-done
-
-list_swaps >>/mnt/etc/fstab
-
-echo >/mnt/etc/mtab
-touch -t 197001010000.00 /mnt/etc/modules.conf # workaround to avoid error messages
-
-echolog "creating init script in /tmp/init..."
-
-echo >/mnt/$LINUXINIT
-chmod 0755 /mnt/$LINUXINIT
-
-NEWROOTPASS="`cmdline_value passwd`"
-if [ "$NEWROOTPASS" = "ask" ]; then
-   echolog -ne "\nEnter new password for root: "
-   read -s NEWROOTPASS
-fi
-
-if [ ! "$NEWROOTPASS" = "" ]; then
-   echolog "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
-fi
-
-echo '
-echo "freeing ramdisk..."
-umount -nl /mnt/ramdisk
-/sbin/blockdev --flushbufs /dev/rd/0
-echo "'"`header \"starting init\"`"'"
-exec /sbin/init <dev/console >dev/console 2>&1
-' >>/mnt/$LINUXINIT
-
-cp /var/log/livedbg /mnt/var/log/livedbg
-mount -o remount,ro /mnt
-cd /mnt
-
-$DEBUG
+echolog "inserting all modules and creating live filesystem"
+union_insert_modules $UNION $DATA $IMAGES
+activate_fstab $UNION
 
 echolog "changing root directory..."
-/sbin/pivot_root . mnt/ramdisk
-exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
+cd $UNION
+mkdir -p $INITRAMDISK
+mkdir -p $UNION/dev
+if [ ! -e $UNION/dev/console ]; then mknod $UNION/dev/console c 5 1; fi
+
+$DEBUGCMD
+
+/bin/busybox pivot_root . $INITRAMDISK
+exec /usr/bin/chroot . sbin/init <dev/console >dev/console 2>&1
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
-echolog "calling /mnt/usr/bin/chroot failed?"
+echolog "calling $UNION/usr/bin/chroot failed?"
 echolog "Press Ctrl+Alt+Del for reboot."
-while [ 1 = 1 ]; do bash; done
+while [ 1 = 1 ]; do ash; done

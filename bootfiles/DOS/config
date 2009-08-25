@@ -10,7 +10,7 @@ ramdisk_size=9999    # our initrd.gz is 9999 KB of size when unpacked
 
 max_loop=255         # overide default to allow inserting up to 127 modules
 
-hdsubdir=LIVECD      # name of directory used for tohd and fromhd boot options
+hddsubdir=LIVECD     # name of directory used for tohd and fromhd boot options
 livecd_subdir=/      # modify this if you copied LiveCD to some directory
                      # (for example livecd_subdir=/livedir/)
 		     # you may need to change the first and 5th line too,
