@@ -1,3 +1,26 @@
+
+ 6.0.6 - code name Japanese
+ 
+ * fixed make_iso.bat for windows (including broken config from tools/WIN)
+
+ * search for changes= boot argument after the partition with LiveData is mounted.
+   Search in the mounted filesystem first, then try other ones. This makes sure
+   that, for example, changes=slaxsave.dat searches for slaxsave.dat on the
+   boot device first, then it tries other devices and partitions.
+ * fixed some problems in booting from USB devices using from=/dev/{USB} param.
+ * probe of USB modules is done only once, even if called several times
+ * using '-t ext2' parameter to mount initrd image in initrd_create script
+ * don't copy unnecessary files to CD
+ * file memtest86p renamed to mt86p as it caused some troubles on fat16
+   nevertheless the boot parameter is still called 'memtest86p'
+
+ * all NLS kernel modules are now copied to initrd, as I discovered it is useful
+ * mounting of dos filesystems (vfat and ntfs) now always use the iocharset given
+   by boot parameter iocharset=. This makes it easier to make live distributions
+   for foreign users, like Japanese.
+                                        ! read DOC/international.txt
+
+
  6.0.5
 
  * fixed cleanup script to skip ejecting of CD when copy2ram is used

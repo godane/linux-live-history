@@ -48,7 +48,7 @@ cat cd-root/boot/dos/readme.txt | sed -r "s/LINUX.BAT/"${LIVECDNAME:0:8}.bat"/" 
 mkdir -p $CDDATA/$LIVECDNAME
 cp -R cd-root/linux/* $CDDATA/$LIVECDNAME
 cp tools/* $CDDATA/$LIVECDNAME/tools
-cp -R DOC/* $CDDATA/$LIVECDNAME
+cp -R DOC/LICENSE $CDDATA/$LIVECDNAME
 cp $VMLINUZ $CDDATA/boot/vmlinuz
 
 echo "creating initrd image..."

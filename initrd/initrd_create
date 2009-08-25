@@ -136,9 +136,7 @@ rcopy_ex $ROOT/$LMK/kernel/fs/ext3 $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/fs/reiserfs $INITRD_TREE 2>>$DEBUG
 
 # add language support for filesystems
-rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_cp437.* $INITRD_TREE 2>>$DEBUG
-rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_iso8859-1.* $INITRD_TREE 2>>$DEBUG
-rcopy_ex $ROOT/$LMK/kernel/fs/nls/nls_iso8859-2.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/nls $INITRD_TREE 2>>$DEBUG
 
 # usb modules
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
@@ -164,7 +162,7 @@ mkdir $MOUNTDIR
 
 debug "mounting $INITRDIMG to it"
 modprobe loop 2>>$DEBUG
-mount -o loop $INITRDIMG $MOUNTDIR
+mount -o loop -t ext2 $INITRDIMG $MOUNTDIR
 if [ "$?" -ne 0 ]; then
    echo "Error mounting initrd! Not enough free loop devices?"
    exit 1

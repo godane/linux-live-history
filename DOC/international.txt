@@ -1,0 +1,19 @@
+People with international Windows won't be able to see correct file names
+on disk, because FAT and NTFS partitions require a boot argument,
+which specifies I/O charset.
+
+A temporary solution is to use 'iocharset=' boot option each time you boot
+the Live distro on a computer with international Windows.
+
+If you're creating a live distribution which will be mostly used on 
+computers with international Windows systems, you may need to add iocharset
+boot option permanently. In this case, edit:
+
+ - boot/syslinux/syslinux.cfg
+ - boot/isolinux/isolinux.cfg
+ - boot/dos/config
+
+and add 'iocharset=your_encoding' to the append section.
+For example,
+  Central european people will use: iocharset=iso8859-2
+  Japanese / Korean / Chinese people will use: iocharset=utf8

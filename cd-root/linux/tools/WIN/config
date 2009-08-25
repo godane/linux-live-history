@@ -5,5 +5,5 @@
 -no-emul-boot
 -boot-info-table
 -boot-load-size 4 
--b "boot/isolinux.bin"
--c "boot/isolinux.boot"
+-b "boot/isolinux/isolinux.bin"
+-c "boot/isolinux/isolinux.boot"

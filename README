@@ -17,6 +17,8 @@
 
    cat ./DOC/requirements.txt
    cat ./DOC/changelog.txt
+   cat ./DOC/international.txt
+   cat ./DOC/bootparams.txt
    vi ./.config
 
  Author:

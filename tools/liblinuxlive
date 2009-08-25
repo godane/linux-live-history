@@ -5,7 +5,7 @@
 #
 
 # ===========================================================
-# variables
+# GLOBAL variables
 # ===========================================================
 
 # linux live flag to fstab, if fstab line doesn't contain it,
@@ -109,20 +109,18 @@ allow_only_root()
 #
 egrep_o()
 {
+   local SED
    SED="`echo \"$1\" | sed -r 's/\\//\\\\\\//g'`"
    cat | egrep "$1" | sed -r "s/.*$SED.*/\\1/" 2>/dev/null
 }
 
 # look into cmdline and echo $1 back if $1 is set
 # $1 = value name, case sensitive, for example changes
-# $2 = file to use instead /proc/cmdline, optional
 #
 cmdline_parameter()
 {
-   CMDLINE=/proc/cmdline
-   if [ "$2" != "" ]; then CMDLINE="$2"; fi
    log "searching for boot param: $1"
-   cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1(\$|=|[[:space:]]+))" | egrep_o "($1)"
+   cat /proc/cmdline | egrep_o "((^|[[:space:]]+)$1(\$|=|[[:space:]]+))" | egrep_o "($1)"
 }
 
 # look into cmdline and echo value of $1 option
@@ -131,10 +129,8 @@ cmdline_parameter()
 #
 cmdline_value()
 {
-   CMDLINE=/proc/cmdline
-   if [ "$2" != "" ]; then CMDLINE="$2"; fi
    log "searching for bootparam value: $1"
-   cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1=([^[:space:]]+))" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
+   cat /proc/cmdline | egrep_o "((^|[[:space:]]+)$1=([^[:space:]]+))" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
 }
 
 # ===========================================================
@@ -153,27 +149,30 @@ modprobe_module()
 }
 
 # Mount device $1 to $2
+# If the device is using vfat or ntfs filesystem, use iocharset as a mount option
 # $1 = /dev device to mount, eg. /dev/hda1, or loop file, or directory
 # $2 = mountpoint, eg. /mnt/hda1
 # $3 = optional mount options, for example "ro", or "remount,rw"
-# $4 = optional filesystem type
 #
 mount_device()
 {
+  local OPTIONS PRINTK FILESYSTEM err
+
   # make sure we have enough arguments
   if [ "$2" = "" ]; then return 1; fi
 
   mkdir -p "$2"
-  OPTIONS="noatime"
+
+  OPTIONS=$(fs_options `device_filesystem $1`)
+  if [ "$OPTIONS" ]; then OPTIONS="noatime,$OPTIONS"; else OPTIONS="noatime"; fi
   if [ -f "$1" ]; then OPTIONS="$OPTIONS,loop"; fi
   if [ -d "$1" ]; then OPTIONS="$OPTIONS,rbind"; fi
   if [ "$3" ]; then OPTIONS="$OPTIONS,$3"; fi
-  if [ "$4" ]; then FILESYSTEM="-t $4"; else FILESYSTEM=""; fi
 
   PRINTK=`cat /proc/sys/kernel/printk`
   echo "0" >/proc/sys/kernel/printk
 
-  mount $FILESYSTEM -o $OPTIONS "$1" "$2" >/dev/null 2>/dev/null
+  mount -o $OPTIONS "$1" "$2" >/dev/null 2>/dev/null
   err=$?
 
   if [ 0$err -ne 0 ]; then rmdir $2 2>/dev/null; fi
@@ -226,6 +225,8 @@ mountpoint()
 #
 mount_module()
 {
+   local err
+
    mount -t squashfs -o loop,ro "$1" "$2"
    err=$?
    if [ 0$err -eq 0 ]; then
@@ -251,6 +252,8 @@ union_insert_dir()
 #
 list_modules()
 {
+   local LOAD NOLOAD
+
    LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
    NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
    find $1/base $1/modules $1/optional -name "*.lzm" 2>/dev/null | sort | while read LINE; do
@@ -271,6 +274,8 @@ list_modules()
 #
 union_insert_module()
 {
+   local TARGET
+
    TARGET="$3/`basename $2`"
    if mountpoint $TARGET >/dev/null 2>&1; then return; fi # skip mounted modules
    mkdir -p $TARGET
@@ -321,9 +326,23 @@ copy_to_ram()
 #
 list_cdrom_devices()
 {
+   local CDDEVICE
+
    if [ "`cmdline_parameter nocd`" != "" ]; then return 1; fi
    for CDDEVICE in `cat /proc/sys/dev/cdrom/info 2>/dev/null | head -n 3 | tail -n 1 | cut -d ":" -f 2`; do
       echo "/dev/$CDDEVICE"
+   done
+}
+
+# List mounted devices, if any
+#
+list_mounted_devices()
+{
+   ls -1 $MOUNTDIR | while read DIR; do
+      mountpoint $MOUNTDIR/$DIR >/dev/null 2>&1
+      if [ $? -eq 0 ]; then
+         echo $DIR
+      fi
    done
 }
 
@@ -333,7 +352,7 @@ list_cdrom_devices()
 list_partition_devices()
 {
    if [ "`cmdline_parameter nohd`" != "" ]; then return 1; fi
-   cat /proc/partitions | grep -v loop |grep -v major | grep -v "^\$" | sed -r "s/^[0-9 ]+/\\/dev\\//"
+   cat /proc/partitions | grep -v loop | grep -v major | grep -v "^\$" | sed -r "s/^[0-9 ]+/\\/dev\\//"
 }
 
 # List all disk devices
@@ -355,6 +374,7 @@ list_swap_devices()
 #
 list_block_devices()
 {
+   list_mounted_devices
    list_cdrom_devices
    list_partition_devices
 }
@@ -368,21 +388,33 @@ list_block_devices()
 #
 find_filepath()
 {
+   local DIR FOUND PRESERVE
+
    DIR="$1/`basename $2`"
    mountpoint $DIR >/dev/null 2>&1
-   if [ $? -ne 0 ]; then
+   if [ $? -eq 0 ]; then
+      PRESERVE="true"
+   else
       mount_device $2 $DIR ro
       if [ $? -ne 0 ]; then rmdir $DIR 2>/dev/null; return 1; fi
+      PRESERVE=""
    fi
+
    FOUND="`ls -A1d $DIR/$3 2>/dev/null | head -n 1 | tr -s '/'`"
-   umount $DIR 2>/dev/null
 
    if [ "$FOUND" = "" ]; then
-      rmdir $DIR 2>/dev/null
+      if [ "$PRESERVE" != "true" ]; then
+         umount $DIR 2>/dev/null
+         rmdir $DIR 2>/dev/null
+      fi
       return 1
    else
-      # mount again, without the 'ro' option now, so use rw or defaults
-      mount_device $2 $DIR 
+      # remount without the 'ro' option now, so use rw or defaults
+      # Only in the case it was not mounted already before.
+      if [ "$PRESERVE" != "true" ]; then
+         umount $DIR 2>/dev/null
+         mount_device $2 $DIR 
+      fi
       echo "$FOUND"
       return 0
    fi
@@ -395,6 +427,8 @@ find_filepath()
 #
 find_file()
 {
+   local DEVPART PATHPART
+
    # if parameter is just a device, echo it and exit
    if [ -b "$2" -o -c "$2" -o "$2" = "" ]; then echo "$2"; return; fi
 
@@ -403,7 +437,7 @@ find_file()
    DEVPART="`echo \"$2\" | egrep_o \"(^/dev/[^/]+)\"`"
 
    if [ "$DEVPART" = "" ]; then
-      # no device is specified, search all devices for filename $1
+      # no device is specified. Search all devices for filename $1
       PATHPART="$2";
       list_block_devices | while read DEVICE; do
          find_filepath $1 $DEVICE $PATHPART
@@ -433,8 +467,12 @@ mdev_start_hotplug()
 #
 modprobe_essential_modules()
 {
+   local PRINTK IOCHARSET
+
    PRINTK=`cat /proc/sys/kernel/printk`
    echo "0" >/proc/sys/kernel/printk
+
+   IOCHARSET="`cmdline_value iocharset`"
 
    echolog "starting loop device support"
    modprobe_module loop max_loop=255
@@ -443,11 +481,12 @@ modprobe_essential_modules()
    echolog "starting squashfs support"
    modprobe_module squashfs
    echolog "starting aufs support"
-   modprobe_module aufs
-   echolog "starting vfat support"
+   modprobe_module aufs nwkq=16
+   echolog "starting international fs support"
    modprobe_module nls_cp437
    modprobe_module nls_iso8859-1
-   modprobe_module nls_iso8859-2
+   modprobe_module nls_$IOCHARSET
+   echolog "starting vfat support"
    modprobe_module vfat
    echolog "starting ntfs support"
    modprobe_module ntfs
@@ -455,10 +494,17 @@ modprobe_essential_modules()
    echo "$PRINTK" >/proc/sys/kernel/printk
 }
 
-# modprobe kernel modules needed for USB masstorage devices
+# Modprobe kernel modules needed for USB masstorage devices
+# This function is called only if necessary (eg. you're using from= or
+# changes= but the argument can't be found
 #
 modprobe_usb_modules()
 {
+   # it doesn't make any sense to call this function more than just once
+   if [ -e /var/log/usb_probed ]; then return 1; fi
+   touch /var/log/usb_probed
+
+   local PRINTK
    PRINTK=`cat /proc/sys/kernel/printk`
    echo "0" >/proc/sys/kernel/printk
 
@@ -467,7 +513,7 @@ modprobe_usb_modules()
       return
    fi
 
-   echolog "starting USB support..."
+   echolog "starting USB support"
    if [ "`echo $LSPCI | grep -i ehci`" != "" ]; then
       modprobe_module ehci-hcd
    fi
@@ -482,7 +528,9 @@ modprobe_usb_modules()
    SLEEP="`cmdline_value waitusb | sed -r 's/[^0-9]*([0-9]+).*/\1/'`"
    if [ "$SLEEP" = "" ]; then SLEEP=10; fi
 
+   echolog "waiting for USB devices..."
    sleep $SLEEP
+   setup_dma
    echo "$PRINTK" >/proc/sys/kernel/printk
 }
 
@@ -498,12 +546,44 @@ cd_autoeject()
 #
 setup_dma()
 {
+   local DEVICE
+
    if [ ! "`cmdline_parameter nodma`" = "" ]; then
       for DEVICE in `list_cdrom_devices` `list_disk_devices`; do
          echolog "setting DMA support off for $DEVICE"
          hdparm -d 0 $DEVICE
       done
    fi
+}
+
+# ===========================================================
+# Filesystem functions
+# ===========================================================
+
+# Get filesystem options, useful for vfat and ntfs filesystems
+# $1 = filesystem
+#
+fs_options()
+{
+   local IOCHARSET
+   IOCHARSET="`cmdline_value iocharset`"
+
+   if [ "$1" = "vfat" -a "$IOCHARSET" ]; then echo "iocharset=$IOCHARSET"; fi
+   if [ "$1" = "ntfs" ]; then
+      echo -n "ro"
+      if [ "$IOCHARSET" ]; then
+         echo ",nls=$IOCHARSET"
+      fi
+   fi
+}
+
+# discover filesystem used on the given device
+# use vfat for msdos filesystem
+# $1 = device, eg. /dev/hda1
+#
+device_filesystem()
+{
+   blkid -s TYPE $1 | cut -d = -f 2 | tr -d ' "' | sed "s/msdos/vfat/"
 }
 
 # update given line in fstab, add new values only if the device is not found
@@ -527,7 +607,8 @@ fstab_update_line()
 #
 fstab_update()
 {
-   IOCHARSET="`cmdline_value iocharset`"
+   local AUTO FSTAB
+
    AUTO="`cmdline_parameter noauto`"
    if [ "$AUTO" = "" ]; then AUTO="auto"; fi
 
@@ -544,23 +625,16 @@ fstab_update()
       fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR iso9660 noauto,users,exec
    done
    list_partition_devices | while read DEVICE; do
-      unset REMOVABLE; unset OPT; DEV="`basename $DEVICE`"; DEV0="`echo $DEV | cut -b 1-3`"
+      unset REMOVABLE; DEV="`basename $DEVICE`"; DEV0="`echo $DEV | cut -b 1-3`"
       if [ "0`cat /sys/block/$DEV0/removable 2>/dev/null`" -ne 0 ]; then
          REMOVABLE="_removable"
       fi
 
       MOUNTDIR="/mnt/$DEV$REMOVABLE"
-      FS="`blkid -s TYPE $DEVICE | cut -d = -f 2 | tr -d ' \"'`"
 
-      # add special options for NTFS
-      if [ "$FS" = "ntfs" ]; then
-         OPT=",ro"
-#	 FS="ntfs-3g"
-         if [ "$IOCHARSET" != "" ]; then OPT="$OPT,nls=$IOCHARSET"; fi
-      fi
-
-      # add special options for VFAT
-      if [ "$FS" = "vfat" -a "$IOCHARSET" != ""  ]; then OPT=",iocharset=$IOCHARSET"; fi
+      FS="`device_filesystem $DEVICE`"
+      OPT="`fs_options $FS`"
+      if [ "$OPT" ]; then OPT=",$OPT"; fi
 
       # if the partition has filesystem, add it to fstab
       if [ "$FS" != "" ]; then
