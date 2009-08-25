@@ -56,6 +56,7 @@ if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit
 # with two arguments: "start" "uselivemod".
 # This is done only by uselivemod, not in the case when the module is loaded 
 # during OS startup (in that case, your distro is responsible for execution)
+MOD=$(basename $MOD)
 find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
    if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
       ${SCRIPT##$IMAGES/$MOD} start uselivemod
@@ -63,8 +64,7 @@ find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
 done
 
 # update ld cache if new ld.so.conf/cache exists in the module
-
 if [ -e "$IMAGES/$MOD/etc/ld.so.conf" -o -e "$IMAGES/$MOD/etc/ld.so.cache" ]; then
-   echo "Module contains ld.so.conf or ld.so.cache, updating lib cache..."
+   echo "Module contains ld.so.conf or ld.so.cache, updating libs cache..."
    /sbin/ldconfig
 fi

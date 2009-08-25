@@ -1,5 +1,4 @@
 boot param: debug ... to debug
-boot param: nodma ... disable DMA for all CDROM and disk devices
 boot param: nocd ... don't see any CDROM devices at all
 boot param: nohd ... don't see any harddisk devices at all
 boot param: toram ... copy data from boot device to RAM and then run LiveCD from RAM
@@ -10,7 +9,8 @@ bootparam value: chopt= ... value 'eie' causes the changes file from previous bo
 bootparam value: from= ... data for LiveCD are loaded from given device or loop file. Default: the first device found
 bootparam value: ramsize= ... how much RAM will be used to save changes, if changes= parameter is not used. Default: 60%
 bootparam value: load= ... which lzm modules should be loaded from /optional directory. Default: empty
-bootparam value: noload= ... which lzm modules should not be loaded. Default: all
+bootparam value: noload= ... which lzm modules should not be loaded at all (from /base /modules /optional). Default: load all from /base and /modules
 bootparam value: iocharset= ... international charset used to mount FAT/NTFS partitions. Default: your kernel settings, usually 'cp437'
-bootparam value: waitusb= ... how many seconds to wait for USB devices. Default: 10 second
-bootparam value: waitpcmcia= ... how many seconds to wait for PCMCIA devices. Default: 10 second
+bootparam value: locale= ... locale to use (for NTFS-3G mounting). Default: none
+bootparam value: lang= language= ... alias for locale=
+bootparam value: scantimeout= ... how many seconds to wait for USB/PCMCIA devices. Default: 10 second

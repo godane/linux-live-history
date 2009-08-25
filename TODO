@@ -1,18 +1,5 @@
 Linux Live Scripts TODO list
 ============================
 
-- If a device has been probed in find_filepath, don't probe it anymore again 
-  for the same search name. OR, if the device has been probed but can't
-  be mounted (NTFS-3g), try more devices (it seems it doesn't).
-  
-- nohotplug should affect USB modules probing 
-
-- lilo boot loading
-
-- chopt = eie ... we need something better, because eie (expand if empty)
-  may take a long long time (because fat doesn't support sparse files). We need:
-  a) a progress bar, or 
-  b) limit the maximum size (maybe using another chopt variable, or eie:64
-  syntax for example). Progress bar would be perhaps better, so the user
-  can see that something is happening. But is it a good idea to fill the
-  device up? Is fat filesystem safe when filled? Maybe eie:17 would be the best
+- bootinst.sh/.bat, bootlilo - make the 'Slax' string customizable, and modify
+  it the same way like liblinuxlive

@@ -1,0 +1,35 @@
+#!/bin/bash
+# Remove the module while running LiveCD
+# $1 = module_name.lzm
+#
+# Author: Tomas M. <http://www.linux-live.org>
+
+MODULE=$(basename $1 .lzm).lzm
+if [ "$MODULE" = "" ]; then
+   echo
+   echo "Detach the module on the fly from the live filesystem"
+   echo "Usage: $0 module[.lzm]"
+   exit 1
+fi
+
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 3
+
+allow_only_root
+IMAGES=/mnt/live/memory/images
+MODULES=/mnt/live/memory/modules
+
+mount -t aufs -n -o remount,del:$IMAGES/$MODULE aufs /
+if [ $? -ne 0 ]; then
+   echo "Can't remove the module from live filesystem, some files"
+   echo "from the module are opened or used right now."
+   exit 1
+fi
+umount $IMAGES/$MODULE
+
+# cleanup memory
+if [ -e $IMAGES/$MODULE ]; then
+   rm -f $MODULES/$MODULE
+fi
+
+rmdir $IMAGES/$MODULE

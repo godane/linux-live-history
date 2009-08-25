@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Functions library :: for Linux Live scripts 6.x.y
+# Functions library :: for Linux Live scripts 6
 # Author: Tomas M. <http://www.linux-live.org>
 #
 
@@ -38,6 +38,7 @@ debug_log()
 {
    if [ "$DEBUG_IS_ENABLED" ]; then
       echo "- debug: $*" >&2
+      log "- debug: $*"
    fi
 }
 
@@ -105,7 +106,7 @@ fatal()
    echolog "Something went wrong and we can't continue. This should never happen."
    echolog "Please reboot your computer with Ctrl+Alt+Delete ..."
    echolog
-   umount -a -r 2>/dev/null
+   umount -a -r -d 2>/dev/null
    mount -t proc proc /proc
    mount -t sysfs sysfs /sys
    ash < /dev/console
@@ -309,7 +310,7 @@ device_filesystem()
 mount_device()
 {
    debug_log "mount_device" "$*"
-   local DEV LOOPDEV OPTIONS PRINTK FILESYSTEM ERR
+   local DEV LOOPDEV OPTIONS FILESYSTEM ERR
 
    # make sure we have enough arguments
    if [ "$2" = "" ]; then return 1; fi
@@ -323,9 +324,6 @@ mount_device()
    if [ -d "$DEV" ]; then OPTIONS="$OPTIONS,rbind"; fi
    if [ "$3" ]; then OPTIONS="$OPTIONS,$3"; fi
    OPTIONS=$(echo "$OPTIONS" | sed -r "s/^,+//")
-
-   PRINTK=$(cat /proc/sys/kernel/printk)
-   echo "0" >/proc/sys/kernel/printk
 
    if [ "$FS" = "ntfs-3g" ]; then
       ntfsmount "$DEV" "$2" -o $OPTIONS >/dev/null 2>&1
@@ -341,7 +339,7 @@ mount_device()
    if [ $ERR -eq 2 ]; then
        LOOPDEV=$(mknod_next_loop_dev)
        OPTIONS=$(echo "$OPTIONS" | sed -r "s/,loop//")
-       losetup "$LOOPDEV" "$DEV" >/dev/null 2>&1
+       losetup "$LOOPDEV" "$DEV" 2>/dev/null
        mount -n -o $OPTIONS "$LOOPDEV" "$2" >/dev/null 2>&1
        ERR=$?
    fi
@@ -353,24 +351,96 @@ mount_device()
    fi
 
    if [ $ERR -ne 0 ]; then rmdir $2 2>/dev/null; fi
-   echo "$PRINTK" >/proc/sys/kernel/printk
    return $ERR
 }
 
 # Force unmount of all parameters
+# First try normal umount, if that fails, remount read-only and do lazy-umount.
 # $1..$n = directories to be unmounted
 #
 fumount()
 {
    debug_log "fumount" "$*"
+   local TARGET # LOOPS LOOP
+
    while [ "$1" ]; do
-      umount -n "$1" >/dev/null 2>&1
+      TARGET="$1"
+#      LOOPS=$(cat /proc/mounts | egrep "(^|[[:space:]])$TARGET([[:space:]]|\$)" | cut -d " " -f 1 | grep /dev/loop)
+      umount -n "$TARGET" >/dev/null 2>&1
       if [ $? -ne 0 ]; then
-         mount -n -o remount,ro -t ignored ignored "$1" >/dev/null 2>&1
-         umount -n -l "$1" >/dev/null 2>&1
+         mount -n -o remount,ro -t ignored ignored "$TARGET" >/dev/null 2>&1
+         umount -n -l "$TARGET" >/dev/null 2>&1
       fi
+
+      # umount has own -d option to free up the loop device(s),
+      # but it may fail (I guess it's when /etc/mtab is not used during mount)
+# -------
+# This is commented out, as I think it's no longer needed, because fumount
+# is only called in busybox, which should use -d all the time correctly.
+# I will leave this here for a while, as I think I'll reimplement it sometime
+# in the future, just for the case. It wouldn't currently work 100% correctly
+# anyway, as LOOPS may be incorrect:
+#
+#      for LOOP in $LOOPS ; do
+#         debug_log "losetup -d $LOOP"
+#         losetup -d "$LOOP" 2>/dev/null
+#      done
+# -------
       shift
    done
+}
+
+# Grow Changes is used to expand the loopback XFS filesystem to a bigger size.
+# It appends zeros at the end of the loop file and then it uses xfs_growfs.
+# It is executed only if the actual file size is smaller then requested.
+# $1 = xfs filesystem file path
+# $2 = requested size in MB, must be at least 17 MB
+# $3 = verbose and slower? (optional, empty value means quiet and faster)
+#
+grow_changes()
+{
+   debug_log "grow_changes" "$*"
+   local REQSIZE FILESIZE CURSIZE GROWDIR
+
+   REQSIZE=$(echo "$2" | sed -r "s/[^0-9]//g")
+   FILESIZE=$(stat -c '%s' "$1")
+   if [ ! -f "$1" -o "$REQSIZE" = "" -o "$FILESIZE" = "" ]; then return 1; fi
+   CURSIZE=$(($FILESIZE/1024/1024))
+
+   # if current filesize is not in 1024 blocks, round up
+   if [ $(($FILESIZE % 1024)) -ne 0 ]; then
+      CURSIZE=$(($CURSIZE+1))
+   fi
+
+   # works only with a regular existing file which is smaller then REQSIZE
+   if [ $REQSIZE -gt 16 -a $REQSIZE -gt $CURSIZE ]; then
+      if [ "$3" ]; then # verbose and slower, using sync
+         while [ $REQSIZE -gt $CURSIZE ]; do
+            echo -ne "- grow changes: $(($CURSIZE * 100 / $REQSIZE))% done\r"
+            dd if=/dev/zero of="$1" bs=1M seek=$CURSIZE count=1 2>/dev/null
+            if [ $? -ne 0 ]; then break; fi # not enough space can't stop us
+            CURSIZE=$(($CURSIZE + 1))
+            sync
+         done
+      else # direct seek, will create a hole if the filesystem supports it
+         dd if=/dev/zero of="$1" bs=1 seek="$REQSIZE"M count=0 2>/dev/null
+      fi
+ 
+      echo "- creating/growing XFS filesystem..."
+      mkfs.xfs "$1" >/dev/null 2>&1 # this command will not overwrite any existing filesystem
+      if [ $? -ne 0 ]; then # the filesystem already exists, grow it (if it's xfs)
+         GROWDIR=/tmp/grow_changes$$
+         mkdir -p $GROWDIR
+         mount_device "$1" $GROWDIR
+         if [ $? -eq 0 ]; then
+            xfs_growfs $GROWDIR >/dev/null 2>&1
+            fumount $GROWDIR
+            rmdir $GROWDIR
+         fi
+      fi
+   else # REQSIZE < 17 MB or < CURSIZE
+      return 2
+   fi
 }
 
 # ===========================================================
@@ -410,14 +480,7 @@ mountpoint()
 mount_module()
 {
    debug_log "mount_module" "$*"
-   local ERR
-
    mount -n -t squashfs -o loop,ro "$1" "$2"
-   ERR=$?
-   if [ 0$ERR -eq 0 ]; then
-      echo "$1 $2" >>/tmp/_mounts
-   fi
-   return $ERR
 }
 
 # Insert a directory tree $2 to an union specified by $1
@@ -581,26 +644,16 @@ list_block_devices()
    list_partition_devices
 }
 
-# create mountdir for device, so KDE can easily assing an icon for it
-# based on the directory name (using _cdrom or _removable suffix)
-# $1 = device full path
+# Format mountdir for device. This function used to append _cdrom or _removable
+# suffix to the directory name so KDE was able to assign a nice icon for evey
+# device, but this should be done using HAL in KDE nowadays, so we do not
+# support these stupid suffixes anymore. Many people will be happy :)
+# $1 = device full path, eg. /dev/hda1
 #
 device_mountdir()
 {
    debug_log "device_mountdir" "$*"
-   local REMOVABLE DEV DEVMBR MEDIA SUFFIX
-
-   DEV=$(basename $1)
-   DEVMBR=$(echo $DEV | sed -r 's/[0-9]+$//')
-   REMOVABLE=$(cat /sys/block/$DEVMBR/removable 2>/dev/null)
-   MEDIA=$(cat /sys/block/$DEVMBR/device/media 2>/dev/null)
-
-   if [ "$MEDIA" != "" -a "$MEDIA" != "disk" ]; then
-      SUFFIX="_$MEDIA"
-   elif [ "$REMOVABLE" -eq 1 ]; then
-      SUFFIX="_removable"
-   fi
-   echo "/$MOUNTDIR/$DEV$SUFFIX" | tr -s /
+   echo "/$MOUNTDIR/$(basename "$1")" | tr -s /
 }
 
 # Find file-path on given device
@@ -630,7 +683,7 @@ find_filepath()
 
    if [ "$FOUND" = "" ]; then
       if [ "$PRESERVE" != "true" ]; then
-         umount $DIR 2>/dev/null
+         fumount $DIR
          rmdir $DIR 2>/dev/null
       fi
       return 1
@@ -638,7 +691,7 @@ find_filepath()
       # remount without the 'ro' option now, so use rw or defaults
       # Only in the case it was not mounted already before.
       if [ "$PRESERVE" != "true" ]; then
-         umount $DIR 2>/dev/null
+         fumount $DIR
          mount_device $1 $DIR
          if [ $? -ne 0 ]; then
             rmdir $DIR 2>/dev/null
@@ -657,7 +710,7 @@ find_filepath()
 find_file()
 {
    debug_log "find_file" "$*"
-   local DEVPART PATHPART
+   local DEVICE DEVPART PATHPART
 
    # if parameter is just a device, echo it and exit
    if [ -b "$1" -o -c "$1" -o "$1" = "" ]; then echo "$1"; return; fi
@@ -669,9 +722,12 @@ find_file()
    if [ "$DEVPART" = "" ]; then
       # no device is specified. Search all devices for filename $1
       PATHPART="$1";
-      ( list_mounted_directories ; list_block_devices ) | while read DEVICE; do
-         find_filepath "$DEVICE" "$PATHPART"
-         if [ $? -eq 0 ]; then return 0; fi
+      for DEVICE in $(list_mounted_directories) $(list_block_devices); do
+         if ! grep -q ":$DEVICE@$PATHPART:" /tmp/_findfile 2>/dev/null; then
+            find_filepath "$DEVICE" "$PATHPART"
+            if [ $? -eq 0 ]; then return 0; fi
+            echo ":$DEVICE@$PATHPART:" >>/tmp/_findfile
+         fi
       done
    else
       # try to find PATHPART only on the given device
@@ -691,7 +747,7 @@ find_in_computer()
    debug_log "find_in_computer" "$*"
    local TIMEOUT RESULT
 
-   TIMEOUT=$(cmdline_value timeout | sed -r 's/[^0-9]*([0-9]+).*/\1/')
+   TIMEOUT=$(cmdline_value scantimeout | sed -r 's/[^0-9]*([0-9]+).*/\1/')
    if [ "$TIMEOUT" = "" ]; then TIMEOUT=10; fi
 
    RESULT=$(find_file "$1")
@@ -720,7 +776,7 @@ mdev_start_hotplug()
    echo /bin/mdev > /proc/sys/kernel/hotplug
 }
 
-# modprobe kernel modules needed for the LiveCD
+# Modprobe kernel modules needed for the LiveCD
 #
 modprobe_essential_modules()
 {
@@ -742,17 +798,18 @@ modprobe_essential_modules()
 }
 
 # Modprobe kernel modules needed for USB masstorage devices
-# This function is called only if necessary (eg. you're using from= or
-# changes= but the argument can't be found
 #
 modprobe_usb_modules()
 {
    debug_log "modprobe_usb_modules" "$*"
    local LSPCI
 
+   # skip module loading if nohotplug bootparam is present
+   if [ "$(cmdline_parameter nohotplug)" ]; then return 0; fi
+
    LSPCI=$(lspci -v | grep -i prog-if)
    if [ "$(echo $LSPCI | egrep -i [eou]hci)" = "" ]; then
-      return
+      return 0
    fi
 
    echolog "starting USB support"
@@ -768,9 +825,14 @@ modprobe_usb_modules()
    modprobe_module usb-storage
 }
 
+# Load drivers for PCMCIA CardBus devices
+#
 modprobe_pcmcia_modules()
 {
    debug_log "modprobe_pcmcia_modules" "$*"
+
+   # skip module loading if nohotplug bootparam is present
+   if [ "$(cmdline_parameter nohotplug)" ]; then return 0; fi
 
    echolog "starting PCMCIA CardBus support"
    modprobe_module pcmcia_core
@@ -784,9 +846,32 @@ modprobe_pcmcia_modules()
 #
 rmmod_unused_modules()
 {
+   debug_log "rmmod_unused_modules" "$*"
    rmmod usb-storage uhci-hcd ohci-hcd ehci-hcd 2>/dev/null
    rmmod yenta_socket rsrc_nonstatic pcmcia pcmcia_core 2>/dev/null
    rmmod $(cat /proc/modules | cut -d " " -f 1) 2>/dev/null
+}
+
+# kill all unneeded processes, which have bigger PID then the PID of
+# current shell. We can't use killall5, as it would kill some processes
+# which may be currently needed, for example ntfsmount.
+# $1 = maximum pid (kill all lower)
+#
+killall_unneeded()
+{
+   debug_log "killall_unneeded" "$*"
+   local LIST PID
+
+   PID=$1
+   for pid in $(ps | grep -v "PID" | egrep -v "\[.*\]" | fgrep -v mount | fgrep -v ntfs | sed -r "s/^[[:space:]]*([0-9]+).*/\\1/"); do
+      if [ $pid -lt $PID ]; then
+         LIST="$LIST $pid"
+      fi
+   done
+
+   kill -SIGTERM $LIST 2>/dev/null # SIGTERM
+   sleep 2
+   kill -SIGKILL $LIST 2>/dev/null # SIGKILL
 }
 
 # enable/disable CD autoejecting when unmounted

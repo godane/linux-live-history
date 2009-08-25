@@ -53,8 +53,8 @@ if [ "$DATAFROM" ]; then
          echolog "found in $DATAFROM"
          DATA=$LOOPMOUNT/$LIVECDNAME
       else
-         umount $LOOPMOUNT
-	 umount $MOUNTDIR/* 2>/dev/null
+         fumount $LOOPMOUNT
+	 fumount $MOUNTDIR/*
       fi
    fi
 fi
@@ -72,7 +72,7 @@ Workaround: Copy the directory $LIVECDNAME from your boot device to an IDE/SATA
 disk, eg. to /mnt/hda1/$LIVECDNAME or C:\\$LIVECDNAME. Then try to boot again."
 fi
 
-echolog "Using $LIVECDNAME data from $DATA"
+echolog "using $LIVECDNAME data from $DATA"
 
 debug_shell
 
@@ -86,24 +86,16 @@ fi
 
 debug_shell
 
-# options for the changes= boot parameter (chopt)
-# eie = expand if empty
-CHANGESOPT=$(cmdline_value chopt)
-if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a 0$(du -sk "$CHANGESMNT" 2>/dev/null | cut -b1) -eq 0 ]; then
-   SIZE=$(df -k $CHANGESMNT | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4)
-   SIZE=$(expr $SIZE / 1024)
-   # xfs filesystem can't be created if the loop file is too small
-   if [ $SIZE -lt 17 ]; then
-      echo "- not enough free space, at least 17 MB is required"
-   elif ! touch $CHANGESMNT 2>/dev/null; then
-      echo "- a Read-Only filesystem is not supported"
+# increase the size of changes file
+EXPANDTO=$(cmdline_value chexpand)
+if [ "$EXPANDTO" != "" -a -f "$CHANGESMNT" -a ! -d "$CHANGESMNT" ]; then
+   if ! touch $CHANGESMNT 2>/dev/null; then
+      echo "- can't expand changes, perhaps a read-only filesystem?"
    else
-      echolog "expanding the file for changes to $SIZE MB"
-      echolog "(it may take few minutes, depending on your drive/bus speed and the size)"
-      dd if=/dev/zero of=$CHANGESMNT bs=1M count=0 seek=$SIZE >/dev/null 2>&1
-      sync
-      echolog "creating journaling XFS filesystem to store changes safely..."
-      mkfs.xfs $CHANGESMNT >/dev/null
+      echolog "expanding the file for changes to $EXPANDTO MB."
+      echo  "- this is done only the first time you run $LIVECDNAME"
+      echo  "- the procedure may take few minutes, wait please."
+      grow_changes "$CHANGESMNT" "$EXPANDTO" verbose
    fi
 fi
 
@@ -115,6 +107,9 @@ if [ $? -ne 0 ]; then
    mkdir -p $MEMORY # mount_device could remove it
    mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY
    XINO=$MEMORY
+else
+   # if xfs filesystem is given, issue xfs_growfs to use maximum space
+   xfs_growfs $MEMORY >/dev/null 2>&1
 fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
@@ -149,8 +144,8 @@ if [ "$(cmdline_parameter toram)" != "" -o "$(cmdline_parameter copy2ram)" != ""
    copy_to_ram $DATA $COPY2RAM
 
    cd_autoeject 1
-   umount $DATA 2>/dev/null
-   umount $MOUNTDIR/* 2>/dev/null
+   fumount $DATA
+   fumount $MOUNTDIR/*
    rmdir $MOUNTDIR/* 2>/dev/null # mounted device names are empty, remove them
    DATA=$COPY2RAM
    cd_autoeject 0
@@ -170,9 +165,9 @@ union_insert_modules $UNION $MEMORY $IMAGES
 debug_shell
 
 echolog "copying content of rootcopy directory"
-cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
+cp -af $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 echolog "copying liblinuxlive library to union"
-cp /liblinuxlive $UNION/usr/lib/
+cp -af /liblinuxlive $UNION/usr/lib/
 
 debug_shell
 
@@ -181,7 +176,10 @@ echo -ne > $UNION/etc/fstab
 fstab_update $UNION
 
 # everything is ready now, so we may unload unused kernel modules
+# and do some cleanup, unmount few things which are no longer needed.
 rmmod_unused_modules
+fumount /usr
+fumount /sys
 
 # More likely these directories aren't there.
 # Even if they are, this won't hurt.
@@ -194,7 +192,7 @@ chmod 0777 $UNION/tmp
 
 # Boot will contain whatever was in ./boot directory in the bootable media
 # Error output goes to null, as nothing is mounted with copy2ram
-mount -o rbind $(dirname $DATA)/boot $UNION/boot 2>/dev/null
+mount -n -o rbind $(dirname $DATA)/boot $UNION/boot 2>/dev/null
 
 debug_shell
 
@@ -204,8 +202,6 @@ debug_shell
 echolog "changing root directory..."
 
 cd $UNION
-
-umount /sys # we won't need it anymore
 mkdir -p $INITRAMDISK
 
 # Copy all dev files (found by mdev) to unioned dev directory
@@ -224,12 +220,23 @@ if [ -x bin/init ]; then INIT=bin/init; fi
 if [ -x sbin/init ]; then INIT=sbin/init; fi
 if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
 
-# time to end Linux Live scripts and start the distribution itself
+# time to end Linux Live scripts and start the distribution itself,
+# using /sbin/init or whatever was found.
 header "linux live end, starting the Linux distribution"
-
 mount -n -o remount,ro aufs .
-pivot_root . $INITRAMDISK
-exec $CHROOT . $INIT <dev/console >dev/console 2>&1
+
+# We will copy init from the distro to initrd (there should be 2MB free)
+# This allows us to use the cleanup script during reboot, as init will be
+# started from memory and not from the union and /union will not be busy.
+
+cp -af $INIT /bin
+if [ $? -eq 0 ]; then
+   pivot_root . $INITRAMDISK
+   exec $CHROOT . $INITRAMDISK/bin/init <dev/console >dev/console 2>&1
+else # If copying fails, start init directly.
+   pivot_root . $INITRAMDISK
+   exec $CHROOT . $INIT <dev/console >dev/console 2>&1
+fi
 
 header "!!ERROR!!"
 fatal "You are not supposed to be here, something went wrong!"

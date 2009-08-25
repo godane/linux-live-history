@@ -1,3 +1,46 @@
+ 6.1.4
+ 
+ * KDE with HAL does no more need the stupid suffixes for mountpoints 
+   (like _removable, _cdrom, etc) so Linux-Live scripts need it no more as well.
+
+ * removed kuselivemod, as it will be part of Slax, not linux live scripts
+ * added /dev/zero to initrd
+ * updated ntfs-3g driver
+
+ * chopt=eie removed at all
+ * replaced by 'chexpand=n' where n is bigger than 16,
+   so it does no more fill up the device entirely, but only expands the
+   changes-file to the given size in megabytes. The file does no longer need
+   to be empty, but still must exist. Smaller file will remail unchanged.
+
+   It is required to use XFS filesystem in the changes file in order to expand
+   existing filesystem correctly. If you use different filesystem, you'll have
+   to modify liblinuxlive - the function grow_changes().
+
+ * use fumount instead of umount everywhere
+
+ * init binary is copied to memory before chroot, so it's possible to umount
+   union during system shutdown (if user doesn't execute 'init U').
+   This takes about 500KB of memory, but it's the only way to safely unmount
+   all resources, free up loop devices, etc.
+
+ * refined the cleanup script
+ * added killall_unneeded function to liblinuxlive, called from cleanup
+
+
+ 6.1.3 - code name Derren Brown
+
+ * updated pci.ids
+ * find_file: REMEMBER which devices do not contain the given filename/path
+   and don't search for this filename/path anymore on these devices.
+   /tmp/_findfile is used for this purpose. This change makes it behave
+   The Right Way (tm). Nevertheless, is there a better way than a temp file?
+ * timeout boot parameter renamed to scantimeout
+ * removed printk modification from mount_device() as it's no longer needed
+ * nohotplug bootparam now causes USB and PCMCIA drivers to NOT load
+   (has no effect if you compiled these to kernel directly)
+
+
  6.1.2 - some more fixes
  
  * fixed a bug in kuselivemod (thanks to Manfred Mueller aka Quax)

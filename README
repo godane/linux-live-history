@@ -6,11 +6,7 @@
    your distro somewhere, unpack these scripts somewhere in $DISTRO/tmp,
    login as root, make changes to .config file and finally run ./build
 
-   The most important is the LIVECDNAME variable in .config file, please
-   change it from 'slax' to your own name.
-
-   ./build script will create /tmp/slax.iso (or whatever the name you choosed)
-   Burn it and boot it.
+   You'll be asked for the name of your LiveCD during the build process.
 
 
  Documentation and changelog:
@@ -29,4 +25,4 @@
 
  Source code of all binaries available in linux-live scripts are not included,
  because of the size. Nevertheless you may download all sources needed to build
- these binaries from: ftp.slax.org/source
+ these binaries from ftp.slax.org/source and ftp.slackware.com
