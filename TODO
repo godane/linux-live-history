@@ -1,3 +1,11 @@
-Linux Live Scripts - LLS
+Linux Live Scripts TODO list
+============================
 
-nohotplug should affect USB modules probing 
+- If a device has been probed in find_filepath, don't probe it anymore again 
+  for the same search name. OR, if the device has been probed but can't
+  be mounted (NTFS-3g), try more devices (it seems it doesn't).
+  
+- nohotplug should affect USB modules probing 
+
+- lilo boot loading
+  

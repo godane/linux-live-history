@@ -6,7 +6,7 @@ TARGET=""
 MBR=""
 
 # Find out which partition or disk are we using
-MYMNT=$(dirname "`readlink -f $0`")
+MYMNT=$(dirname $(readlink -f $0))
 while [ "$MYMNT" != "" -a "$MYMNT" != "." -a "$MYMNT" != "/" ]; do
    TARGET=$(egrep "[^[:space:]]+[[:space:]]+$MYMNT[[:space:]]+" /proc/mounts | cut -d " " -f 1)
    if [ "$TARGET" != "" ]; then break; fi

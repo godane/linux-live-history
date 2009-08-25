@@ -35,11 +35,11 @@ if [ $? != 0 ]; then echo "error unpacking package control files"; exit; fi
 
 echo >> $TMPDIRCONTR/control
 
-PACKAGE=`dpkg --field $1 package`
+PACKAGE=$(dpkg --field $1 package)
 
 mkdir -p $TMPDIR/var/lib/dpkg/info
 for FILE in $TMPDIRCONTR/*; do
-   cp $FILE $TMPDIR/var/lib/dpkg/info/$PACKAGE.`basename $FILE`
+   cp $FILE $TMPDIR/var/lib/dpkg/info/$PACKAGE.$(basename $FILE)
 done
 
 PACKAGE=$PACKAGE.lzm

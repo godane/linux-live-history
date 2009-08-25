@@ -13,9 +13,9 @@ if [ "$MODULE" = "" -o ! -e "$MODULE" -o -d "$MODULE" ]; then
    exit 1
 fi
 
-if [ "`echo $MODULE | fgrep -i .lzm`" = "" ]; then
+if [ "$(echo $MODULE | fgrep -i .lzm)" = "" ]; then
    echo
-   echo "`basename $MODULE`: Module must end with .lzm"
+   echo "$(basename $MODULE): Module must end with .lzm"
    echo "If you have .mo extension, convert it by using mo2lzm"
    exit 2
 fi
@@ -28,7 +28,7 @@ IMAGES=/mnt/live/memory/images
 MODULES=/mnt/live/memory/modules
 
 # are we even using union?
-if [ "`grep \"^aufs / \" /proc/mounts`" = "" ]; then
+if [ "$(grep '^aufs / ' /proc/mounts)" = "" ]; then
    echo "not in the live mode, can't continue. Try lzm2dir"
    exit 4
 fi
@@ -37,9 +37,9 @@ mkdir -p "$MODULES"
 
 # Test whether the module file is stored in union
 # if yes, then we must move it somewhere else (to RAM) else it can't be added
-if [ -e "/mnt/live/memory/changes/`readlink -f \"$MODULE\"`" ]; then
+if [ -e "/mnt/live/memory/changes/$(readlink -f "$MODULE")" ]; then
    echo "module file is stored inside the union, moving to $MODULES first..."
-   TARGET="$MODULES/`basename \"$MODULE\"`"
+   TARGET="$MODULES/$(basename "$MODULE")"
    mv "$MODULE" "$TARGET"
    if [ $? -ne 0 ]; then
       echo "error copying module to memory, not enough free RAM? try df" >&2
@@ -49,7 +49,7 @@ if [ -e "/mnt/live/memory/changes/`readlink -f \"$MODULE\"`" ]; then
    MODULE="$TARGET"
 fi
 
-MOD="`union_insert_module / \"$MODULE\" $IMAGES`"
+MOD=$(union_insert_module / "$MODULE" $IMAGES)
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 3; fi
 
 # all executables in /etc/rc.d/ from this module will be started

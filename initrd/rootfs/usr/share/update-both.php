@@ -1,8 +1,17 @@
 #!/usr/bin/php
 # re-run this script as often as possible (e.g. daily)
 # It will update pci.ids to recognize USB controllers
+# and it copies /usr/share/locale.alias in here
 <?
+   // copy locale.alias
+   $aliases=file_get_contents("/usr/share/locale/locale.alias");
+   $fp=fopen("locale/locale.alias","wb");
+   fwrite($fp,$aliases);
+   fclose($fp);   
+
+   // update pci.ids
    $url='http://pciids.sourceforge.net/pci.ids';
+   $lasth0=""; $lasth1="";
    
    $ids="# Hacked list of PCI ID's for 'lspci' command for linux live scripts.\n";
    $ids.="# This list only contains [EUO]HCI controllers from $url\n";
@@ -23,5 +32,7 @@
       }
    }
 
-   file_put_contents('pci.ids',$ids);
+   $fp=fopen('pci.ids','wb');
+   fwrite($fp,$ids);
+   fclose($fp);
 ?>

@@ -10,7 +10,7 @@
 # Author: Tomas M. <http://www.linux-live.org>
 #
 
-N="`basename $0`"
+N=$(basename $0)
 
 if [ "$N" = "build" ]; then
    N=install

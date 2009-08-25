@@ -41,19 +41,15 @@
 1166  Broadcom
 	0220  OSB4/CSB5 OHCI USB Controller
 	0221  CSB6 OHCI USB Controller
-# uninitialized SRCU32 RAID Controller
+# IBM Thinkpad R40 model 2681 - I recently had problems with my laptop, and while disassembled checked out the chip part number. C
 	1087  631xESB/632xESB UHCI Redirection
-# 8086:0009 revision 5, 82558B based
+# the revision field differentiates between them (1-3 is 82557, 4-5 is 82558, 6-8 is 82559, 9 is 82559ER)
 	24c2  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #1
-# Both share the same uhci
 	24c4  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #2
-# Both laptop models share the same modem
 	24c7  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #3
-# Both share the same uhci
-# Both share the same ide controller
 	24cd  82801DB/DBM (ICH4/ICH4-M) USB2 EHCI Controller
-# Both share the same ehci
 	24d2  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #1
+# xSeries 346
 	24d4  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #2
 	24d7  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #3
 	24dd  82801EB/ER (ICH5/ICH5R) USB2 EHCI Controller
@@ -69,18 +65,25 @@
 	268a  631xESB/632xESB/3100 Chipset UHCI USB Controller #3
 	268b  631xESB/632xESB/3100 Chipset UHCI USB Controller #4
 	268c  631xESB/632xESB/3100 Chipset EHCI USB2 Controller
-	27c8  82801G (ICH7 Family) USB UHCI #1
-	27c9  82801G (ICH7 Family) USB UHCI #2
-	27ca  82801G (ICH7 Family) USB UHCI #3
-	27cb  82801G (ICH7 Family) USB UHCI #4
+# 0000:00:1f.2 IDE interface: Intel Corporation 82801GBM/GHM (ICH7 Family) SATA IDE Controller (rev 02) (prog-if 80 [Master])
+	27c8  82801G (ICH7 Family) USB UHCI Controller #1
+# 0000:00:1d.0 USB Controller: Intel Corporation 82801G (ICH7 Family) USB UHCI Controller #1 (rev 02) (prog-if 00 [UHCI])
+	27c9  82801G (ICH7 Family) USB UHCI Controller #2
+# 0000:00:1d.1 USB Controller: Intel Corporation 82801G (ICH7 Family) USB UHCI Controller #2 (rev 02) (prog-if 00 [UHCI])
+	27ca  82801G (ICH7 Family) USB UHCI Controller #3
+# 0000:00:1d.2 USB Controller: Intel Corporation 82801G (ICH7 Family) USB UHCI Controller #3 (rev 02) (prog-if 00 [UHCI])
+	27cb  82801G (ICH7 Family) USB UHCI Controller #4
+# 0000:00:1d.3 USB Controller: Intel Corporation 82801G (ICH7 Family) USB UHCI Controller #4 (rev 02) (prog-if 00 [UHCI])
 	27cc  82801G (ICH7 Family) USB2 EHCI Controller
-	2830  82801H (ICH8 Family) USB UHCI #1
-	2831  82801H (ICH8 Family) USB UHCI #2
-	2832  82801H (ICH8 Family) USB UHCI #3
-	2834  82801H (ICH8 Family) USB UHCI #4
-	2835  82801H (ICH8 Family) USB UHCI #5
-	2836  82801H (ICH8 Family) USB2 EHCI #1
-	283a  82801H (ICH8 Family) USB2 EHCI #2
+# 0000:00:1d.7 USB Controller: Intel Corporation 82801G (ICH7 Family) USB2 EHCI Controller (rev 02) (prog-if 20 [EHCI])        S
+# 0000:00:1f.3 SMBus: Intel Corporation 82801G (ICH7 Family) SMBus Controller (rev 02)        Subsystem: Acer Incorporated [ALI]
+	2830  82801H (ICH8 Family) USB UHCI Controller #1
+	2831  82801H (ICH8 Family) USB UHCI Controller #2
+	2832  82801H (ICH8 Family) USB UHCI Controller #3
+	2834  82801H (ICH8 Family) USB UHCI Contoller #4
+	2835  82801H (ICH8 Family) USB UHCI Controller #5
+	2836  82801H (ICH8 Family) USB2 EHCI Controller #1
+	283a  82801H (ICH8 Family) USB2 EHCI Controller #2
 	2934  USB UHCI Controller #1
 	2935  USB UHCI Controller #2
 	2936  USB UHCI Controller #3

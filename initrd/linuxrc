@@ -5,38 +5,30 @@
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 
 mount -n -t proc proc /proc
+mount -n -t sysfs sysfs /sys
+mount -n -o remount,rw /         # for the case we forgot rw boot option
+ln -sf /proc/mounts /etc/mtab    # this allows us to use umount -a
+
 . liblinuxlive # it requires proc to be mounted
 
 header "starting Linux Live scripts <http://www.linux-live.org/>"
-echolog "mounting /proc and /sys filesystems"
-mount -n -t sysfs sysfs /sys
-ln -sf /proc/mounts /etc/mtab    # this allows us to use umount -a
-mount -n -o remount,rw /         # for the case we forgot rw boot option
 
-# Load essential drivers, like CDROM drivers, aufs/squashfs etc.
-modprobe_essential_modules
+# don't print kernel messages to konsole now
+echo "0" >/proc/sys/kernel/printk
 
+# Load essential drivers, like CDROM drivers, aufs/squashfs etc,
 # use mdev to create /dev/ devices and setup it as a hotplug-handler
+modprobe_essential_modules
 mdev_start_hotplug
 
 # /usr is compressed in initrd so it must be mounted from /usr.lzm
-# I know this consumes one loop mount, but this is in order to keep initrd 
-# small (max 4MB), as it consumes memory all the time the Live CD runs.
 mount_initrd_loops
 
-# setup DEBUGCMD variable. If debug boot option is present, call debug()
-# function several times during script's execution to help fighting bugs
-if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
+# Then load drivers for data storage and input devices
+modprobe_usb_modules
+modprobe_pcmcia_modules
 
-if [ "$DEBUGCMD" != "" ]; then
-   # debug prompt requires a keyboard. Including USB keyboards
-   modprobe_usb_modules
-fi
-
-$DEBUGCMD
-
-# disable DMA if nodma parameter is used
-setup_dma
+debug_shell
 
 # make sure ext3 partitions are not mounted using ext2 driver,
 # and vfat partitions are not mounted using msdos driver
@@ -45,20 +37,20 @@ echo -e "ext3\next2\nvfat\n*" >/etc/filesystems
 mkdir -p $UNION
 mkdir -p $MEMORY
 
-$DEBUGCMD
+debug_shell
 
 # Find livecd data directory
 echolog "looking for data directory"
 
 # First, try from= boot argument, if given
-DATAFROM="`cmdline_value from`"
+DATAFROM=$(cmdline_value from)
 
 if [ "$DATAFROM" ]; then
-   DATAFROM="`find_in_computer $DATAFROM`"
+   DATAFROM=$(find_in_computer $DATAFROM)
    if [ "$DATAFROM" ]; then
       mount_device $DATAFROM $LOOPMOUNT # mount again, it may be loop device
-      if [ $? -eq 0 -a -d "$LOOPMOUNT/$LIVECDNAME" ]; then
-         echolog "found in $LOOPMOUNT"
+      if [ $? -eq 0 -a "$(find_modules $LOOPMOUNT/$LIVECDNAME)" != "" ]; then
+         echolog "found in $DATAFROM"
          DATA=$LOOPMOUNT/$LIVECDNAME
       else
          umount $LOOPMOUNT
@@ -69,7 +61,8 @@ fi
 
 if [ "$DATA" = "" ]; then
    # from= is not used or it didn't contain valid data
-   DATA="`find_in_computer $LIVECDNAME`"
+   DATA=$(find_in_computer $LIVECDNAME/$LIVECDSGN)
+   DATA=$(dirname $DATA 2>/dev/null)
 fi
 
 if [ "$DATA" = "" ]; then fatal \
@@ -81,24 +74,24 @@ fi
 
 echolog "Using $LIVECDNAME data from $DATA"
 
-$DEBUGCMD
+debug_shell
 
 echolog "setting up directory for changes"
-CHANGESVAL="`cmdline_value changes`"
+CHANGESVAL=$(cmdline_value changes)
 
 if [ "$CHANGESVAL" ]; then
-   CHANGESMNT="`find_in_computer $CHANGESVAL`"
+   CHANGESMNT=$(find_in_computer $CHANGESVAL)
    echolog $CHANGESMNT
 fi
 
-$DEBUGCMD
+debug_shell
 
 # options for the changes= boot parameter (chopt)
 # eie = expand if empty
-CHANGESOPT="`cmdline_value chopt`"
-if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a "`du -k \"$CHANGESMNT\" 2>/dev/null | cut -b1`" -eq 0 ]; then
-   SIZE="`df -k $CHANGESMNT | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4`"
-   SIZE="`expr $SIZE / 1024`"
+CHANGESOPT=$(cmdline_value chopt)
+if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a 0$(du -k "$CHANGESMNT" 2>/dev/null | cut -b1) -eq 0 ]; then
+   SIZE=$(df -k $CHANGESMNT | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4)
+   SIZE=$(expr $SIZE / 1024)
    # xfs filesystem can't be created if the loop file is too small
    if [ $SIZE -lt 17 ]; then
       echo "- not enough free space, at least 17 MB is required"
@@ -117,30 +110,37 @@ fi
 mount_device $CHANGESMNT $MEMORY # if empty or fails, mount tmpfs:
 if [ $? -ne 0 ]; then 
    # Find out how much of RAM do we like to use to save filesystem changes
-   RAMSIZE="`cmdline_value ramsize`"
+   RAMSIZE=$(cmdline_value ramsize)
    if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
    mkdir -p $MEMORY # mount_device could remove it
    mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY
+   XINO=$MEMORY
 fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
-echolog "setup union directory (using aufs, direct branch access disabled)"
+echolog "setup union directory (using aufs, with udba=none)"
 
 mkdir -p $CHANGES
 if [ $? -ne 0 ]; then
    fatal "a Read-Only filesystem for 'changes' is not supported."
 fi
 
+# Store the xino file in memory in all cases, it's faster and safer
+if [ "$XINO" != "$MEMORY" ]; then
+   mkdir -p $XINO
+   mount -n -t tmpfs tmpfs $XINO
+fi
+
 mkdir -p $IMAGES
-mount -t aufs -o nowarn_perm,udba=none,br:$CHANGES=rw aufs $UNION
+mount -t aufs -o nowarn_perm,udba=none,xino=$XINO/.aufs.xino,br:$CHANGES=rw aufs $UNION
 if [ $? -ne 0 ]; then fatal "can't setup union (aufs)"; fi
 
-$DEBUGCMD
+debug_shell
 
 # If toram or copy2ram boot parameter is present, copy all fs modules to RAM.
 # (skip modules from /optional/ which are not listed in load= boot option)
 # Finaly modify DATA variable so it will point to correct directory
-if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
+if [ "$(cmdline_parameter toram)" != "" -o "$(cmdline_parameter copy2ram)" != "" ]; then
    echolog "copying data to RAM, this may take some time..."
    mkdir -p $COPY2RAM
 
@@ -156,7 +156,7 @@ if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]
    cd_autoeject 0
 fi
 
-$DEBUGCMD
+debug_shell
 
 # DATA contains path to the base directory of all fs modules which need
 # to be mounted and inserted into live filesystem. Do it now.
@@ -164,21 +164,24 @@ echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
 
 # the $MEMORY directory can contain $MEMORY/modules too
-# in the case where changes= boot argument is used. If not, it doesn't hurt
+# in the case if changes= boot argument is used. If not, it doesn't hurt
 union_insert_modules $UNION $MEMORY $IMAGES
 
-$DEBUGCMD
+debug_shell
 
 echolog "copying content of rootcopy directory"
 cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 echolog "copying liblinuxlive library to union"
 cp /liblinuxlive $UNION/usr/lib/
 
-$DEBUGCMD
+debug_shell
 
 echolog "creating /etc/fstab"
 echo -ne > $UNION/etc/fstab
 fstab_update $UNION
+
+# everything is ready now, so we may unload unused kernel modules
+rmmod_unused_modules
 
 # More likely these directories aren't there.
 # Even if they are, this won't hurt.
@@ -191,9 +194,9 @@ chmod 0777 $UNION/tmp
 
 # Boot will contain whatever was in ./boot directory in the bootable media
 # Error output goes to null, as nothing is mounted with copy2ram
-mount -o rbind `dirname $DATA`/boot $UNION/boot 2>/dev/null
+mount -o rbind $(dirname $DATA)/boot $UNION/boot 2>/dev/null
 
-$DEBUGCMD
+debug_shell
 
 # Union contains all the files and directories unioned from all modules.
 # Change root directory to it, and move initrd's root to /mnt/live/initramdisk

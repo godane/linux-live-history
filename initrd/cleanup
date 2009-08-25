@@ -9,10 +9,6 @@ export PATH=.:/mnt/live:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib
 
 header "starting Linux Live shutdown procedures..."
 
-if [ "`cmdline_parameter debug`" ]; then
-   DEBUG=yes
-fi
-
 echo "pivot_root"
 cd $INITRAMDISK
 pivot_root . $UNION < dev/console > dev/console 2>&1
@@ -46,7 +42,7 @@ for MNT in $(ls -1 $MOUNTDIR 2>/dev/null | sed -r "s/_.*//"); do
    fi
 done
 
-if [ "$DEBUG" ]; then
+if [ "$DEBUG_IS_ENABLED" ]; then
    /bin/ash || /bin/sh
 fi
 

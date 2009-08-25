@@ -9,22 +9,26 @@ if [ "$1" != "" ]; then
    LIVECDNAME="$1"
 fi
 
+if [ "$2" != "" ]; then
+   ADDLOCALE="$2"
+fi
+
 # rcopy is a recursive cp, which copies also symlink's real source
 # $1 = source (may be a regular file or symlink)
 # $2 = target PARENT
 #
 rcopy()
 {
-   CWD=`pwd`
-   cd $ROOT
+   CWD=$(pwd)
+   if [ "$ROOT" = "" ]; then cd /; else cd $ROOT; fi
    SOURCE="${1:${#ROOT}}"
    DEST="$2"
    if [ -L "$SOURCE" ]; then
-      REALPATH="`readlink -f \"$SOURCE\"`"
-      cp --parent -R "$REALPATH" "$DEST"
+      REALPATH=$(readlink -f "$SOURCE")
+      cp --parent -a "$REALPATH" "$DEST"
       ln -sf "$REALPATH" "$DEST/$SOURCE"
    else
-      cp --parent -R "$SOURCE" "$DEST"
+      cp --parent -a "$SOURCE" "$DEST"
    fi
    if [ "$?" -ne 0 ]; then
       echo ""
@@ -68,9 +72,9 @@ if [ ! -d $ROOT/$LMK ]; then
    exit 1
 fi
 
-if [ "`ls -1 rootfs/lib`" = "" ]; then
+if [ "$(ls -1 rootfs/lib)" = "" ]; then
    echo "cannot find essential libc libraries."
-   echo "please add ld-linux and libc.so to `pwd`./rootfs/lib"
+   echo "please add ld-linux and libc.so to $(pwd)./rootfs/lib"
    exit 1
 fi
 
@@ -97,12 +101,16 @@ cat liblinuxlive | sed -r 's/^LIVECDNAME=.*/LIVECDNAME="'$LIVECDNAME'"/' > $INIT
 cp {linuxrc,cleanup} $INITRD_TREE
 chmod ago+x $INITRD_TREE/{linuxrc,cleanup}
 
-cp -R rootfs/* $INITRD_TREE
+if [ "$USENTFS3G" = "yes" ]; then
+   cp -a ntfs-3g/* $INITRD_TREE
+fi
+
+cp -a rootfs/* $INITRD_TREE
 ln -s busybox $INITRD_TREE/bin/ash
-ln -s busybox $INITRD_TREE/bin/sh
-ln -s busybox $INITRD_TREE/bin/bash
 ln -s busybox $INITRD_TREE/bin/echo
 ln -s busybox $INITRD_TREE/bin/[
+ln -s busybox $INITRD_TREE/bin/modprobe
+ln -s busybox $INITRD_TREE/bin/insmod
 ln -s busybox $INITRD_TREE/bin/mount
 ln -s busybox $INITRD_TREE/bin/umount
 ln -s busybox $INITRD_TREE/bin/poweroff
@@ -173,6 +181,7 @@ dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >>$DEBUG 2>&1
 
 debug "making filesystem"
 mkfs -t ext2 -F -m 0 -b 1024 -i 1024 $INITRDIMG >>$DEBUG 2>&1
+tune2fs -i 120m $INITRDIMG >>$DEBUG 2>&1
 
 debug "creating empty directory $MOUNTDIR"
 rm -Rf $MOUNTDIR

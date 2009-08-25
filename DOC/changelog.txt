@@ -1,3 +1,39 @@
+ 6.1.0 - code name Test it
+ 
+ * introduced livecd.sgn again, as experiences show it's needed
+ * fixed a problem in cmdline_value and cmdline_parameter with -w.
+   For some odd reason egrep -o -w 'load' returns a string from 'noload'.
+ * fixed a bug in mountpoint call, it was OK if using 'mountpoint' from LLS,
+   but wasn't correctly redirecting stdout to null if called busybox's internal
+   function. I think it didn't cause any problem at all but now it's called
+   the 'right way'(tm).
+ * fixed a function rcopy in initrd_create while using $ROOT, suggested by Rick.
+ * point aufs xino path to tmpfs memory instead of $CHANGES. This allows us to
+   use a fuse-mounted directory for 'changes=' and hides the .fuse_hidden files
+   from root caused by xino. Moreover it should be much faster and safer then
+   storing it in 'changes' file which may be on USB device. This is now done 
+   the 'right way'(tm).
+ * obsolete syntax `command` replaced by $(command)
+ * removed nodma boot option as I don't see any reason for it anymore
+ * usb and pcmcia devices are now probed right away, refined find_in_computer
+   function, boot speedup by 20 seconds
+ * updated NTFS-3g to the newest version
+
+
+ 6.0.9 - code name NTFS
+
+ * little corrections to addlocale, fixed ROOT variable support
+ * direct NTFS-3g support, configurable in .config
+ * added [locale= | language= | lang= ]
+   example: lang=czech will be recognized as cs_CZ.ISO-8859-2
+   If you don't use iocharset= boot option, iocharset for FAT32 partitions
+   will be set to the string recognized from locale. In our example iso8859-2.
+ * increased the size of initrd (using 6.6 MB instead of old 4.4 MB)
+ * added busybox 1.5, compiled with bbconfig, patched to hide msgs about job control turned off
+ * removed egrep_o function and replaced by egrep -o (supported by busybox now)
+ * added -w to cmdline_parameter and cmdline_value to simplify regular expressions
+
+
  6.0.8 - code name: Hasta la VISTA!
 
  * fixed mountpoint function to correctly recognize mounted directories.

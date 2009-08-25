@@ -24,3 +24,9 @@
  Author:
 
    Tomas M. <http://www.linux-live.org>
+
+ Sources:
+
+ Source code of all binaries available in linux-live scripts are not included,
+ because of the size. Nevertheless you may download all sources needed to build
+ these binaries from: ftp.slax.org/source
