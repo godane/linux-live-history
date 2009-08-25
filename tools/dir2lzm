@@ -18,3 +18,4 @@ fi
 rm -f "$2"
 create_module "$1" "$2"
 if [ $? != 0 ]; then echo "error building compressed image"; exit 1; fi
+echo -e "\ndone OK"

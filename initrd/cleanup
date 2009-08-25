@@ -4,22 +4,30 @@
 #
 # Call it this way: exec /mnt/live/cleanup
 
-export PATH=.:/mnt/live:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH=.:/mnt/live:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib
 . liblinuxlive
 
 header "starting Linux Live shutdown procedures..."
 
+if [ "`cmdline_parameter debug`" ]; then
+   DEBUG=yes
+fi
+
+echo "pivot_root"
 cd $INITRAMDISK
 pivot_root . $UNION < dev/console > dev/console 2>&1
 
+echo "umount union"
 fumount $UNION/proc
 fumount $UNION/sys
 fumount $UNION/dev
 fumount $UNION/boot
 fumount $UNION
 
+echo "umount images"
 fumount $IMAGES/*
 
+echo "umount mountpoints"
 fumount $COPY2RAM
 fumount $ISOMOUNT
 fumount $MEMORY
@@ -27,14 +35,19 @@ fumount $MEMORY
 fumount $MOUNTDIR/*
 
 # eject cdrom devices
-MNT=$(ls -1 $MOUNTDIR 2>/dev/null | head -n 1)
-CD=$(cat /proc/sys/dev/cdrom/info 2>/dev/null | grep name | grep "$MNT")
-if [ "$CD" -a "$MNT" ]; then
-   echo "Ejecting CD-ROM..."
-   /bin/eject -m /dev/$MNT >/dev/null 2>&1
-   echo "CD tray will be closed in 6 seconds..."
-   sleep 6
-   /bin/eject -t /dev/$MNT >/dev/null 2>&1
+for MNT in $(ls -1 $MOUNTDIR 2>/dev/null | sed -r "s/_.*//"); do
+   CD=$(cat /proc/sys/dev/cdrom/info 2>/dev/null | grep name | grep "$MNT")
+   if [ "$CD" -a "$MNT" ]; then
+      echo "Ejecting $MNT..."
+      /bin/eject -m /dev/$MNT >/dev/null 2>&1
+      echo "CD tray will be closed in 6 seconds..."
+      sleep 6
+      /bin/eject -t /dev/$MNT >/dev/null 2>&1
+   fi
+done
+
+if [ "$DEBUG" ]; then
+   /bin/ash || /bin/sh
 fi
 
 echo $1

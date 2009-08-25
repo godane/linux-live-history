@@ -127,6 +127,7 @@ rcopy $ROOT/$LMK/kernel/fs/squashfs $INITRD_TREE
 rcopy_ex $ROOT/$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/lib/zlib_deflate $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/block/loop.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/fuse/fuse.* $INITRD_TREE 2>>$DEBUG
 
 rcopy_ex $ROOT/$LMK/kernel/fs/isofs $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/fs/fat $INITRD_TREE 2>>$DEBUG
@@ -144,11 +145,28 @@ rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ehci-hcd.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ohci-hcd.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/uhci-hcd.* $INITRD_TREE 2>>$DEBUG
 
+# pcmcia modules
+rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/pcmcia_core.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/pcmcia.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/rsrc_nonstatic.* $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/yenta_socket.* $INITRD_TREE 2>>$DEBUG
+
+if [ "$ADDLOCALE" != "" ]; then
+   debug "adding locales $ADDLOCALE"
+   . ./addlocaleslib
+   copylocales $ROOT/ $INITRD_TREE $ADDLOCALE
+fi
+
 debug "unpacking all kernel modules for initrd"
 find $INITRD_TREE -name "*.ko.gz" | xargs -r gunzip
 
 debug "generating module dependency files"
 depmod -b $INITRD_TREE $KERNEL
+
+debug "compressing usr in initrd"
+mksquashfs $INITRD_TREE/usr $INITRD_TREE/usr.lzm >/dev/null 2>/dev/null
+chmod ago-x $INITRD_TREE/usr.lzm
+rm -Rf $INITRD_TREE/usr/*
 
 debug "creating empty image file for initrd"
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >>$DEBUG 2>&1
@@ -170,7 +188,14 @@ fi
 
 debug "copying content of $INITRD_TREE to $MOUNTDIR"
 rmdir $MOUNTDIR/lost+found
-cp -R --preserve $INITRD_TREE/* $MOUNTDIR
+cp -R --preserve $INITRD_TREE/* $MOUNTDIR 2>/dev/null
+if [ $? -ne 0 ]; then
+   debug "error copying data to mounted initrd. Increase RAM0SIZE"
+   echo "Not enough free space in initrd. Edit .config and increase RAM0SIZE !"
+   umount $MOUNTDIR
+   rm $INITRDIMG
+   exit 1
+fi
 
 debug "unmounting $MOUNTDIR"
 umount $MOUNTDIR

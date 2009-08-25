@@ -3,18 +3,26 @@
 # Author: Tomas M <http://www.linux-live.org/>
 
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
-. liblinuxlive
+
+mount -n -t proc proc /proc
+. liblinuxlive # it requires proc to be mounted
 
 header "starting Linux Live scripts <http://www.linux-live.org/>"
-
 echolog "mounting /proc and /sys filesystems"
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-ln -sf /proc/mounts /etc/mtab # this allows us to use umount -a
-mount -o remount,rw /         # for the case we forgot rw boot option
+mount -n -t sysfs sysfs /sys
+ln -sf /proc/mounts /etc/mtab    # this allows us to use umount -a
+mount -n -o remount,rw /         # for the case we forgot rw boot option
+
+# Load essential drivers, like CDROM drivers, aufs/squashfs etc.
+modprobe_essential_modules
 
 # use mdev to create /dev/ devices and setup it as a hotplug-handler
 mdev_start_hotplug
+
+# /usr is compressed in initrd so it must be mounted from /usr.lzm
+# I know this consumes one loop mount, but this is in order to keep initrd 
+# small (max 4MB), as it consumes memory all the time the Live CD runs.
+mount_initrd_loops
 
 # setup DEBUGCMD variable. If debug boot option is present, call debug()
 # function several times during script's execution to help fighting bugs
@@ -26,9 +34,6 @@ if [ "$DEBUGCMD" != "" ]; then
 fi
 
 $DEBUGCMD
-
-# Load essential drivers, like CDROM drivers, aufs/squashfs etc.
-modprobe_essential_modules
 
 # disable DMA if nodma parameter is used
 setup_dma
@@ -49,13 +54,7 @@ echolog "looking for data directory"
 DATAFROM="`cmdline_value from`"
 
 if [ "$DATAFROM" ]; then
-   DATAFROM="`find_file $MOUNTDIR $DATAFROM`"
-   if [ "$DATAFROM" = "" ]; then
-      # still empty? Load USB drivers and try again
-      modprobe_usb_modules
-      DATAFROM="`find_file $MOUNTDIR $DATAFROM`"
-   fi
-
+   DATAFROM="`find_in_computer $DATAFROM`"
    if [ "$DATAFROM" ]; then
       mount_device $DATAFROM $LOOPMOUNT # mount again, it may be loop device
       if [ $? -eq 0 -a -d "$LOOPMOUNT/$LIVECDNAME" ]; then
@@ -70,18 +69,12 @@ fi
 
 if [ "$DATA" = "" ]; then
    # from= is not used or it didn't contain valid data
-   DATA="`find_file $MOUNTDIR $LIVECDNAME`"
-fi
-
-if [ "$DATA" = "" ]; then
-   # Still nothing found? Load USB modules and try again
-   modprobe_usb_modules
-   DATA="`find_file $MOUNTDIR $LIVECDNAME`"
+   DATA="`find_in_computer $LIVECDNAME`"
 fi
 
 if [ "$DATA" = "" ]; then fatal \
 "$LIVECDNAME data not found.
-You are maybe using an unsupported boot device (eg. SCSI or PCMCIA CD-ROM).
+You are maybe using an unsupported boot device (eg. SCSI or old PCMCIA).
 Workaround: Copy the directory $LIVECDNAME from your boot device to an IDE/SATA
 disk, eg. to /mnt/hda1/$LIVECDNAME or C:\\$LIVECDNAME. Then try to boot again."
 fi
@@ -94,12 +87,7 @@ echolog "setting up directory for changes"
 CHANGESVAL="`cmdline_value changes`"
 
 if [ "$CHANGESVAL" ]; then
-   CHANGESMNT="`find_file $MOUNTDIR $CHANGESVAL`"
-   if [ "$CHANGESMNT" = "" ]; then
-      # still empty? Load USB modules and try again
-      modprobe_usb_modules
-      CHANGESMNT="`find_file $MOUNTDIR $CHANGESVAL`"
-   fi
+   CHANGESMNT="`find_in_computer $CHANGESVAL`"
    echolog $CHANGESMNT
 fi
 
@@ -118,7 +106,7 @@ if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a "`du -k \"$CHANGESMNT\" 2>/dev
       echo "- a Read-Only filesystem is not supported"
    else
       echolog "expanding the file for changes to $SIZE MB"
-      echolog "(it may take few minutes, depending on your drive/bus speed and size)"
+      echolog "(it may take few minutes, depending on your drive/bus speed and the size)"
       dd if=/dev/zero of=$CHANGESMNT bs=1M count=0 seek=$SIZE >/dev/null 2>&1
       sync
       echolog "creating journaling XFS filesystem to store changes safely..."
@@ -136,15 +124,15 @@ if [ $? -ne 0 ]; then
 fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
-echolog "setup union directory (using aufs)"
+echolog "setup union directory (using aufs, direct branch access disabled)"
 
 mkdir -p $CHANGES
 if [ $? -ne 0 ]; then
-   fatal "a Read-Only filesystem is not supported"
+   fatal "a Read-Only filesystem for 'changes' is not supported."
 fi
 
 mkdir -p $IMAGES
-mount -t aufs -o br:$CHANGES=rw aufs $UNION
+mount -t aufs -o nowarn_perm,udba=none,br:$CHANGES=rw aufs $UNION
 if [ $? -ne 0 ]; then fatal "can't setup union (aufs)"; fi
 
 $DEBUGCMD
@@ -183,6 +171,8 @@ $DEBUGCMD
 
 echolog "copying content of rootcopy directory"
 cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
+echolog "copying liblinuxlive library to union"
+cp /liblinuxlive $UNION/usr/lib/
 
 $DEBUGCMD
 

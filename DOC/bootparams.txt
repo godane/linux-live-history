@@ -6,8 +6,11 @@ boot param: toram ... copy data from boot device to RAM and then run LiveCD from
 boot param: copy2ram ... alias for toram
 boot param: noauto ... disable automount of devices (add 'noauto' to fstab entries)
 bootparam value: changes= ... all changes you made while running liveCD are stored in the given device/file. Default: empty
+bootparam value: chopt= ... value 'eie' causes the changes file from previous boot param to expand itself (fill up the device) if empty (zero size). Default: nothing
 bootparam value: from= ... data for LiveCD are loaded from given device or loop file. Default: the first device found
 bootparam value: ramsize= ... how much RAM will be used to save changes, if changes= parameter is not used. Default: 60%
 bootparam value: load= ... which lzm modules should be loaded from /optional directory. Default: empty
 bootparam value: noload= ... which lzm modules should not be loaded. Default: all
 bootparam value: iocharset= ... international charset used to mount FAT/NTFS partitions. Default: your kernel settings, usually 'cp437'
+bootparam value: waitusb= ... how many seconds to wait for USB devices. Default: 10 second
+bootparam value: waitpcmcia= ... how many seconds to wait for PCMCIA devices. Default: 10 second

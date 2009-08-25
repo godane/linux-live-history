@@ -1,6 +1,7 @@
 People with international Windows won't be able to see correct file names
-on disk, because FAT and NTFS partitions require a boot argument,
-which specifies I/O charset.
+on disk, because FAT and NTFS partitions require different encoding.
+
+FIXME which specifies I/O charset.
 
 A temporary solution is to use 'iocharset=' boot option each time you boot
 the Live distro on a computer with international Windows.

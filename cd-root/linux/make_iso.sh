@@ -17,6 +17,7 @@ ISONAME="$1"
 
 if [ "$ISONAME" = "" ]; then
    SUGGEST="../../`basename \`pwd\``.iso"
+   SUGGEST="`readlink -f $SUGGEST`"
    echo -ne "Target ISO file name [ Hit enter for $SUGGEST ]: "
    read ISONAME
    if [ "$ISONAME" = "" ]; then ISONAME="$SUGGEST"; fi

@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# $1 = from dir (eg /)
+# $2 = to dir
+# $3..$n = language(s)
+#
+copylocales()
+{
+   ROOT="$1"; shift
+   TARGET="$1"; shift
+   ADDLOCALE="$*"
+
+   MYLOCALE=$ROOT/usr/lib/locale # system locales (sorting, days in week, etc)
+   MYALIAS=$ROOT/usr/share/locale/locale.alias # translate 'czech' to 'cs_CZ.ISO-8859-2'
+   MYGCONV=$ROOT/usr/lib/gconv # codepages
+   MYI18NLOC=$ROOT/usr/share/i18n/locales
+
+   for NAME in `echo $ADDLOCALE | tr ',' ' '`; do
+      ALIAS="`cat $MYALIAS | egrep ^$NAME[[:space:]]`"
+      if [ "$ALIAS" = "" ]; then continue; fi
+      LOCA="`echo $ALIAS | cut -d " " -f 2- | cut -d "." -f 1`"
+      CHAR="`echo $ALIAS | cut -d "." -f 2 | sed -r 's/-/-?/g'`"
+      echo $NAME:$LOCA:$CHAR | tr -d '?'
+
+      cp -a --parents $MYI18NLOC/$LOCA $TARGET
+      cp -a --parents $MYGCONV/gconv-modules $TARGET
+
+      GCONV=$(find $MYGCONV | while read LINE; do echo $LINE@`echo $LINE | tr -d "-"`; done | egrep -i "/$CHAR.so\$" | head -n 1)
+      GCONV=$(echo $GCONV | cut -d "@" -f 1)
+      cp -a --parents $GCONV $TARGET
+
+      GCONVDEP=$(ldd $GCONV | grep -v linux-gate.so | grep -v libc.so | grep -v ld-linux.so)
+      GCONVDEP=$(echo $GCONVDEP | cut -d " " -f 1)
+      if [ "$GCONVDEP" ]; then cp -a --parents $MYGCONV/$GCONVDEP $TARGET; fi
+
+      LOCAC=$(find $MYLOCALE | egrep -i "/$LOCA(\\.$CHAR)?\$" | head -n 1)
+      cp -a --parents $LOCAC $TARGET
+   done
+}

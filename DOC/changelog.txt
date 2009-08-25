@@ -1,4 +1,28 @@
- 6.0.7 - code name dd seek=`df`
+ 6.0.8 - code name: Hasta la VISTA!
+
+ * fixed mountpoint function to correctly recognize mounted directories.
+   It worked correctly in BusyBox (during LiveCD startup) because it called
+   busybox's mountpoint, but it was broken if called from bash. Not a big 
+   prolem but it should be working in both cases
+ * added support for booting from PCMCIA CardBus-compatible devices
+ * added missing sanity check after mounting partition without read-only flag
+ * added a possibility to include locales for given language in initrd
+ * fstab-update adds a line for sysfs to fstab, thanks to loonix!
+ * swap devices are added with 'noauto' option to fstab, as it is not safe
+   to automatically use swap. There can be some other Linux OS hybernated.
+ * modprobe_module now accepts many arguments, passing them to modprobe
+ * added brs=1 parameter to aufs modprobe, so the module is loaded with 
+   full sysfs support
+ * mounting is now done using -n option, to skip modifying /etc/mtab
+ * if mount -o loop fails, try mknod next loop device in /dev and mount again
+   This enables you to use unlimited number of loop devices, if kernel supports it
+   (It should be in since 2.6.22, but who knows)
+ * mount aufs union with nowarn_perm and udba=none options
+ * rewqritten fstab_update, split the functionality into few more functions
+ * make_iso.sh now shows real path (readlink -f) instead of the ../../ ...
+
+
+ 6.0.7 - code name: dd seek=`df`
  
  * upgraded to new busybox 1.4.1 with bbconfig applet
  * added mkfs.xfs (compressed by upx) to initrd
@@ -21,7 +45,7 @@
  * fixed a typo preventing from= working at all (we should use -d, not -f)
 
 
- 6.0.6 - code name Japanese
+ 6.0.6 - code name: Japanese
  
  * fixed make_iso.bat for windows (including broken config from tools/WIN)
 
