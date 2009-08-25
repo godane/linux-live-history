@@ -13,7 +13,9 @@ if [ "$1" = "--help" -o "$1" = "-h" ]; then
 fi
 
 CDLABEL="SLAX"
-ISONAME="$1"
+ISONAME=$(readlink -f "$1")
+
+cd $(dirname $0)
 
 if [ "$ISONAME" = "" ]; then
    SUGGEST=$(readlink -f ../../$(basename $(pwd)).iso)

@@ -41,7 +41,7 @@ mkdir -p $MEMORY
 debug_shell
 
 # Find livecd data directory by searching for livecd.sgn file
-SGN=$(cmdline_value sgn)
+SGN=$(cmdline_value sgnfile)
 if [ "$SGN" = "" ]; then SGN=livecd.sgn; fi
 echolog "looking for data directory (searching for $SGN file)"
 
@@ -181,6 +181,12 @@ debug_shell
 
 echolog "copying content of rootcopy directory"
 cp -af $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
+
+# TODO: if copy2ram is used, there is no need to preserve the original in memory anymore
+#if [ "$DATA" = "$COPY2RAM" ]; then 
+#    rm from memory once ??
+#fi
+
 echolog "copying liblinuxlive library to union"
 cp -af /liblinuxlive $UNION/usr/lib/
 

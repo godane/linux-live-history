@@ -10,10 +10,9 @@ if [ "$1" = "-k" ]; then
    shift
 fi
 
-if [ "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" -a "$(whereis kactivate)" ]; then
-   exec kdeactivate "$@" 2>/dev/null
+if [ -e /usr/bin/kdeactivate -a "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" ]; then
+   exec /usr/bin/kdeactivate "$@" 2>/dev/null
 fi
-
 
 MODULE=$(basename "$1" .lzm).lzm
 IMAGES=/mnt/live/memory/images

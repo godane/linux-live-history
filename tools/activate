@@ -9,8 +9,8 @@ if [ "$1" = "-k" ]; then
    shift
 fi
 
-if [ "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" -a "$(whereis kactivate)" ]; then
-   exec kactivate "$@" 2>/dev/null
+if [ -e /usr/bin/kactivate -a "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" ]; then
+   exec /usr/bin/kactivate "$@" 2>/dev/null
 fi
 
 MODULE=$(readlink -f "$1")

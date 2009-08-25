@@ -522,9 +522,9 @@ copy_to_ram()
    debug_log "copy_to_ram" "$*"
    cp -a "$1/rootcopy" "$2" 2>/dev/null # could be empty
    list_modules "$1" | while read MODULE; do
-      TARGET="$2/$(basename $(dirname $MODULE))"
-      mkdir -p "$TARGET"
-      cp "$MODULE" "$TARGET"
+      TARGET=$(dirname "$MODULE" | cut -b ${#1}- | cut -b 2-)
+      mkdir -p "$2/$TARGET"
+      cp "$MODULE" "$2/$TARGET"
       if [ $? -ne 0 ]; then fatal "Not enough memory. Using ramsize=$RAMSIZE"; fi
    done
 }
@@ -541,7 +541,6 @@ list_cdrom_devices()
    debug_log "list_cdrom_devices" "$*"
    local CDDEVICE
 
-   if [ "$(cmdline_parameter nocd)" != "" ]; then return 1; fi
    for CDDEVICE in $(cat /proc/sys/dev/cdrom/info 2>/dev/null | head -n 3 | tail -n 1 | cut -d ":" -f 2); do
       echo "/dev/$CDDEVICE"
    done
@@ -591,7 +590,9 @@ list_swap_devices()
 list_block_devices()
 {
    debug_log "list_block_devices" "$*"
-   list_cdrom_devices
+   if [ "$(cmdline_parameter nocd)" = "" ]; then
+      list_cdrom_devices
+   fi
    list_partition_devices
 }
 

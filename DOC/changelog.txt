@@ -1,3 +1,13 @@
+ 6.2.4
+ 
+ * activate and deactivate must work even without k{activate/deactivate} scripts
+ * bugfix: sgnfile boot parameter was not working 
+ * make_iso.sh now works even if called from a different directory
+ * the meaning of nocd parameter is now different: skip looking for CD devices during bootup, but normally
+   add cdrom devices to fstab.
+ * fixed copy2ram if modules are in subdirectories of /base /modules or /optional
+ 
+
  6.2.3
  
  * added newest memtest86+ 2.1
