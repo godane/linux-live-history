@@ -5,6 +5,12 @@
 # Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
 if [ ! -d "$1" -o "$3" = "" ]; then
    echo
    echo "Convert directory tree into IMG compressed module"
@@ -12,7 +18,6 @@ if [ ! -d "$1" -o "$3" = "" ]; then
    exit 1
 fi
 
-. liblinuxlive || exit 1
 
 mkciso "$1" "$2" "$3"
 if [ $? != 0 ]; then echo "error building compressed image"; exit 1; fi

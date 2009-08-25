@@ -1,0 +1,35 @@
+#!/bin/bash
+# Use module while running LiveCD - include it into directory structure on the fly
+# Author: Tomas Matejicek <http://www.linux-live.org>
+#
+
+if [ "$1" = "" ]; then
+   echo
+   echo "Use module on the fly while running Live CD"
+   echo "Usage: $0 module.img"
+   exit
+fi
+
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
+IMGRO=/mnt/livecd/imgro/
+IMGRW=/mnt/livecd/imgrw/
+
+MODULE="`basename $1`"
+INSORDER=/tmp/moduse$$
+
+rm -f "$INSORDER"
+mount_img "$1" "$IMGRO" "$INSORDER"
+
+IMG="`cat $INSORDER`"
+IMG=$IMGRW/${IMG:${#IMGRO}}
+
+if [ -x "$IMG/preinsert" ]; then "$IMG/preinsert"; fi
+make_links "$IMG/data" "/" ""
+if [ -x "$IMG/postinsert" ]; then "$IMG/postinsert"; fi
+
+rm -f "$INSORDER"

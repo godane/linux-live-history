@@ -1,8 +1,10 @@
 #!/bin/bash
-# install all scripts from /tools to /usr/sbin,
+# install all scripts from /tools to /usr/sbin and /usr/lib,
 # so the user is able to use all commands while running his/her Live Linux
 
 mkdir -p /usr/sbin
-cp ./tools/* /usr/sbin
+mkdir -p /usr/lib
+ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE /usr/sbin; done
+ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE /usr/lib; done
 
 echo "Done, Linux Live scripts were installed"

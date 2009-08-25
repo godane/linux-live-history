@@ -71,11 +71,11 @@ tempdir()
    if [ "$2" != "" ]; then TMPDIR="$2"; else TMPDIR="/tmp"; fi
    local MOUNTPOINT=`basename $1`
 
-   MOUNTPOINT=`tempfile $TMPDIR/$MOUNTPOINT`
-   if [ "$?" -ne 0 ]; then exit 1; fi
+   MOUNTPOINT="$TMPDIR/$MOUNTPOINT"
 
-   rm "$MOUNTPOINT"
-   if [ $? != 0 ]; then echo "cannot remove temp file $MOUNTPOINT"; exit 1; fi
+   while [ -a "$MOUNTPOINT" ]; do
+      MOUNTPOINT=$MOUNTPOINT".X"
+   done
 
    mkdir -p "$MOUNTPOINT"
    if [ $? != 0 ]; then echo "error creating directory $MOUNTPOINT"; exit 1; fi

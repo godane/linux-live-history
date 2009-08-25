@@ -11,7 +11,12 @@ if [ ! -d "$2" ]; then
    exit 1
 fi
 
-. liblinuxlive || exit 1
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
+
 
 TMPDIR=/tmp
 TMPFILE="/tmp/ll$$"

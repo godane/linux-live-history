@@ -6,7 +6,6 @@ REM First, ensure any unwritten disk buffers are flushed:
 
 REM Start the LOADLIN process:
 cls
-type \splash
 loadlin @slax %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 REM #########################################################################

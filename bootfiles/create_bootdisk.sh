@@ -31,12 +31,13 @@ if [ ! "$?" = "0" ]; then echo "error mounting $2"; exit; fi
 # copy all files there
 mkdir -p $MOUNTPOINT/$SUBDIR
 cp -R "$DATADIR"/* "$MOUNTPOINT/$SUBDIR"
+gunzip "$MOUNTPOINT/$SUBDIR/splash.bmp.gz"
 APPEND="`cat $DATADIR/isolinux.cfg | grep append | cut -b 7-`"
 
 echo "
 boot = $3
 prompt
-timeout = 40
+timeout = 50
 #install = text
 #message = $MOUNTPOINT/$SUBDIR/splash
 bitmap = $MOUNTPOINT/$SUBDIR/splash.bmp

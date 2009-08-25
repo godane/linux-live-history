@@ -12,7 +12,11 @@ if [ "$1" = "" -o "$2" = "" ]; then
    exit 1
 fi
 
-. liblinuxlive || exit 1
+if [ -a ./liblinuxlive ]; then
+   . ./liblinuxlive
+else
+   . /usr/lib/liblinuxlive || exit 1
+fi
 
 TMPDIR=/tmp/tgz2img$$
 
@@ -23,7 +27,7 @@ rm -Rf $TMPDIR/var/log/{packages,removed_packages,removed_scripts,scripts}
 rm -Rf $TMPDIR/usr/doc
 rmdir --ignore-fail-on-non-empty $TMPDIR/{bin,etc/rc.d,lib,sbin,var,usr/bin,usr/sbin,usr/lib}
 
-mkciso $TMPDIR "$2"
+mkciso $TMPDIR "$2" "data"
 if [ $? != 0 ]; then echo "error building compressed image"; exit; fi
 
 rm -Rf $TMPDIR
