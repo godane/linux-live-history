@@ -52,7 +52,7 @@ read-write
 append=\" probeusb $APPEND livecd_subdir=$SUBDIR \" " >$TMPLILOCONF
 
 lilo -v -C $TMPLILOCONF -S /dev/null
-if [ "$?" = "0" ]; then echo "ERROR installing LILO ! Your drive won't boot" fi
+if [ "$?" = "0" ]; then echo "ERROR installing LILO ! Your drive won't boot"; fi
 
 umount $DATADIR 2>/dev/null >/dev/null
 if [ "$?" = "0" ]; then rmdir $DATADIR; fi

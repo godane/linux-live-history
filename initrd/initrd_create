@@ -64,26 +64,20 @@ LMK="lib/modules/$KERNEL"
 rcopy /$LMK/kernel/fs/ovlfs $MOUNTDIR
 
 #copy filesystem modules, if not directly copied into kernel
-if [ -d /$LMK/kernel/fs/ntfs ]; then
-   rcopy /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
-fi
-if [ -d /$LMK/kernel/fs/ext3 ]; then
-   rcopy /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
-fi
-if [ -d /$LMK/kernel/fs/reiserfs ]; then
-   rcopy /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
-fi
+rcopy_ex /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
 
 #usb modules
-rcopy /$LMK/kernel/drivers/usb/usbcore.* $MOUNTDIR 2>/dev/null
-rcopy /$LMK/kernel/drivers/usb/host $MOUNTDIR 2>/dev/null
-rcopy /$LMK/kernel/drivers/usb/storage $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/usbcore.* $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/host $MOUNTDIR 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/storage $MOUNTDIR 2>/dev/null
 
 #disk (ide, raid, pcmcia, pnp, ide-scsi) modules
-rcopy /$LMK/kernel/drivers/ide $MOUNTDIR
-rcopy /$LMK/kernel/drivers/pcmcia $MOUNTDIR
-rcopy /$LMK/kernel/drivers/pnp $MOUNTDIR
-rcopy /$LMK/kernel/drivers/scsi/ide-scsi.* $MOUNTDIR
+rcopy_ex /$LMK/kernel/drivers/ide $MOUNTDIR
+rcopy_ex /$LMK/kernel/drivers/pcmcia $MOUNTDIR
+rcopy_ex /$LMK/kernel/drivers/pnp $MOUNTDIR
+rcopy_ex /$LMK/kernel/drivers/scsi/ide-scsi.* $MOUNTDIR
 
 chroot $MOUNTDIR depmod -a 2>/dev/null # some dependences may be missing
 

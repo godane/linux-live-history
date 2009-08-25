@@ -1,3 +1,8 @@
+ 4.2.1
+
+ * mount_img() function produces more usefull error messages now
+ * initrd_create: don't fail while copying nonexistent kernel modules (except ovl)
+
  4.2
 
  * modified dir2img to properly handle third parameter.

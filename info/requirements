@@ -28,6 +28,7 @@
    * devfsd must be installed and configured in your distribution
      else your LiveCD won't be able to use devfs (can't open initial console error)
      devfsd package was removed from Slackware 10, you can find
-     it in ./packages/ directory now
+     it in ./packages/ directory now. Don't install udev package else 
+     devfsd won't work!
 
   These requirements could change with new kernel or ovlfs versions.

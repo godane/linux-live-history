@@ -205,17 +205,18 @@ mount_img()
    local MOUNTPOINT=`tempdir $1 $2`
    mount $4 -o loop,ro $1 $MOUNTPOINT
    if [ $? != 0 ]; then
-      echolog "error mounting $1 to $MOUNTPOINT";
-      echolog "Do you have enough free loop devices?";
-      exit 1;
+      echolog "error mounting $1 to $MOUNTPOINT"
+      echolog "Do you have enough free loop devices?"
+      echolog "Or IMG file is corrupted? Can you check md5sum?"
+      exit 1
    fi
 
    mount $4 -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
    if [ $? != 0 ]; then
-      echolog "error submounting $1";
-      echolog "Do you have enough free loop devices?";
-      echolog "Do you have transparent decompression for ISO filesystem compiled into kernel?";
-      exit 1;
+      echolog "error submounting $1"
+      echolog "Do you have enough free loop devices?"
+      echolog "Do you have transparent decompression for ISO filesystem compiled into kernel?"
+      exit 1
    fi
    
    echolog "$MOUNTPOINT" >>$3
@@ -339,6 +340,7 @@ list_libs()
 # rcopy is a recursive cp, which copies also symlink's real source
 # $1 = source (may be a regular file or symlink)
 # $2 = target PARENT
+#
 rcopy()
 {
    if [ -L "$1" ]; then
@@ -354,5 +356,16 @@ rcopy()
       echo "nevertheless your LiveCD may still work."
       echo "Possible reason: not enough free space in initrd or source doesn't exist"
       echo "---------------------------"
+   fi
+}
+
+# copy file/dir only if it exists, else skip with no error
+# $1 = source (may not exist)
+# $2 = target PARENT
+#
+rcopy_ex()
+{
+   if [ -a "$1" ]; then
+      rcopy "$1" "$2"
    fi
 }
