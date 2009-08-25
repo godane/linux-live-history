@@ -1,3 +1,7 @@
+ 5.1.3
+ 
+ * bugfix: precompiled kernel modules weren't gzipped
+
  5.1.2
  
  * added squashfs kernel modules for 2.6.12.2
