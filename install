@@ -10,10 +10,16 @@
 # Author: Tomas M. <http://www.linux-live.org>
 #
 
-ROOT="$1"
 N="`basename $0`"
 
-if [ "$N" = "install" ]; then
+if [ "$N" = "build" ]; then
+   N=install
+else
+   . ./.config || exit 1
+   if [ "$1" ]; then ROOT="$1"; fi
+fi
+
+if [ "$N" != "uninstall" ]; then
    mkdir -p $ROOT/usr/bin
    mkdir -p $ROOT/usr/lib
    ls -1 ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/bin; done

@@ -5,6 +5,10 @@
 
 . ../.config || exit 1
 
+if [ "$1" != "" ]; then
+   LIVECDNAME="$1"
+fi
+
 # rcopy is a recursive cp, which copies also symlink's real source
 # $1 = source (may be a regular file or symlink)
 # $2 = target PARENT

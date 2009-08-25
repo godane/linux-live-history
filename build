@@ -16,6 +16,14 @@ cd $CHANGEDIR
 # only root can continue, because only root can read all files from your system
 allow_only_root
 
+# live CD name
+echo -ne "Name of your live distro [hit enter for $LIVECDNAME]: "
+read NEWLIVECDNAME
+if [ "$NEWLIVECDNAME" != "" ]; then LIVECDNAME=$NEWLIVECDNAME; fi
+LIVECDNAME="`echo $LIVECDNAME | tr -d ' '`"
+
+. ./install
+
 # search for kernel
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
@@ -31,6 +39,12 @@ mkdir -p $CDDATA/$LIVECDNAME/{base,modules,optional,rootcopy,tools}
 
 echo "copying cd-root to $CDDATA, using kernel from $VMLINUZ"
 cp -R cd-root/boot $CDDATA
+for i in isolinux syslinux; do
+   cat cd-root/boot/$i/$i.cfg | sed -r "s/LABEL linux/LABEL $LIVECDNAME/" | sed -r "s/DEFAULT linux/DEFAULT $LIVECDNAME/" > $CDDATA/boot/$i/$i.cfg
+done
+mv $CDDATA/boot/dos/linux.bat $CDDATA/boot/dos/${LIVECDNAME:0:8}.bat
+cat cd-root/boot/dos/readme.txt | sed -r "s/LINUX.BAT/"${LIVECDNAME:0:8}.bat"/" > $CDDATA/boot/dos/readme.txt
+
 mkdir -p $CDDATA/$LIVECDNAME
 cp -R cd-root/linux/* $CDDATA/$LIVECDNAME
 cp tools/* $CDDATA/$LIVECDNAME/tools
@@ -40,7 +54,7 @@ cp $VMLINUZ $CDDATA/boot/vmlinuz
 echo "creating initrd image..."
 echo "Using kernel modules from $ROOT/$LMK"
 cd initrd
-./initrd_create
+./initrd_create $LIVECDNAME
 if [ "$?" -ne 0 ]; then exit; fi
 cd ..
 
@@ -64,3 +78,6 @@ echo
 echo "* run $CDDATA/$LIVECDNAME/make_iso.bat to create ISO image"
 echo "* or copy content of $CDDATA to your USB device"
 echo "and run ./boot/bootinst.sh (from the device!) to setup boot sector"
+echo
+echo "Now press Enter to finish..."
+read junk

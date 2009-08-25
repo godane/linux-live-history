@@ -1,3 +1,23 @@
+ 6.0.5
+
+ * fixed cleanup script to skip ejecting of CD when copy2ram is used
+ * fixed a bug when swap partitions were not marked 'noauto' even if noauto
+   boot parameter was specified
+ * modified search routines, all partitions are mounted read-only now
+   and only the partition found for liveCD data or changes= or from= is
+   remounted without 'ro' flag at the end
+ * all partitions are now in all circumstances mounted with 'noatime' option
+ * boot prompt now waits 4 seconds before vmlinuz is loaded
+ * wait for Enter after liveCD is created (at the end of ./build script)
+ * LIVECDNAME (see .config) now affects the name of syslinux/isolinux label.
+   That means, if you use 'aaa' as a LIVECDNAME, then you'll need to use
+   boot: aaa copy2ram
+   for example, instead of 'boot: linux copy2ram' like before
+ * linux.bat from boot/dos is now renamed to $LIVECDNAME.bat (only 8 chars)
+ * LIVECDNAME can be entered during ./build procedure (there is a prompt for it)
+ * ./install is called automatically from ./build now
+
+
  6.0.4
 
  * mo2lzm - first try to mount the .mo module instead of unpacking it.

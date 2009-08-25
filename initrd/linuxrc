@@ -157,8 +157,9 @@ mkdir -p $UNION/dev
 mkdir -p $UNION/tmp
 chmod 0777 $UNION/tmp
 
-# boot will contain whatever was in ./boot directory in the bootable media
-mount -o rbind `dirname $DATA`/boot $UNION/boot
+# Boot will contain whatever was in ./boot directory in the bootable media
+# Error output goes to null, as nothing is mounted with copy2ram
+mount -o rbind `dirname $DATA`/boot $UNION/boot 2>/dev/null
 
 $DEBUGCMD
 
