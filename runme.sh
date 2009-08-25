@@ -54,6 +54,7 @@ cp $VMLINUZ $CDDATA/vmlinuz
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/packs
 mkdir -p $CDDATA/optional
+mkdir -p $CDDATA/devel
 
 # these directories have to be packed (tar.gz) because
 # it's not possible to overmount them by ovlfs 
