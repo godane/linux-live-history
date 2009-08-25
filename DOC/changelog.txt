@@ -1,3 +1,10 @@
+ 6.1.1 - some fixes
+ 
+ * fixed incorrect ntfs-3g binaries
+ * fixed some old binaries in rootfs
+ * fixed chopt when changes=directory is given
+
+
  6.1.0 - code name Test it
  
  * introduced livecd.sgn again, as experiences show it's needed

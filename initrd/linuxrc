@@ -89,7 +89,7 @@ debug_shell
 # options for the changes= boot parameter (chopt)
 # eie = expand if empty
 CHANGESOPT=$(cmdline_value chopt)
-if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a 0$(du -k "$CHANGESMNT" 2>/dev/null | cut -b1) -eq 0 ]; then
+if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a 0$(du -sk "$CHANGESMNT" 2>/dev/null | cut -b1) -eq 0 ]; then
    SIZE=$(df -k $CHANGESMNT | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4)
    SIZE=$(expr $SIZE / 1024)
    # xfs filesystem can't be created if the loop file is too small

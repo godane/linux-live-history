@@ -19,6 +19,7 @@ fi
 #
 rcopy()
 {
+   debug "rcopy $1 $2"
    CWD=$(pwd)
    if [ "$ROOT" = "" ]; then cd /; else cd $ROOT; fi
    SOURCE="${1:${#ROOT}}"
@@ -49,6 +50,7 @@ rcopy()
 #
 rcopy_ex()
 {
+   debug "rcopy_ex $1 $2"
    if [ -a "$1" ]; then
       rcopy "$1" "$2"
    fi
@@ -160,8 +162,8 @@ rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/rsrc_nonstatic.* $INITRD_TREE 2>>$DEBU
 rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/yenta_socket.* $INITRD_TREE 2>>$DEBUG
 
 if [ "$ADDLOCALE" != "" ]; then
-   debug "adding locales $ADDLOCALE"
    . ./addlocaleslib
+   debug "copylocales $ROOT/ $INITRD_TREE $ADDLOCALE"
    copylocales $ROOT/ $INITRD_TREE $ADDLOCALE
 fi
 

@@ -1,0 +1,57 @@
+#!/bin/bash
+# This script is used in KDE to provide a GUI for uselivemod
+# It has the same syntax like uselivemod, moreover it accepts HTTP addresses
+# to be mounted remotely using httpfs
+# (you may kuselivemod a LZM module over HTTP, no need to download it!)
+
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 127
+
+# make sure to work only with *.lzm files
+while [ "$(echo "$1" | grep '.lzm$')" = "" -a "$1" != "" ]; do shift; done
+
+FILE="$1"
+BASE=$(basename "$FILE" >/dev/null)
+
+SLIK=${FILE:0:4}
+
+# handle slik (Slax Klik) and HTTP requests/urls
+if [ "$SLIK" = "slik" -o "$SLIK" = "http" ]; then
+   MNT="/mnt/live/memory/httpfs/$BASE"
+   mkdir -p "$MNT"
+   httpfs http${FILE:4} "$MNT"
+   if [ $? -ne 0 ]; then
+      kdialog --title "error" --error "Can't mount the module remotely.\nDownload it to your computer and try again."
+      exit 128;
+   fi
+   FILE="$MNT/$BAS"
+fi
+
+if [ "$FILE" = "" -o ! -e "$FILE" ]; then
+   FILE=$(kdialog --getopenfilename ~ "*.lzm" --title "Select LZM module")
+   if [ $? -ne 0 ]; then exit 1; fi
+   BASE=$(basename "$FILE")
+fi
+
+if [ -d "/mnt/live/memory/images/$BASE" ]; then
+   kdialog --title "error" --error "$BASE: Module with this name is already inserted.\nRename the module to something else."
+   exit 2
+fi
+
+kdialog --passivepopup "$BASE: module insertion in progress, wait please..." 10000 &
+KILLPID=$(ps -ef | grep [k]dialog | grep $$ | tr -s " " | cut -d " " -f 2)
+
+uselivemod "$FILE"
+
+if [ $? -ne 0 ]; then
+   kill $KILLPID
+   kdialog --title "error" --error "Some error occured while inserting module to live filesystem."
+   exit 3
+else
+   # Rebuild the system configuration cache for KDE
+   kbuildsycoca 2>/dev/null
+   kill $KILLPID
+   kdialog --title "done ok" --msgbox "Module $BASE\ninserted into live filesystem."
+fi
+
+exit 0

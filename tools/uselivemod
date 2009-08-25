@@ -52,9 +52,10 @@ fi
 MOD=$(union_insert_module / "$MODULE" $IMAGES)
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 3; fi
 
-# all executables in /etc/rc.d/ from this module will be started
-# with two arguments: "start" "lzm". This happens only by this script (uselivemod),
-# not in the case when module is loaded during OS startup.
+# All executables (but symlinks) in /etc/rc.d/ from this module will be started
+# with two arguments: "start" "uselivemod".
+# This is done only by uselivemod, not in the case when the module is loaded 
+# during OS startup (in that case, your distro is responsible for execution)
 find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
    if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
       ${SCRIPT##$IMAGES/$MOD} start uselivemod

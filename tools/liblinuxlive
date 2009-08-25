@@ -65,7 +65,7 @@ echolog()
 # store given text in /var/log/livedbg
 log()
 {
-   echo "$@" >>/var/log/livedbg
+   echo "$@" >>/var/log/livedbg 2>/dev/null
 }
 
 # show information about the debug shell

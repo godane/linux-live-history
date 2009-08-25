@@ -1,4 +1,6 @@
 #!/bin/bash
+# you must have all the locales available in your running system,
+# so make sure to install glibc package and glibc-i18n
 
 # $1 = source file or directory
 # $2 = target file or directory
@@ -11,7 +13,7 @@ cp_parents()
    TARGET="$2"
    ROOT="$3"
 
-   if [ -e "$SOURCE" ]; then
+   if [ -e "$SOURCE" -a "$#" = "3" ]; then
       STRIP=$(dirname ${SOURCE:${#ROOT}})
       mkdir -p $TARGET/$STRIP
       cp -a $SOURCE $TARGET/$STRIP
