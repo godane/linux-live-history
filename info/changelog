@@ -1,6 +1,12 @@
+ 5.0.4
+
+ * added toram boot parameter (copy2ram is an alias for toram and can be used too)
+ 
+
  5.0.3
  
  * small bugfixes in shell scripts
+
 
  5.0.2
  
@@ -28,10 +34,10 @@
  * added BusyBox binary, which reduces the size of initrd and makes
    linux-live scripts more flexible; removed bash, added ash
  * modinsert renamed to editiso and rewritten
-not yet:* fixed tohd boot option (--test?)
  * added nodma boot option, to disable DMA support upon request for all cdroms and disks
  * create_bootdisk.sh fixed incorrect error message about LILO not installed
  * removed nolock boot parameter
+ not yet:* fixed tohd boot option (--test?)
  
 
  4.2.4

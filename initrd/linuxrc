@@ -1,21 +1,5 @@
 #!/bin/ash
 
-# initrd:
-# /
-#   bin
-#   changes
-#   dev
-#   etc
-#   mnt
-#   union
-#        / mnt
-#             / live
-#                   / images
-#                   / initramdisk
-#   usr
-#   tmp
-#   toram
-
 export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 . liblinuxlive
 
@@ -66,20 +50,20 @@ echolog "found in $DATA"
 $DEBUGCMD
 
 #
-# Now we know where our DATA are. We can copy them to RAM if toram boot parameter
-# is present. We will copy ALL .mo files from "base" and "modules" directory,
-# and then .mo files selected by load=... boot option
+# If toram or copy2ram boot parameter is present, copy all .mo modules to RAM.
+# (skip those modules from /optional/ which are not listed in load= boot option)
 # Finaly modify DATA variable so it will point to directory with copied .mo files
 # 
 
-if [ ! "`cmdline_parameter`" = "" ]; then
+if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
+   echolog "copying modules to RAM, this may take some time"
    copy_modules $DATA $TORAM
    DATA=$TORAM
 fi
 
 #
 # Now we know the path to all .mo images which needs to be mounted and inserted
-# to live filesystem. Do it for "base", "modules" and "optional" in $DATA
+# to live filesystem. Do it now.
 #
 
 echolog "inserting all modules and creating live filesystem"
@@ -101,4 +85,4 @@ header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
 echolog "calling $UNION/usr/bin/chroot failed?"
 echolog "Press Ctrl+Alt+Del for reboot."
-while [ 1 = 1 ]; do ash; done
+ash

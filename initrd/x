@@ -1,0 +1,17 @@
+#!/bin/busybox ash
+
+echo "-----------------------------------------------------------"
+echo "       This is only for testing. Don't run this file!      "
+echo "-----------------------------------------------------------"
+
+. ./liblinuxlive
+
+sync
+
+./initrd_create
+if [ "$?" -ne 0 ]; then exit; fi
+mv initrd.gz /tmp/live_data_1365/
+cd /tmp/live_data_1365/
+./create_bootiso.sh /tmp/livecd_tmp.iso
+qemu -cdrom /tmp/livecd_tmp.iso -m 52
+

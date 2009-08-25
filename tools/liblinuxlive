@@ -45,10 +45,10 @@ header()
 fatal()
 {
    header "Fatal error occured - $1"
-   echo "Something went wrong and we can't continue booting."
-   echo "You may explore the system by using simple commands like ls, lsmod, mount, etc."
-   echo "Finaly hit Ctrl+Alt+Delete to reboot."
-   echo
+   echolog "Something went wrong and we can't continue booting."
+   echolog "You may explore the system by using simple commands like ls, lsmod, mount, etc."
+   echolog "Finaly hit Ctrl+Alt+Delete to reboot."
+   echolog
    ash
 }
 
@@ -62,7 +62,7 @@ fatal()
 #
 egrep_o()
 {
-   cat - | egrep "$1" | sed -r "s/.*($1).*/\\1/"
+   cat | egrep "$1" | sed -r "s/.*($1).*/\\1/"
 }
 
 # look into cmdline and echo $1 back if $1 is set
@@ -72,8 +72,8 @@ egrep_o()
 cmdline_parameter()
 {
    CMDLINE=/proc/cmdline
-   if [ ! "$2" = "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep_o "[^[:space:]].*[^[:space:]]"
+   if [ "$2" != "" ]; then CMDLINE="$2"; fi
+   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep_o "$1"
 }
 
 # look into cmdline and echo value of $1 option
@@ -83,7 +83,7 @@ cmdline_parameter()
 cmdline_value()
 {
    CMDLINE=/proc/cmdline
-   if [ ! "$2" = "" ]; then CMDLINE="$2"; fi
+   if [ "$2" != "" ]; then CMDLINE="$2"; fi
    cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep_o "=.*" | cut -b 2- | tail -n 1
 }
 
@@ -175,11 +175,18 @@ union_insert_dir()
    unionctl $1 --add --after 0 --mode ro $2
 }
 
-# List all modules
+# List all modules in all directories (base, modules, optional)
+# and filter out unneeded optional modules (not specified by load= kernel parameter)
+# $1 = root directory of mounted DATAdir
 #
 list_modules()
 {
-   ls -A1d $1/*.mo $1/*/*.mo 2>/dev/null
+   LOAD="`cmdline_value load`"
+   ls -A1d $1/*.mo $1/*/*.mo 2>/dev/null | while read LINE; do
+      MODNAME="`basename $LINE .mo`"
+      if [ "$LOAD" != "*" -a "`echo $LINE | grep optional`" != "" -a "`echo $LOAD | egrep \"(^|,)$MODNAME(\\\$|,)\"`" = "" ]; then continue
+        else echo $LINE; fi
+   done
 }
 
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
@@ -205,7 +212,11 @@ union_insert_modules()
 copy_modules()
 {
    list_modules $1 | while read MODULE; do
-      cp $MODULE $2
+      RELATIVE=${MODULE#$1}
+      DIR="`dirname $RELATIVE`"
+      mkdir -p $2/$DIR
+      cp $MODULE $2/$RELATIVE
+      if [ "$?" -ne 0 ]; then fatal "not enough memory to copy modules to RAM"; fi
    done
 }
 
@@ -214,7 +225,7 @@ copy_modules()
 # ===========================================================
 
 # List all CD-ROMs
-# by using /dev entries (mounted devfs filesystem)
+# by using /proc entries
 #
 list_cdrom_devices()
 {
@@ -262,15 +273,6 @@ find_live_data_dir()
       if [ "$?" -eq 0 ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null
       else return 0; fi
    done
-}
-
-# Copy .mo modules to RAM
-# $1 = data source
-# $2 = target
-#
-copy_toram()
-{
-   echo "not implemented yet"
 }
 
 # ===========================================================
@@ -325,7 +327,7 @@ modprobe_scsi_modules()
    echolog "starting SCSI support, this may take a while"
    ls /lib/modules/`uname -r`/kernel/drivers/scsi | cut -d . -f 1 | while read MODULE; do
       if [ "$MODULE" != "sg" -a "$MODULE" != "scsi_debug" ]; then
-         echo "$MODULE..."
+         echolog "$MODULE..."
 	 modprobe_module $MODULE
       fi
    done
@@ -338,7 +340,7 @@ setup_dma()
 {
    if [ "`cmdline_parameter nodma`" = "" ]; then USINGDMA=1; else USINGDMA=0; fi
    for DEVICE in `list_cdrom_devices` `list_disk_devices`; do
-      echo "setting DMA support for $DEVICE =using_dma:$USINGDMA"
+      echolog "setting DMA support for $DEVICE =using_dma:$USINGDMA"
       echo "using_dma:$USINGDMA" >"/proc/ide/`basename $DEVICE`/settings"
    done
 }
