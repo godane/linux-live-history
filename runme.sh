@@ -4,12 +4,19 @@
 # Your kernel image has to be in /boot/vmlinuz or /vmlinuz
 #
 
-. ./initrd/functions
-. ./config
+export PATH=.:..:./tools:../tools:/usr/sbin:/usr/bin:/sbin:/bin:/
+
+. liblinuxlive || exit 1
+. config || exit 1
+
+mkmod()
+{  echo "processing $1..."; 
+   if [ -d "$1" ]; then mkciso $1 $CDDATA/base/$1.img data/$1; fi
+}
 
 VMLINUZ=/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`dirname $VMLINUZ`/`readlink $VMLINUZ`; fi
-if [ "`ls $VMLINUZ 2>/dev/null`" = "" ]; then echo "cannot find vmlinuz, exiting."; exit; fi
+if [ "`ls $VMLINUZ 2>/dev/null`" = "" ]; then echo "cannot find /boot/vmlinuz"; exit 1; fi
 
 header "Creating LiveCD from your Linux"
 
@@ -28,11 +35,11 @@ cp -R {info,tools} $CDDATA
 touch $CDDATA/livecd.flag # just to be sure it's there
 
 echo "creating compressed images (.img)..."
-if [ -d "/bin" ]; then mkciso /bin $CDDATA/base/bin.img /bin; fi
-if [ -d "/lib" ]; then mkciso /lib $CDDATA/base/lib.img /lib; fi
-if [ -d "/opt" ]; then mkciso /opt $CDDATA/base/opt.img /opt; fi
-if [ -d "/usr" ]; then mkciso /usr $CDDATA/base/usr.img /usr; fi
-if [ -d "/sbin" ]; then mkciso /sbin $CDDATA/base/sbin.img /sbin; fi
+mkmod /bin
+mkmod /lib
+mkmod /opt
+mkmod /usr
+mkmod /sbin
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz
@@ -40,6 +47,10 @@ cp $VMLINUZ $CDDATA/vmlinuz
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/packs
 mkdir -p $CDDATA/lang
+
+# these directories have to be packed (tar.gz) because
+# it's not possible to overmount them by ovlfs 
+# (ovlfs has some problems with file locking)
 tar -C / -c root | gzip -f --best >$CDDATA/packs/root.tar.gz
 tar -C / -c etc | gzip -f --best >$CDDATA/packs/etc.tar.gz
 tar -C / -c var | gzip -f --best >$CDDATA/packs/var.tar.gz

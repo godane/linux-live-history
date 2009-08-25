@@ -2,18 +2,18 @@
   To be able to create a Linux Live CD
   you will need to meet all the following requirements:
 
-
     * devfs enabled kernel (compile dev filesystem).
-      I know it's obsolete but there is nothing working enough now.
+      I know it's obsolete but there is nothing working enough now
+      so I've decided to use it.
 
-    * ovlfs modules has to be compiled for the kernel you are using.
+    * ovlfs module has to be compiled for the kernel you are using.
       Get the source at http://ovlfs.sourceforge.net, and be sure
       that symlink /lib/modules/2.4.xx/build points to the correct
       kernel source tree before compiling. Install ovlfs to your system.
 
     * mkzftree is used for img compression. Make sure you have it,
       and also make sure your mkisofs is patched properly.
-      (This is already done under Slackware)
+      (This all is already done in Slackware's cdrtools package)
 
     * ext2 filesystem must be compiled into kernel, a module is not enough
       (because initrd is ext2 formated)

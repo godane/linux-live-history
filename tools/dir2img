@@ -6,11 +6,13 @@
 #
 
 if [ ! -d "$1" -o "$3" = "" ]; then
+   echo
+   echo "Convert directory tree into IMG compressed module"
    echo "usage: $0 source_directory output_file.img virtual_directory_tree"
    exit 1
 fi
 
-. ./functions
+. liblinuxlive || exit 1
 
 mkciso "$1" "$2" "$3"
-if [ $? != 0 ]; then echo "error building compressed image"; exit; fi
+if [ $? != 0 ]; then echo "error building compressed image"; exit 1; fi

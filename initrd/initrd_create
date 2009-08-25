@@ -4,8 +4,8 @@
 #
 # Author:	  Tomas Matejicek <http://www.linux-live.org>
 
-. ../config
-. ./functions
+. ../config || exit 1
+. ./liblinuxlive || exit 1 
 
 KERNEL=`/bin/uname -r`
 
@@ -33,17 +33,16 @@ touch $MOUNTDIR/etc/{m,fs}tab
 for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount \
               mkdir rmdir ls ln echo cat grep egrep fdisk blockdev \
 	      pivot_root insmod lsmod modprobe swapon eject tail tr \
-	      chroot tempfile readlink basename dirname test sleep [ ;
+	      chroot readlink basename dirname test sleep [ ;
 do
    for LOCATION in /bin /sbin /usr/bin /usr/sbin ;
    do
       if [ -r "$LOCATION/$BINARY" ]; then
-         cp -R "$LOCATION/$BINARY" "$MOUNTDIR/$LOCATION/$BINARY"
+         rcopy "$LOCATION/$BINARY" "$MOUNTDIR"
 
          list_libs "$LOCATION/$BINARY" | sort | uniq | while read LIB; do
-	    mkdir -p "`dirname \"$MOUNTDIR/$LIB\"`"
             if [ ! -a "$MOUNTDIR/$LIB" ]; then
-               cp -R "$LIB" "$MOUNTDIR/$LIB"
+               rcopy "$LIB" "$MOUNTDIR"
 	    fi
 	 done
       fi
@@ -63,15 +62,13 @@ cp -R /$LMK/modules* $MOUNTDIR/$LMK
 mkdir -p $MOUNTDIR/$LMK/kernel/fs/ovlfs
 cp -R /$LMK/kernel/fs/ovlfs $MOUNTDIR/$LMK/kernel/fs
 
-#disk (ide, scsi?) modules
+#disk (ide, scsi) modules
 mkdir -p $MOUNTDIR/$LMK/kernel/drivers/ide
 cp -R /$LMK/kernel/drivers/ide $MOUNTDIR/$LMK/kernel/drivers
-
-#to enable burning
 mkdir -p $MOUNTDIR/$LMK/kernel/drivers/scsi
-cp -R /$LMK/kernel/drivers/scsi/ide-scsi* $MOUNTDIR/$LMK/kernel/drivers/scsi
+cp -R /$LMK/kernel/drivers/scsi $MOUNTDIR/$LMK/kernel/drivers
 
-#filesystem modules
+#copy filesystem modules, if not directly copied into kernel
 mkdir -p $MOUNTDIR/$LMK/kernel/fs/ntfs
 cp -R /$LMK/kernel/fs/ntfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
 mkdir -p $MOUNTDIR/$LMK/kernel/fs/ext3
@@ -85,9 +82,8 @@ cp -R /$LMK/kernel/drivers/usb/usbcore* $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev
 cp -R /$LMK/kernel/drivers/usb/host $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
 cp -R /$LMK/kernel/drivers/usb/storage $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
 
-cp {linuxrc,functions} $MOUNTDIR
+cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
 chmod a+x $MOUNTDIR/linuxrc
-cp ../info/{README,LICENSE,COPYING} $MOUNTDIR
 
 echo "unmounting $MOUNTDIR and gzipping initrd.img..."
 umount $MOUNTDIR

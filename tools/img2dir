@@ -1,0 +1,25 @@
+#!/bin/bash
+# convert IMG compressed file back into directory tree
+#
+# Author: Tomas Matejicek <http://www.linux-live.org>
+#
+
+if [ ! -d "$2" ]; then
+   echo 
+   echo "Convert IMG compressed module back into directory tree"
+   echo "usage: $0 source_file.img output_directory"
+   exit 1
+fi
+
+. liblinuxlive || exit 1
+
+TMPDIR=/tmp
+TMPFILE="/tmp/ll$$"
+
+mount_img "$1" "$TMPDIR" "$TMPFILE"
+IMGDIR="`cat $TMPFILE`"
+cp -R "$IMGDIR"/* "$2"
+umount "$IMGDIR"
+umount "$IMGDIR"
+rm "$TMPFILE"
+rmdir "$IMGDIR"

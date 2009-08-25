@@ -1,0 +1,8 @@
+#!/bin/bash
+# install all scripts from /tools to /usr/sbin,
+# so the user is able to use all commands while running his/her Live Linux
+
+mkdir -p /usr/sbin
+cp ./tools/* /usr/sbin
+
+echo "Done, Linux Live scripts were installed"

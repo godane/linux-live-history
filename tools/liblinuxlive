@@ -1,5 +1,5 @@
 #!/bin/bash
-# Functions for use in LiveCD
+# ::Functions library:: for Linux Live scripts
 # Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
@@ -46,6 +46,20 @@ cmdline_value()
    cat "$CMDLINE" | egrep -io "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep -o "[^=]+\$" | tail -n 1
 }
 
+# create temporary file (empty)
+# $1 = prefix
+#
+tempfile()
+{
+   local NAME=$1
+   if [ "$NAME" = "" ]; then NAME="/tmp/tempfile"; fi
+   while [ -a "$NAME" ]; do
+      NAME=$NAME".X"
+   done
+   touch "$NAME"
+   echo "$NAME"
+}
+
 # create temp directory in $1 with the preffix $2
 # $1 = prefix to use, it may be a fullpath too
 # (for example tempdir /mnt/cdrom/bin.img /mnt will create /mnt/bin.KJBDRTYH)
@@ -54,15 +68,17 @@ cmdline_value()
 tempdir()
 {
    local TMPDIR
-   if [ "$2" != "" ]; then TMPDIR="-d $2"; fi
+   if [ "$2" != "" ]; then TMPDIR="$2"; else TMPDIR="/tmp"; fi
    local MOUNTPOINT=`basename $1`
-   MOUNTPOINT=`tempfile -p $MOUNTPOINT. $TMPDIR`
+
+   MOUNTPOINT=`tempfile $TMPDIR/$MOUNTPOINT`
+   if [ "$?" -ne 0 ]; then exit 1; fi
 
    rm "$MOUNTPOINT"
-   if [ $? != 0 ]; then echo "cannot remove temp file $MOUNTPOINT"; exit; fi
+   if [ $? != 0 ]; then echo "cannot remove temp file $MOUNTPOINT"; exit 1; fi
 
    mkdir -p "$MOUNTPOINT"
-   if [ $? != 0 ]; then echo "error creating directory $MOUNTPOINT"; exit; fi
+   if [ $? != 0 ]; then echo "error creating directory $MOUNTPOINT"; exit 1; fi
    echo "$MOUNTPOINT"
 }
 
@@ -81,8 +97,9 @@ mkciso()
    mkzftree -z 9 -F "$RAW" "$COMPRESSED"
    if [ ! "$?" = 0 ]; then
       echo "mkzftree error: directory $1 is very big? Maybe you are running"
-      echo "out of disk space, or kmzftree doesn't support large files..."
-      exit
+      echo "out of disk space, or mkzftree doesn't support large files,"
+      echo "or mkzftree not found! (get it from cdrtools package)"
+      exit 1
    fi
    mkisofs -R -J -D -z -o "$2" -graft-points mountme.iso=$COMPRESSED 2>/dev/null
 
@@ -90,7 +107,7 @@ mkciso()
    rm -f "$COMPRESSED"
 }
 
-# link all files and directories from $1/* to $2
+# link all files and directories from $1/* to $2; recursive function
 # $1 = source directory
 # $2 = destination directory
 # $3 = directory to strip, usually /mnt
@@ -124,7 +141,7 @@ make_links()
    done
 }
 
-# make a symlink to file or directory writable in LiveCD linked tree
+# make a symlink to file or directory writable in LiveCD linked tree; recursive
 # $1 = directory or file I would like to write to
 # $2 = stripped directory which has to be added back now
 #
@@ -146,31 +163,26 @@ make_writable()
    fi
 }
 
-# copy image to RAM, if commandline parameter told me
+# try to copy all images to RAM, if commandline parameter copy2ram is present
 # $1 = path to compressed image
 # $2 = destination path
-# return: will echo the final destination of image (the original path if not copied to RAM, or copy)
+# return: will echo the final destination of image (the original path if not copied to RAM, or the copy)
 #
 cp2ram()
 {
-   ALLINC=0; IMGINC=0; IMGEXC=0;
-   INCLUDE="`cmdline_value copy2ram`"
-   EXCLUDE="`cmdline_value nocopy2ram`"
-   EXT="`file_extension \"$1\"`"
-   IMGNAME="`basename \"$1\" \"$EXT\"`"
+   DOCOPY="`cmdline_parameter copy2ram`"
+   IMGNAME="`basename \"$1\"`"
 
-   if [ ! "`echo \"$INCLUDE\" | egrep -i \"(^|,)all(,|\\\$)\"`" = "" ]; then ALLINC=1; fi
-   if [ ! "`echo \"$INCLUDE\" | egrep -i \"(^|,)$IMGNAME(,|\\\$)\"`" = "" ]; then IMGINC=1; fi
-   if [ ! "`echo \"$EXCLUDE\" | egrep -i \"(^|,)$IMGNAME(,|\\\$)\"`" = "" ]; then IMGEXC=1; fi
+   if [ ! "$DOCOPY" = "" ]; then
+      echo -n " $IMGNAME" >&2
+      cp "$1" "$2/$IMGNAME"
 
-   if [ "$ALLINC" = 1 -a "$IMGEXC" != 1 -o "$IMGINC" = 1 ]; then
-      echo -n " $IMGNAME$EXT" >&2
-      cp "$1" "$2/$IMGNAME$EXT"
-      if [ $? = 0 ]; then echo "$2/$IMGNAME$EXT"; return 0
-      else rm -f "$2/$IMGNAME$EXT"
+      if [ $? = 0 ];
+         then echo "$2/$IMGNAME"; return 0
+         else rm -f "$2/$IMGNAME" # not enough free space?
       fi
    fi
-   echo $1
+   echo "$1"
 }
 
 # mount image into unique temporary directory
@@ -182,9 +194,9 @@ mount_img()
 {
    local MOUNTPOINT=`tempdir $1 $2`
    mount -o loop,ro $1 $MOUNTPOINT
-   if [ $? != 0 ]; then echo "error mounting $1 to $MOUNTPOINT"; exit; fi
+   if [ $? != 0 ]; then echo "error mounting $1 to $MOUNTPOINT"; exit 1; fi
    mount -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
-   if [ $? != 0 ]; then echo "error submounting $1"; exit; fi
+   if [ $? != 0 ]; then echo "error submounting $1"; exit 1; fi
    echo "$MOUNTPOINT" >>$3
 }
 
@@ -279,4 +291,18 @@ list_libs()
      if [ -L "$LIB" ]; then LIB="`dirname $LIB`/`readlink $LIB`"; echo $LIB; fi
      list_libs $LIB # even a library could use libraries
    done
+}
+
+# rcopy is a recursive cp, which copies also symlink's real source
+# $1 = source (may be a regular file or symlink)
+# $2 = target PARENT
+rcopy()
+{
+   if [ -L "$1" ]; then
+      REALPATH="`readlink -f \"$1\"`"
+      cp --parent -R "$REALPATH" "$2"
+      ln -sf "$REALPATH" "$2/$1"
+   else
+      cp --parent -R "$1" "$2"
+   fi
 }

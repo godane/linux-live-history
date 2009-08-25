@@ -1,0 +1,137 @@
+../tools/liblinuxliveesystem"
+
+echo "Starting ovlfs support (by Arthur Naseef)"
+modprobe_module ovl
+mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
+
+if [ ! "$?" = "0" ]; then
+  header "ERROR!"
+  echo "cannot overmount cdrom in pseudo-write mode."
+  echo "Maybe your kernel doesn't support ovlfs?"
+  echo "Press Ctrl+Alt+Del for reboot."
+  while [ 1 = 1 ]; do bash; done
+fi
+
+echo -n "inserting images into filesystem... "
+cat $INSORDER | while read IMG;
+do
+   IMG=$IMGRW/${IMG:${#IMGRO}}
+   echo -n "`basename \"$IMG\"` "
+   if [ -x $IMG/preinsert ]; then $IMG/preinsert; fi
+   make_links $IMG/data /mnt /mnt
+   if [ -x $IMG/postinsert ]; then $IMG/postinsert; fi
+done
+echo
+
+echo -n "unpacking .tar.gz from the CD... "
+ls -aA1b $LIVECD_PATH/packs | while read PACK;
+do
+   echo -n "$PACK "
+   tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
+done
+echo
+
+$DEBUG
+
+if [ ! "`cmdline_parameter eject`" = "" ]; then
+   echo "trying to eject LiveCD medium..."
+   eject "$LIVECD_MOUNT" >/dev/null 2>/dev/null
+   if [ ! "$?" = 0 ]; then
+      echo "error, cdrom cannot be unmounted or doesn't support ejecting"
+   fi
+fi
+
+echo "creating fstab..."
+
+echo "tmpfs /     tmpfs defaults 0 0" >/mnt/etc/fstab
+echo "proc  /proc proc  defaults 0 0" >>/mnt/etc/fstab
+
+cat $MOUNTS | while read DEVICE; do
+   LINE="`cat /proc/mounts | egrep \"^$DEVICE[[:space:]]\"`"
+   if [ "$LINE" = "" ]; then continue; fi
+
+   umount "$DEVICE" 1>/dev/null 2>/dev/null
+   if [ "$?" = 0 ]; then
+      LINERO=${LINE/ \/mnt/ }
+      LINEDEF=${LINERO/ ro / defaults }
+      echo $LINEDEF >>/mnt/etc/fstab
+   fi
+done
+
+list_swaps >>/mnt/etc/fstab
+
+echo >/mnt/etc/mtab
+touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
+
+echo "creating init script in /tmp/init..."
+
+echo >/mnt/$LINUXINIT
+chmod 0755 /mnt/$LINUXINIT
+
+NEWROOTPASS="`cmdline_value passwd`"
+if [ "$NEWROOTPASS" = "ask" ]; then
+   echo -ne "\nEnter new password for root: "
+   read -s NEWROOTPASS
+fi
+
+if [ ! "$NEWROOTPASS" = "" ]; then
+   echo "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
+fi
+
+echo '
+echo "freeing ramdisk..."
+umount -nl /mnt/ramdisk
+/sbin/blockdev --flushbufs /dev/rd/0
+echo "'"`header \"starting init\"`"'"
+exec /sbin/init <dev/console >dev/console 2>&1
+' >>/mnt/$LINUXINIT
+
+mount -o remount,ro /mnt
+cd /mnt
+mount -t devfs devfs dev
+
+$DEBUG
+
+echo "changing root directory..."
+/sbin/pivot_root . mnt/ramdisk
+exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
+
+header "ERROR!"
+echo "You are not supposed to be here, something went wrong!"
+echo "calling /mnt/usr/bin/chroot failed?"
+echo "Press Ctrl+Alt+Del for reboot."
+while [ 1 = 1 ]; do bash; done
+ is our CD in
+for DIR in /mnt/mnt/*
+do
+  if [ -r "$DIR/$LIVECD_SUBDIR/livecd.flag" ]; then
+     export LIVECD_MOUNT="$DIR"
+     export LIVECD_PATH=`dirname "$DIR/$LIVECD_SUBDIR/x"`
+     break
+  fi
+done
+
+# if none, run bash
+if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
+  header "ERROR!"
+  echo "cannot find your compressed IMG files! Maybe you are trying to start the"
+  echo "LiveCD from unsupported CDROM drive (scsi?)"
+  echo "Or you entered wrong livecd_subdir= parameter?"
+  echo "Press Ctrl+Alt+Del for reboot."
+  while [ 1 = 1 ]; do bash; done
+fi
+
+echo "liveCD found in $LIVECD_PATH"
+mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
+
+LANGFILE="`cmdline_value lang`"
+
+echo -n "copying selected modules to RAM... "
+# base
+ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
+   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+done
+
+# modules
+ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMGN­‰·
+   echoÖ›‰·p2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAA

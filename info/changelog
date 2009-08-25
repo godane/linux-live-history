@@ -1,3 +1,17 @@
+ 4.0.1
+ 
+  * fixed copying symlinks to initrd (copy link's target too w/ absolute pathname)
+  * created own tempfile function
+  * updated error message for mkzftree
+  * removed nocopy2ram boot parameter. copy2ram parameter now implifies copy2ram=all
+    so it's not possible (it didn't make any sense) to copy/not-copy individual modules
+  * All SCSI modules are copied to initrd. This shoudl allow SLAX to boot
+    from a cdrom drive connected to SCSI interface! I don't know if the kernel
+    can insert apropriate module automatically (without hotplug for example)
+    but I believe that it should. If there is someone who could test it,
+    let me know please.
+
+
  3.0.28
 
   * Floppy automounting disabled (it caused alot of problems on some hw)
@@ -63,4 +77,4 @@
 
  2.9.0.22
 
-   old version changelog is lost.
+   changelog for all older versions is lost :(

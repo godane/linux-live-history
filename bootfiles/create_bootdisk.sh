@@ -2,15 +2,18 @@
 # Author: Tomas Matejicek <http://www.linux-live.org>
 
 if [ "$1" = "" -o ! -b "$2"  -o ! -b "$3" ]; then
-  echo "Copy all files from LiveCD to USB flashdisk."
-  echo "usage:   $0 [ data_dir | livecd.iso ] [ partition ] [ mbr ]"
-  echo "example: $0 . /dev/sda1 /dev/sda"
+  echo
+  echo "Copies all files from LiveCD to your disk and setup lilo"
+  echo "usage:   $0 [ data_dir | livecd.iso ] [ partition ] [ mbr ] [[ subdir ]]"
+  echo "example: $0 . /dev/sda1 /dev/sda slax"
   exit
 fi
 
 DATADIR="$1"
-MOUNTPOINT=/tmp/mountpoint$$
+MOUNTPOINT=/tmp/slax_to_disk_$$
 TMPLILOCONF=/tmp/lilo$$.conf
+SUBDIR="$4"
+if [ "$SUBDIR" = "" ]; then SUBDIR="SLAX"; fi
 
 # mount iso if not already mounted
 if [ ! -d "$DATADIR" ]; then
@@ -20,29 +23,32 @@ if [ ! -d "$DATADIR" ]; then
    if [ ! "$?" = "0" ]; then echo "error mounting $1 to $DATADIR"; exit; fi
 fi
 
+# mount partition we wish to copy slax onto
 mkdir -p $MOUNTPOINT
 mount $2 $MOUNTPOINT
 if [ ! "$?" = "0" ]; then echo "error mounting $2"; exit; fi
 
-cp -R "$DATADIR"/* "$MOUNTPOINT"
+# copy all files there
+mkdir -p $MOUNTPOINT/$SUBDIR
+cp -R "$DATADIR"/* "$MOUNTPOINT/$SUBDIR"
 APPEND="`cat $DATADIR/isolinux.cfg | grep append | cut -b 7-`"
 
 echo "
 boot = $3
 prompt
-timeout = 30
-vga = normal
-message = $MOUNTPOINT/splash
-map = $MOUNTPOINT/lilo.map
-install = text
+timeout = 40
+#install = text
+#message = $MOUNTPOINT/$SUBDIR/splash
+bitmap = $MOUNTPOINT/$SUBDIR/splash.bmp
+map = $MOUNTPOINT/$SUBDIR/lilo.map
 
 # Linux bootable partition config begins
-image = $MOUNTPOINT/vmlinuz
+image = $MOUNTPOINT/$SUBDIR/vmlinuz
 root = /dev/ram0
 label = slax
-initrd = $MOUNTPOINT/initrd.gz
+initrd = $MOUNTPOINT/$SUBDIR/initrd.gz
 read-write
-append=\" usbdisk $APPEND \" " >$TMPLILOCONF
+append=\" probeusb $APPEND livecd_subdir=$SUBDIR \" " >$TMPLILOCONF
 
 lilo -v -C $TMPLILOCONF
 

@@ -1,13 +1,12 @@
 #!/bin/bash
-# Insert module(s) into CD filesystem
-# Author: Tomas Matejicek 2004 <http://www.linux-live.org>
+# Insert module(s) into CD filesystem (iso)
+# Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
 if [ "$3" = "" ]; then
    echo
    echo "Insert module(s) into CD filesystem"
-   echo "Usage: modinsert.sh original_livecd.iso|livecd_data_dir new_iso_file.iso"
-   echo "                    modules=./file.mo [ | modules=/tmp/file.mo | lang=en.mo ]"
+   echo "Usage: $0 original_livecd.iso|livecd_data_dir new_iso_file.iso modules=./file.mo [ | modules=/tmp/file.mo | lang=en.mo ]"
    echo
    echo "  \$1 = livecd data (mounted CD), or livecd iso image (will be mounted to /tmp/x)"
    echo "  \$2 = new iso file. Full path including filename.iso"

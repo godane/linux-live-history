@@ -6,11 +6,13 @@
 #
 
 if [ "$1" = "" -o "$2" = "" ]; then
+   echo
+   echo "Convert Slackware's TGZ package into IMG compressed module"
    echo "usage: $0 source_filename.tgz output_file.img"
    exit 1
 fi
 
-. ./functions
+. liblinuxlive || exit 1
 
 TMPDIR=/tmp/tgz2img$$
 

@@ -1,6 +1,7 @@
 #!/bin/sh
-. ./functions
-export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/:.
+
+export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
+. liblinuxlive
 
 # storage files
 MOUNTS=/mounts.log
@@ -62,7 +63,7 @@ fi
 # to be able to boot from hdc=ide-scsi
 modprobe_module ide-scsi
 
-if [ ! "`cmdline_parameter usbdisk`" = "" ]; then
+if [ ! "`cmdline_parameter probeusb`" = "" ]; then
    echo "probing usb hardware"
    modprobe_module usbcore
    modprobe_module usb-storage
@@ -120,8 +121,8 @@ mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
 
 LANGFILE="`cmdline_value lang`"
 
-# base
 echo -n "copying selected modules to RAM... "
+# base
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
@@ -131,7 +132,7 @@ ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
    echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
 
-# lang
+# lang variable (use only one module by lang= kernel boot parameter)
 if [ ! "$LANGFILE" = "" -a -r "$LIVECD_PATH/lang/$LANGFILE.img" ]; then
    echo "`cp2ram \"$LIVECD_PATH/lang/$LANGFILE.img\" \"$CP2RAM\"`" >>$MNTORDER
 fi
@@ -150,7 +151,8 @@ $DEBUG
 
 header "creating live filesystem"
 
-/sbin/modprobe -q ovl
+echo "Starting ovlfs support (by Arthur Naseef)"
+modprobe_module ovl
 mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
 
 if [ ! "$?" = "0" ]; then
@@ -166,7 +168,9 @@ cat $INSORDER | while read IMG;
 do
    IMG=$IMGRW/${IMG:${#IMGRO}}
    echo -n "`basename \"$IMG\"` "
-   make_links $IMG /mnt /mnt
+   if [ -x $IMG/preinsert ]; then $IMG/preinsert; fi
+   make_links $IMG/data /mnt /mnt
+   if [ -x $IMG/postinsert ]; then $IMG/postinsert; fi
 done
 echo
 
