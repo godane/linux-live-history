@@ -4,6 +4,7 @@
 # Author:	  Tomas M. <http://www.linux-live.org>
 
 . ../.config || exit 1
+. ./liblinuxlive || exit 1
 
 if [ "$1" != "" ]; then
    LIVECDNAME="$1"
@@ -114,9 +115,8 @@ chmod ago+x $INITRD_TREE/{linuxrc,cleanup}
 
 # handle the fuse filesystems here
 #
-if [ "$USEPOSIXOVL" = "yes" -o "$USENTFS3G" = "yes" ]; then
-   cp -a fuse/* $INITRD_TREE
-fi
+cp -a fuse/* $INITRD_TREE
+cp -a httpfs/* $INITRD_TREE
 
 if [ "$USEPOSIXOVL" = "yes" ]; then
    cp -a posixovl/* $INITRD_TREE
@@ -173,6 +173,15 @@ rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/pcmcia.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/rsrc_nonstatic.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/yenta_socket.* $INITRD_TREE 2>>$DEBUG
 
+# network modules
+for mod in $(list_network_drivers); do
+   cat $ROOT/$LMK/modules.dep | fgrep /$mod.ko | while read LINE; do
+      for dep in $(echo $LINE | tr -d ":"); do
+         rcopy_ex $dep $INITRD_TREE 2>>$DEBUG
+      done
+   done
+done
+
 if [ "$ADDLOCALE" != "" ]; then
    . ./addlocaleslib
    debug "copylocales $ROOT/ $INITRD_TREE $ADDLOCALE"
@@ -186,9 +195,14 @@ debug "generating module dependency files"
 depmod -b $INITRD_TREE $KERNEL
 
 debug "compressing usr in initrd"
-mksquashfs $INITRD_TREE/usr $INITRD_TREE/usr.lzm >/dev/null 2>/dev/null
+mksquashfs $INITRD_TREE/usr $INITRD_TREE/usr.lzm >/dev/null 2>&1
 chmod ago-x $INITRD_TREE/usr.lzm
 rm -Rf $INITRD_TREE/usr/*
+
+debug "compressing net in initrd"
+mksquashfs $INITRD_TREE/$LMK/kernel/drivers $INITRD_TREE/drivers.lzm >/dev/null 2>&1
+chmod ago-x $INITRD_TREE/drivers.lzm
+rm -Rf $INITRD_TREE/$LMK/kernel/drivers/*
 
 debug "creating empty image file for initrd"
 dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >>$DEBUG 2>&1

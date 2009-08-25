@@ -60,25 +60,20 @@ fi
 MOD=$(union_insert_module / "$MODULE" $IMAGES)
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 3; fi
 
-# All executables (but symlinks) in /etc/rc.d/ from this module will be started
-# with two arguments: "start" "activate". Moreover, all executables in
-# /etc/rc.d/rc*.d/S* will be started as well.
+# All executables (but symlinks) in /etc/rc.d/init.d/ from this module will be started
+# with two arguments: "start" "activate".
 # This is done only by the 'activate' script, not in the case when the module is loaded 
 # during OS startup (in that case, your distro is responsible for execution)
-MOD=$(basename $MOD)
-if [ -d $IMAGES/$MOD/etc/rc.d ]; then
-   ( find $IMAGES/$MOD/etc/rc.d -type f -maxdepth 1 ; \
-     find $IMAGES/$MOD/etc/rc.d -type f -maxdepth 2 -mindepth 2 | egrep '/S[^/]+$' \
-   ) | while read SCRIPT; do
-      if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
-         # call the script by real path, not from the images directory
-         ${SCRIPT##$IMAGES/$MOD} start activate
-      fi
-   done
-fi
+#
+# For compatibility, /etc/init.d is also examined, but it's not recommended for you to put your startup scripts
+# there in your module
+
+MOD="$IMAGES/$(basename $MOD)"
+
+find_n_run_scripts $MOD start activate
 
 # update ld cache if new ld.so.conf/cache exists in the module
-if [ -e "$IMAGES/$MOD/etc/ld.so.conf" -o -e "$IMAGES/$MOD/etc/ld.so.cache" ]; then
+if [ -e "$MOD/etc/ld.so.conf" -o -e "$MOD/etc/ld.so.cache" ]; then
    echo "Module contains ld.so.conf or ld.so.cache, updating libs cache..."
    /sbin/ldconfig
 fi

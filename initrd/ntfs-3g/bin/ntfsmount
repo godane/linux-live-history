@@ -1,0 +1,2 @@
+../usr/bin/ntfs-3ges here in ./usr,
+as this directory will be compressed before adding into initrd

@@ -1,17 +1,13 @@
 Linux Live Scripts TODO list
 ============================
 
--(k)uselivemod: make sure to free the loop device as well as there is
- no way to free them in clenaup. Or perhaps there is, ls -1 /sys/block/loop* ?
- that would need to mount sysfs in cleanup (or don't unmount it in linuxrc)
-
-- fstab-update - include correct filesystem for / ... it is forcing tmpfs
-  now, which is very confusing. This may be problematic because fsck in the
-  distro will try to 'check' the filesystem, while it may be aufs in any
-  particular time.
-
 - bootinst.sh/.bat, bootlilo - make the 'Slax' string customizable, and modify
   it the same way like liblinuxlive
 
 - copy2ram together with changes=slax .. can confuse people and/or make
-  troubles if user unplugs the flash key after copy2ram
+  troubles if user unplugs the flash key after copy2ram. Perhaps
+  ignore 'changes=...' if copy2ram is used?
+
+- when busybox is called to list its applets, it should link to correct libraries
+  (from linux live scripts, not from current distro).
+  

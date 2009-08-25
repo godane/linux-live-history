@@ -1,3 +1,59 @@
+ 6.2.8
+ 
+ * don't umount filesystems if fatal() function is called, so we can
+   actually investigate the real state of things
+ * add to fstab only filesystems recognized by kernel (from /proc/filesystems)
+   one exception: support ntfs-3g, which is (obviously) not in /proc/filesystems
+ * add pri=1 parameter for swap partitions for better swap performance
+ * added two new functions, mutex_lock and mutex_unlock (for a named lock)
+ * upgraddd userspace utilities (ntfs-3g, fuse, etc)
+ * add iocharset fstab option for CDROM filesystems
+ * when using posixovl, use 'find' to cache dentries. This seems to be needed
+   with 2.6.27+ kernels, as a workaround (a bug in FUSE or posixovl?)
+
+
+ 6.2.7
+ 
+ * loadlin didn't work anymore due to big filesize of vmlinuz and initrd.
+   It has been replaced by linLd. See cd-root/boot/dos/
+ * fstab_update: add /dev/shm mount to fstab
+ * list_all_partitions: list all devices from /dev/mapper/ as well (for LVM)
+ * a swap partition will use 'none' as a mountpoint in fstab
+ * updated fuse tools (binaries)
+ * preallocate 20 more loop devices just for the case
+   (this should be perhaps solved somehow better, but is enough for now)
+ * cleanum /union/mnt/ directory (delete all empty directories every boot)
+ * busybox has been recompiled to provide network tools (ifconfig, udhcpc, ...)
+ * if 'ip=' boot parameter is present, initialize network drivers, request
+   IP address from DHCP server and mount live data over HTTP from the server
+   provided as a second argument to the ip= boot param (separated by semicolon)
+   Usually, the ip= parameter is added by pxelinux, and it looks like:
+   ip=<client-ip>:<boot-server-ip>:<gw-ip>:<netmask>
+ * at the end of linux live scripts, print a message "starting $LIVECDNAME"
+   (for example: "starting slax"). Also the message "looking for data directory"
+   and few more others are now personalized as well.
+   Thanks to Manfred (Quax) for this idea :)
+ * dir2lzm: chmod created lzm module to be readable by all
+
+
+ 6.2.6
+
+ * modified activate script to execute scripts only from the following directories (and no subdirectories):
+ /etc/rc.d/
+ /etc/rc.d/init.d
+ Note that /etc/init.d is not supported, because Slackware doesn't use it (it's a symlink to /etc/rc.d/init.d/)
+ * activate now logs all executed scripts to /var/log/livedbg
+ * added missing debug_log call to find_modules() function
+ * new function find_n_run_scripts, which helps in 'activate' and 'deactivate'
+
+
+ 6.2.5
+
+ * retry losetup with -r in case of any error, this may happen if losetup
+   supports -r (eg. in util-linux-ng), because in that case it doesn't
+   automatically try read-only open()
+
+
  6.2.4
  
  * activate and deactivate must work even without k{activate/deactivate} scripts

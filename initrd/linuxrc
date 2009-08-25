@@ -20,10 +20,13 @@ echo "0" >/proc/sys/kernel/printk
 # Load essential drivers, like CDROM drivers, aufs/squashfs etc,
 # use mdev to create /dev/ devices and setup it as a hotplug-handler
 modprobe_essential_modules
-mdev_start_hotplug
 
-# /usr is compressed in initrd so it must be mounted from /usr.lzm
+# /usr and some drivers are compressed in initrd 
+# so it must be mounted from .lzm files
 mount_initrd_loops
+
+# start hotplugging before hw drivers load
+mdev_start_hotplug
 
 # Then load drivers for data storage and input devices
 modprobe_usb_modules
@@ -43,21 +46,37 @@ debug_shell
 # Find livecd data directory by searching for livecd.sgn file
 SGN=$(cmdline_value sgnfile)
 if [ "$SGN" = "" ]; then SGN=livecd.sgn; fi
-echolog "looking for data directory (searching for $SGN file)"
+echolog "looking for '$LIVECDNAME' data directory (searching for $SGN file)"
 
 # First, try from= boot argument, if given
 DATAFROM=$(cmdline_value from)
 
+# If ip= parameter is present, assume we're booted over PXE
+# In that case, we have to initialize network very soon (now)
+# ip=<client-ip>:<boot-server-ip>:<gw-ip>:<netmask>
+# Nevertheless, from= parameter won't be overwritten by this
+IP=$(cmdline_value ip)
+if [ "$IP" != "" -a "$DATAFROM" = "" ]; then
+   DATAFROM="http://"$(echo $IP | cut -d : -f 2)
+fi
+
 if [ "$DATAFROM" ]; then
-   DATAFROM=$(find_in_computer $DATAFROM)
-   if [ "$DATAFROM" ]; then
-      mount_device $DATAFROM $LOOPMOUNT # mount again, it may be loop device
-      if [ $? -eq 0 -a "$(find_modules $LOOPMOUNT/$LIVECDNAME)" != "" ]; then
-         echolog "found in $DATAFROM"
-         DATA=$LOOPMOUNT/$LIVECDNAME
-      else
-         fumount $LOOPMOUNT
-	 fumount $MOUNTDIR/*
+   if [ "$(echo $DATAFROM | cut -b 1-7 | tr "[:upper:]" "[:lower:]")" = "http://" ]; then
+      init_dhcp $(modprobe_network_modules)
+      mount_httpfs $DATAFROM $MOUNTDIR/httpfs
+      # if mountdir/httpfs/livecdname is found, set DATA=, else umount httpfs
+      # - currently this part works even without the above mentioned, but livecd.sgn is required now untill it's uncommented
+   else
+      DATAFROM=$(find_in_computer $DATAFROM)
+      if [ "$DATAFROM" ]; then
+         mount_device $DATAFROM $LOOPMOUNT # mount again, it may be loop device
+         if [ $? -eq 0 -a "$(find_modules $LOOPMOUNT/$LIVECDNAME)" != "" ]; then
+            echolog "found in $DATAFROM"
+            DATA=$LOOPMOUNT/$LIVECDNAME
+         else
+            fumount $LOOPMOUNT
+            fumount $MOUNTDIR/*
+         fi
       fi
    fi
 fi
@@ -123,7 +142,8 @@ else
       echolog "not compatible - starting posixovl"
       rm $MEMORY/.empty1 $MEMORY/.empty2 2>/dev/null
       mkdir -p $CHANGES
-      posixovl -F $CHANGES
+      posixovl -F $CHANGES -- -o attr_timeout=300,entry_timeout=300,negative_timeout=300,kernel_cache,allow_other
+      find $CHANGES >/dev/null 2>&1 # cache everything now
    fi
 fi
 
@@ -151,7 +171,7 @@ debug_shell
 # (skip modules from /optional/ which are not listed in load= boot option)
 # Finaly modify DATA variable so it will point to correct directory
 if [ "$(cmdline_parameter toram)" != "" -o "$(cmdline_parameter copy2ram)" != "" ]; then
-   echolog "copying data to RAM, this may take some time..."
+   echolog "copying $LIVECDNAME data to RAM, this may take some time..."
    mkdir -p $COPY2RAM
 
    # make sure it's in RAM even with changes= parameter
@@ -192,8 +212,9 @@ cp -af /liblinuxlive $UNION/usr/lib/
 
 debug_shell
 
-echolog "creating /etc/fstab"
+echolog "recreating /etc/fstab and /mnt directories"
 touch $UNION/etc/fstab
+rmdir $UNION/mnt/* 2>/dev/null
 fstab_update $UNION
 
 # everything is ready now, so we may unload unused kernel modules
@@ -244,7 +265,7 @@ if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
 
 # time to end Linux Live scripts and start the distribution itself,
 # using /sbin/init or whatever was found.
-header "linux live end, starting the Linux distribution"
+header "linux live end, starting $LIVECDNAME"
 
 debug_shell
 

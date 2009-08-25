@@ -14,6 +14,10 @@ if [ -e /usr/bin/kdeactivate -a "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" ]; then
    exec /usr/bin/kdeactivate "$@" 2>/dev/null
 fi
 
+PATH=.:$(dirname $0):/usr/lib:$PATH
+. liblinuxlive || exit 5
+
+allow_only_root
 MODULE=$(basename "$1" .lzm).lzm
 IMAGES=/mnt/live/memory/images
 IPREV=empty
@@ -41,16 +45,7 @@ rmdir "$IMAGES/$MODULE" 2>/dev/null && exit 0
 # OK the previous trick didn't work. So we have a real module here.
 
 # First, try to stop all daemons which may be started by this module
-if [ -d $IMAGES/$MODULE/etc/rc.d ]; then
-   ( find $IMAGES/$MODULE/etc/rc.d -type f -maxdepth 1 ; \
-     find $IMAGES/$MODULE/etc/rc.d -type f -maxdepth 2 -mindepth 2 | egrep '/S[^/]+$' \
-   ) | while read SCRIPT; do
-      if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
-         # call the script by real path, not from the images directory
-         ${SCRIPT##$IMAGES/$MODULE} stop deactivate 
-      fi
-   done
-fi
+find_n_run_scripts $IMAGES/$MODULE stop deactivate
 
 # detach it from aufs union. This may take a long time, remounting the
 # root directory is an expensive operation.

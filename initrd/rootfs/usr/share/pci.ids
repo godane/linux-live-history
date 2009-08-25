@@ -90,7 +90,7 @@
 	2830  82801H (ICH8 Family) USB UHCI Controller #1
 	2831  82801H (ICH8 Family) USB UHCI Controller #2
 	2832  82801H (ICH8 Family) USB UHCI Controller #3
-	2834  82801H (ICH8 Family) USB UHCI Contoller #4
+	2834  82801H (ICH8 Family) USB UHCI Controller #4
 	2835  82801H (ICH8 Family) USB UHCI Controller #5
 	2836  82801H (ICH8 Family) USB2 EHCI Controller #1
 	283a  82801H (ICH8 Family) USB2 EHCI Controller #2
@@ -98,18 +98,19 @@
 	2935  82801I (ICH9 Family) USB UHCI Controller #2
 	2936  82801I (ICH9 Family) USB UHCI Controller #3
 	2937  82801I (ICH9 Family) USB UHCI Controller #4
+		8086 2942  828011 (ICH9 Family ) USB UHCI Controller
 	2938  82801I (ICH9 Family) USB UHCI Controller #5
 	2939  82801I (ICH9 Family) USB UHCI Controller #6
 	293a  82801I (ICH9 Family) USB2 EHCI Controller #1
 	293c  82801I (ICH9 Family) USB2 EHCI Controller #2
-	3a34  ICH10 USB UHCI Controller #1
-	3a35  ICH10 USB UHCI Controller #2
-	3a36  ICH10 USB UHCI Controller #3
-	3a37  ICH10 USB UHCI Controller #4
-	3a38  ICH10 USB UHCI Controller #5
-	3a39  ICH10 USB UHCI Controller #6
-	3a3a  ICH10 USB2 EHCI Controller #1
-	3a3c  ICH10 USB2 EHCI Controller #2
+	3a34  82801JI (ICH10 Family) USB UHCI Controller #1
+	3a35  82801JI (ICH10 Family) USB UHCI Controller #2
+	3a36  82801JI (ICH10 Family) USB UHCI Controller #3
+	3a37  82801JI (ICH10 Family) USB UHCI Controller #4
+	3a38  82801JI (ICH10 Family) USB UHCI Controller #5
+	3a39  82801JI (ICH10 Family) USB UHCI Controller #6
+	3a3a  82801JI (ICH10 Family) USB2 EHCI Controller #1
+	3a3c  82801JI (ICH10 Family) USB2 EHCI Controller #2
 	3a64  ICH10 USB UHCI Controller #1
 	3a65  ICH10 USB UHCI Controller #2
 	3a66  ICH10 USB UHCI Controller #3
@@ -118,6 +119,10 @@
 	3a69  ICH10 USB UHCI Controller #6
 	3a6a  ICH10 USB2 EHCI Controller #1
 	3a6c  ICH10 USB2 EHCI Controller #2
+	8114  System Controller Hub (SCH Poulsbo) USB UHCI #1
+	8115  System Controller Hub (SCH Poulsbo) USB UHCI #2
+	8116  System Controller Hub (SCH Poulsbo) USB UHCI #3
+	8117  System Controller Hub (SCH Poulsbo) USB EHCI #1
 C 0c  Serial bus controller
 	00  FireWire (IEEE 1394)
 		10  OHCI

@@ -1,0 +1,14 @@
+I am not any C coder so what is here was just my hack to the httpfs.
+In the process I've learned much about how are functions called, how
+to allocate memory by malloc() and so on. The code should be entirely
+rewritten again, making httpRequest a function which returns a response
+structure like { int status, char *headers, char *body }. Also the
+socket handling should be rewritten using select() and others, making
+the socket in non-blocking mode rather then the current default,
+but I don't have any idea how to implement that yet. Don't forget
+this is my (almost) first C programming whatsoever :)
+
+Enjoy, and report bugs :)
+Feel free to rewrite! :)
+
+Tomas M

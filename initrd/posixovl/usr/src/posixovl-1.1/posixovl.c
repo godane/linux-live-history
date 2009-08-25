@@ -1,6 +1,6 @@
 /*
  *	posixovl - POSIX overlay filesystem
- *	Copyright © Jan Engelhardt <jengelh@computergmbh.de>, 2007
+ *	Copyright © Jan Engelhardt <jengelh [at] computergmbh de>, 2007 - 2008
  *
  *	Development of posixovl sponsored by Slax (http://www.slax.org/)
  *
@@ -14,10 +14,12 @@
 #define FUSE_USE_VERSION 26
 #include <sys/fsuid.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <dirent.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuse.h>
@@ -117,6 +119,8 @@ struct hcb {
 	int fd;
 };
 
+struct statvfs stvfs;
+
 /* Global */
 static mode_t default_mode = S_IRUGO | S_IWUSR;
 static unsigned int assume_vfat, single_threaded;
@@ -124,7 +128,7 @@ static const char *root_dir;
 static int root_fd;
 static pthread_mutex_t posixovl_protect = PTHREAD_MUTEX_INITIALIZER;
 
-static inline int lock_read(int fd)
+static int lock_read(int fd)
 {
 	static const struct flock fl = {
 		.l_type   = F_RDLCK,
@@ -137,7 +141,7 @@ static inline int lock_read(int fd)
 	return fcntl(fd, F_SETLKW, &fl);
 }
 
-static inline int lock_write(int fd)
+static int lock_write(int fd)
 {
 	static const struct flock fl = {
 		.l_type   = F_WRLCK,
@@ -162,7 +166,7 @@ static __attribute__((pure)) const char *at(const char *in)
 	return in + 1;
 }
 
-static inline char *strlcpy(char *dest, const char *src, size_t n)
+static char *strlcpy(char *dest, const char *src, size_t n)
 {
 	strncpy(dest, src, n);
 	dest[n-1] = '\0';
@@ -182,7 +186,6 @@ static void __hl_dtoi(char *dest, size_t destsize, const char *src)
 		last = p + 1;
 
 	memcpy(last, HL_INODE_PREFIX, HL_INODE_PREFIX_LEN);
-	return;
 }
 
 #define hl_dtoi(dest, src) __hl_dtoi((dest), sizeof(dest), (src))
@@ -436,12 +439,11 @@ static int hcb_get(const char *path, struct hcb *cb)
  * (Also because whether a change was made is not recorded. Explicitly call
  * hcb_update().)
  */
-static inline void hcb_put(const struct hcb *cb)
+static void hcb_put(const struct hcb *cb)
 {
 	if (cb->fd < 0)
 		should_not_happen();
 	close(cb->fd);
-	return;
 }
 
 /*
@@ -507,7 +509,7 @@ static int hcb_deref(struct hcb *cb)
  *
  * Retrieve the lowest HCB.
  */
-static inline int hcb_get_deref(const char *path, struct hcb *cb)
+static int hcb_get_deref(const char *path, struct hcb *cb)
 {
 	int ret;
 
@@ -526,7 +528,7 @@ static inline int hcb_get_deref(const char *path, struct hcb *cb)
  * Write back the HCB with possibly changed data. hcb_put() is called
  * afterwards because that's what is usually intended.
  */
-static inline int hcb_update(struct hcb *cb)
+static int hcb_update(struct hcb *cb)
 {
 	int ret;
 
@@ -556,7 +558,7 @@ static inline int hcb_update(struct hcb *cb)
  *
  * Do a standard HCB lookup with hardlink following.
  */
-static inline int hcb_lookup(const char *path, struct hcb *cb)
+static int hcb_lookup(const char *path, struct hcb *cb)
 {
 	int ret;
 
@@ -574,7 +576,7 @@ static inline int hcb_lookup(const char *path, struct hcb *cb)
  *
  * Do a standard HCB lookup with hardlink following.
  */
-static inline int hcb_lookup_deref(const char *path, struct hcb *cb)
+static int hcb_lookup_deref(const char *path, struct hcb *cb)
 {
 	int ret;
 
@@ -594,7 +596,7 @@ static inline int hcb_lookup_deref(const char *path, struct hcb *cb)
  * Combines the working directory @dir with @name (to form an absolute path),
  * then retrieves the HCB.
  */
-static inline int hcb_lookup_readdir(const char *dir, const char *name,
+static int hcb_lookup_readdir(const char *dir, const char *name,
     struct hcb *info)
 {
 	char path[PATH_MAX];
@@ -624,7 +626,7 @@ static inline int hcb_lookup_readdir(const char *dir, const char *name,
 	return 0;
 }
 
-static __attribute__((pure)) inline bool is_resv_name(const char *name)
+static __attribute__((pure)) bool is_resv_name(const char *name)
 {
 	return strncmp(name, HCB_PREFIX, HCB_PREFIX_LEN) == 0 ||
 	       strncmp(name, HL_DNODE_PREFIX, HL_DNODE_PREFIX_LEN) == 0 ||
@@ -632,7 +634,7 @@ static __attribute__((pure)) inline bool is_resv_name(const char *name)
 	       strcmp(name, HCB_PREFIX1) == 0;
 }
 
-static __attribute__((pure)) inline bool is_resv(const char *path)
+static __attribute__((pure)) bool is_resv(const char *path)
 {
 	const char *file = strrchr(path, '/');
 	if (file++ == NULL)
@@ -662,8 +664,8 @@ static bool __supports_owners(const char *path, uid_t uid,
     gid_t gid, bool restore)
 {
 	struct stat orig_sb, new_sb;
-	uid_t work_uid;
-	gid_t work_gid;
+	uid_t work_uid = -1;
+	gid_t work_gid = -1;
 
 	if (fstatat(root_fd, at(path), &orig_sb, AT_SYMLINK_NOFOLLOW) < 0) {
 		perror("fstatat");
@@ -704,7 +706,7 @@ static bool __supports_owners(const char *path, uid_t uid,
 	return new_sb.st_uid == work_uid && new_sb.st_gid == work_gid;
 }
 
-static inline bool supports_owners(const char *path, uid_t uid,
+static bool supports_owners(const char *path, uid_t uid,
     gid_t gid, bool restore)
 {
 	if (assume_vfat)
@@ -741,28 +743,96 @@ static bool __supports_permissions(const char *path)
 	return new_sb.st_mode == work_mode;
 }
 
-static inline bool supports_permissions(const char *path)
+static bool supports_permissions(const char *path)
 {
 	if (assume_vfat)
 		return false;
 	return __supports_permissions(path);
 }
 
-static char *xfrm_to_disk(const char *in)
+static char *xfrm_to_disk(const char *read_ptr)
 {
-	char *w, *out = strdup(in);
-	for (w = out; *w != '\0'; ++w)
-		if (*w == ':')
-			*w = ';';
+	unsigned int needed = 0;
+	const char *next;
+	char *out, *out_ptr;
+
+	for (next = read_ptr; *next != '\0'; ++next)
+		switch (*next) {
+		case '\\':
+		case ':':
+		case '*':
+		case '?':
+		case '\"':
+		case '<':
+		case '>':
+		case '|':
+			needed += strlen("%(XX)");
+			break;
+		/* Path separator ('/') is not to be encoded! */
+		default:
+			++needed;
+			break;
+		}
+
+	out = out_ptr = malloc(needed + 1);
+	if (out == NULL)
+		return NULL;
+
+	do {
+		next = strpbrk(read_ptr, "\\:*?\"<>|");
+		if (next == NULL) {
+			strcpy(out_ptr, read_ptr);
+			out_ptr += strlen(read_ptr);
+			break;
+		} else if (read_ptr != next) {
+			strncpy(out_ptr, read_ptr, next - read_ptr);
+			out_ptr += next - read_ptr;
+		}
+		sprintf(out_ptr, "%%(%02X)", *next);
+		out_ptr += strlen("%(XX)");
+		read_ptr = next + 1;
+	} while (*read_ptr != '\0');
+
+	*out_ptr = '\0';
 	return out;
 }
 
-static void xfrm_from_disk(char *in)
+static const unsigned char xfrm_table[] = {
+	['0'] =  0, ['1'] =  1, ['2'] =  2, ['3'] =  3,
+	['4'] =  4, ['5'] =  5, ['6'] =  6, ['7'] =  7,
+	['8'] =  8, ['9'] =  9, ['A'] = 10, ['B'] = 11,
+	['C'] = 12, ['D'] = 13, ['E'] = 14, ['F'] = 15,
+};
+
+static char *xfrm_from_disk(const char *read_ptr)
 {
-	for (; *in != '\0'; ++in)
-		if (*in == ';')
-			*in = ':';
-	return;
+	const char *seek_ptr = read_ptr, *next;
+	char *out = malloc(strlen(read_ptr) + 1), *out_ptr = out;
+
+	if (out == NULL)
+		return NULL;
+
+	do {
+		next = strstr(seek_ptr, "%(");
+		if (next == NULL) {
+			strcpy(out_ptr, read_ptr);
+			out_ptr += strlen(read_ptr);
+			break;
+		}
+		if (!isxdigit(next[2]) || !isxdigit(next[3]) ||
+		    next[4] != ')') {
+			seek_ptr = next + 1;
+			continue;
+		}
+		strncpy(out_ptr, read_ptr, next - read_ptr);
+		out_ptr += next - read_ptr;
+		read_ptr = seek_ptr = next + strlen("%(XX)");
+		*out_ptr++ = (xfrm_table[toupper(next[2])] << 4) |
+		             xfrm_table[toupper(next[3])];
+	} while (*read_ptr != '\0');
+
+	*out_ptr = '\0';
+	return out;
 }
 
 static int posixovl_chmod(const char *path, mode_t mode)
@@ -835,7 +905,7 @@ static int posixovl_close(const char *path, struct fuse_file_info *filp)
 	XRET(close(filp->fh));
 }
 
-static __attribute__((pure)) inline bool could_be_too_long(const char *path)
+static __attribute__((pure)) bool could_be_too_long(const char *path)
 {
 	/* Longest possible case is S_ISDIR: /path/.pxovl. */
 	return strlen(path) + 1 + HCB_PREFIX_LEN >= PATH_MAX;
@@ -849,7 +919,7 @@ static __attribute__((pure)) inline bool could_be_too_long(const char *path)
  * Checks whether @path's parent is owned by @uid.
  * @path denotes a path on the real volume, hence no HCB lookup here.
  */
-static inline bool parent_owner_match(const char *path, uid_t uid)
+static bool parent_owner_match(const char *path, uid_t uid)
 {
 	struct stat sb;
 	int ret;
@@ -875,7 +945,6 @@ static int posixovl_create(const char *path, mode_t mode,
 	if (could_be_too_long(path))
 		return -ENAMETOOLONG;
 
-	ctx = fuse_get_context();
 	fd  = openat(root_fd, at(path), filp->flags, mode);
 	if (fd < 0)
 		return -errno;
@@ -889,6 +958,8 @@ static int posixovl_create(const char *path, mode_t mode,
 	 * supported.
 	 * Fuse oddity: @mode includes S_IFREG (contraty to mkdir())
 	 */
+	ctx = fuse_get_context();
+
 	if (((mode & ~S_IWUSR) != (S_IFREG | (default_mode & ~S_IWUSR)) &&
 	    !supports_permissions(path)) ||
 	    (!parent_owner_match(path, ctx->uid) &&
@@ -1017,7 +1088,7 @@ static int posixovl_getxattr(const char *path, const char *name,
 	XRET(lgetxattr(at(path), name, value, size));
 }
 
-static int posixovl_fgetattr(const char *path, struct stat *sb,
+static int posixovl1_fgetattr(const char *path, struct stat *sb,
     struct fuse_file_info *filp)
 {
 	/*
@@ -1296,12 +1367,13 @@ static int posixovl_mkdir(const char *path, mode_t mode)
 	if (could_be_too_long(path))
 		return -ENAMETOOLONG;
 
-	ctx = fuse_get_context();
 	ret = mkdirat(root_fd, at(path), mode);
 	if (ret < 0)
 		return -errno;
 
 	/* FUSE oddity: @mode does not include S_IFDIR */
+	ctx = fuse_get_context();
+
 	if (((mode & ~S_IWUSR) != ((default_mode & ~S_IWUSR) | S_IXUGO) &&
 	    !supports_permissions(path)) ||
 	    (!parent_owner_match(path, ctx->uid) &&
@@ -1335,14 +1407,12 @@ static int posixovl_mknod(const char *path, mode_t mode, dev_t rdev)
 	if (is_resv(path))
 		return -EPERM;
 
-	ctx = fuse_get_context();
-
 	if (!assume_vfat) {
 		ret = mknodat(root_fd, at(path), mode, rdev);
-			if (ret < 0 && errno != EPERM)
-				return ret;
-			else if (ret >= 0)
-				return 0;
+		if (ret < 0 && errno != EPERM)
+			return ret;
+		else if (ret >= 0)
+			return 0;
 	}
 
 	/*
@@ -1352,6 +1422,8 @@ static int posixovl_mknod(const char *path, mode_t mode, dev_t rdev)
 	 */
 	if ((ret = hcb_new(path, &info, 0)) < 0)
 		return ret;
+
+	ctx = fuse_get_context();
 	info.ll.mode  = mode;
 	info.ll.nlink = 1;
 	info.ll.uid   = ctx->uid;
@@ -1406,7 +1478,6 @@ static int posixovl_open(const char *path, struct fuse_file_info *filp)
 		return -errno;
 
 	filp->fh = fd;
-	filp->keep_cache = 1; // added by TM to workaround a problem with AUFS
 	return 0;
 }
 
@@ -1431,6 +1502,7 @@ static int posixovl_readdir(const char *path, void *buffer,
 	struct hcb info;
 	int ret = 0;
 	DIR *ptr;
+	char *x;
 
 	if (is_resv(path))
 		return -ENOENT;
@@ -1448,9 +1520,10 @@ static int posixovl_readdir(const char *path, void *buffer,
 		if (ret < 0 && ret != -ENOENT_HCB && ret != -EACCES)
 			break;
 		ret = 0;
-		xfrm_from_disk((char *)dentry->d_name);
-		if ((*filldir)(buffer, dentry->d_name, &info.sb, 0) > 0)
+		x = xfrm_from_disk((char *)dentry->d_name);
+		if ((*filldir)(buffer, x, &info.sb, 0) > 0)
 			break;
+		free(x);
 	}
 
 	closedir(ptr);
@@ -1594,10 +1667,20 @@ static int posixovl_setxattr(const char *path, const char *name,
 
 static int posixovl_statfs(const char *path, struct statvfs *sb)
 {
-	if (fstatvfs(root_fd, sb) < 0)
+	struct statfs stfs;
+
+	if (fstatfs(root_fd, &stfs) < 0)
 		return -errno;
+
+	memcpy(sb, &stvfs, sizeof(stvfs));
+	sb->f_bfree = stfs.f_bfree;
+	sb->f_bavail = stfs.f_bavail;
+	sb->f_ffree = stfs.f_ffree;
+	sb->f_favail = 255 /* any value */;
+
 	sb->f_fsid = 0;
 	return 0;
+
 }
 
 static int posixovl_symlink(const char *oldpath, const char *newpath)
@@ -1609,8 +1692,6 @@ static int posixovl_symlink(const char *oldpath, const char *newpath)
 	if (is_resv(newpath))
 		return -EPERM;
 
-	ctx = fuse_get_context();
-
 	if (!assume_vfat) {
 		ret = symlinkat(oldpath, root_fd, at(newpath));
 		if (ret < 0 && errno != EPERM)
@@ -1620,10 +1701,10 @@ static int posixovl_symlink(const char *oldpath, const char *newpath)
 	}
 
 	/* symlink() not supported on @path */
-
 	if ((ret = hcb_new(newpath, &info, 0)) < 0)
 		return ret;
 
+	ctx = fuse_get_context();
 	info.ll.mode  = S_IFSOFTLNK;
 	info.ll.nlink = 1;
 	info.ll.uid   = ctx->uid;
@@ -1824,7 +1905,7 @@ static const struct fuse_operations posixovl_ops = {
 	.chmod       = posixovl1_chmod,
 	.chown       = posixovl1_chown,
 	.create      = posixovl1_create,
-	.fgetattr    = posixovl_fgetattr,
+	.fgetattr    = posixovl1_fgetattr,
 	.ftruncate   = posixovl_ftruncate,
 	.getattr     = posixovl1_getattr,
 	.getxattr    = posixovl_getxattr,
@@ -1860,9 +1941,8 @@ static void usage(const char *p)
 int main(int argc, char **argv)
 {
 	char **aptr, **new_argv;
-	int new_argc = 0, c;
+	int new_argc = 0, original_wd, c;
 	char xargs[256];
-	struct stat sb;
 
 	while ((c = getopt(argc, argv, "1FS:")) > 0) {
 		switch (c) {
@@ -1893,18 +1973,21 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (fstat(root_fd, &sb) < 0) {
-		/* somebody remind me why I added this.. */
-		perror("fstat");
-		return EXIT_FAILURE;
-	}
+	fstatvfs(root_fd, &stvfs);
+
+	original_wd = open(".", O_DIRECTORY);
 
 	new_argv = malloc(sizeof(char *) * (argc + 5 - optind));
 	new_argv[new_argc++] = argv[0];
+#ifdef HAVE_JUST_FUSE_2_6_5
 	snprintf(xargs, sizeof(xargs),
-	         "-oattr_timeout=300,entry_timeout=300,negative_timeout=300,kernel_cache,"
-	         "default_permissions,use_ino,nonempty,dev,"
+	         "-oattr_timeout=0,default_permissions,use_ino,nonempty,dev,"
 	         "fsname=posix-overlay(%s)", root_dir);
+#else
+	snprintf(xargs, sizeof(xargs),
+	         "-oattr_timeout=0,default_permissions,use_ino,nonempty,dev,"
+	         "fsname=posix-overlay(%s),subtype=posixovl", root_dir);
+#endif
 	new_argv[new_argc++] = xargs;
 
 	if (user_allow_other())
@@ -1916,5 +1999,8 @@ int main(int argc, char **argv)
 		new_argv[new_argc++] = *aptr;
 
 	new_argv[new_argc] = NULL;
-	return fuse_main(new_argc, (char **)new_argv, &posixovl_ops, NULL);
+	c = fuse_main(new_argc, (char **)new_argv, &posixovl_ops, NULL);
+	if (fchdir(original_wd) < 0)
+		/* ignore */;
+	return c;
 }

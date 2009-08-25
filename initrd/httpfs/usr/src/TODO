@@ -1,0 +1,12 @@
+This document should describe what is needed to be implemented next.
+
+*) if a directory is linked several times on a web page, it will show up twice in readdir().
+   How to fix that? Perhaps by list.
+
+*) read more than one chunk if chunked transfer encoding is sent by server
+   Actually it should reall all chunks, because it will know where is the last one by '\r\n00\r\n' identifier
+
+*) if a virtual document root is set, for example to /pub/, and a file is linked as /mirrors/, it tries
+   to get it even if it's outside of our root tree. This should be perhaps fixed.
+
+*) fix http_auth (low priority)
