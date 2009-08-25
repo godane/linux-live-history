@@ -1,3 +1,36 @@
+ 6.2.0
+ 
+ * don't use udba=none (defaults now to udba=reval) because of FUSE
+   This can have bad impact on performance in some cases, but not in Linux Live.
+   Particularly, our writable filesystem is always on a single branch, and other
+   branches (squashfs images) are 'rr' (always-readonly) in aufs, so it never
+   assumes a direct branch access on them.
+ * modprobe filesystem modules explicitly
+ * added new fuse filesystems (posixovl, ntfs3g)
+ * force keep_cache in posixovl_open() in order to help AUFS
+ * don't erase fstab file but only touch it in linuxrc, thanks to Claus Klein!
+ * use relative paths in chroot calls, thanks to Patrik Zawadzki
+ * added 'pcimodules' script to ./rootfs/bin/, thanks to Patrik Zawadzki for the idea
+   (currently unused, but may be interesting for someone)
+ * copy few more modules to initrd (cdrom, ide), thanks to Patrik Zawadzki
+ * 'uselivemod' renamed to 'activate'
+ * 'unuselivemod' renamed to 'deactivate'
+
+
+ 6.1.6
+ 
+ * removed rmlivemod and reimplemented the functionality to unuselivemod
+ * removed floppy entry from fstab-create, udev will hopefully create it
+ * added back 'noauto' mount parameter for swap devices, as auto swapping
+   may be a security problem (if you type a password anywhere, it is in
+   memory, and if that part of memory is swapped, the password would be 
+   stored on disk ... this is mostly harmless, but most people hate it)
+ * added newer versions of busybox, ntfs-3g and fuse to initrd
+ * added 'sgn=' boot parameter. Use it to overide file name for livecd.sgn
+ * updated mksquashfs and unsquashfs to reflect CVS changes in squashfs
+ - this also fixes a bug in mksquashfs to show 100% progress bar correctly
+
+
  6.1.5
  
  * re-executing of cleanup script caused the $1 argument to be lost. Fixed.

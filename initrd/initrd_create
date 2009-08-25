@@ -126,28 +126,13 @@ if [ "$USENTFS3G" = "yes" ]; then
    cp -a ntfs-3g/* $INITRD_TREE
 fi
 
-# new busybox doesn't need the following links at all, but it's better
-# if we need to call a busybox binary from within a different shell then ash
 cp -a rootfs/* $INITRD_TREE
-ln -s busybox $INITRD_TREE/bin/ash
-ln -s busybox $INITRD_TREE/bin/echo
-ln -s busybox $INITRD_TREE/bin/[
-ln -s busybox $INITRD_TREE/bin/chroot
-ln -s busybox $INITRD_TREE/bin/modprobe
-ln -s busybox $INITRD_TREE/bin/insmod
-ln -s busybox $INITRD_TREE/bin/mount
-ln -s busybox $INITRD_TREE/bin/umount
-ln -s busybox $INITRD_TREE/bin/ln
-ln -s busybox $INITRD_TREE/bin/ls
-ln -s busybox $INITRD_TREE/bin/head
-ln -s busybox $INITRD_TREE/bin/cat
-ln -s busybox $INITRD_TREE/bin/grep
-ln -s busybox $INITRD_TREE/bin/sleep
-ln -s busybox $INITRD_TREE/bin/sed
-ln -s busybox $INITRD_TREE/bin/mdev
-ln -s busybox $INITRD_TREE/bin/poweroff
-ln -s busybox $INITRD_TREE/bin/reboot
-ln -s busybox $INITRD_TREE/bin/halt
+
+# build links to busybox's functions from busybox's own help text
+for i in $(rootfs/bin/busybox --help | grep -v Copyright | grep , | tr , " "); do
+   ln -s busybox $INITRD_TREE/bin/$i
+done
+
 ln -sf bin $INITRD_TREE/sbin
 
 # necessary modules and dependency files
@@ -167,6 +152,7 @@ rcopy_ex $ROOT/$LMK/kernel/fs/vfat $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/fs/ntfs $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/fs/ext3 $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/fs/reiserfs $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/fs/xfs $INITRD_TREE 2>>$DEBUG
 
 # add language support for filesystems
 rcopy_ex $ROOT/$LMK/kernel/fs/nls $INITRD_TREE 2>>$DEBUG
@@ -176,6 +162,10 @@ rcopy_ex $ROOT/$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ehci-hcd.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/ohci-hcd.* $INITRD_TREE 2>>$DEBUG
 rcopy_ex $ROOT/$LMK/kernel/drivers/usb/host/uhci-hcd.* $INITRD_TREE 2>>$DEBUG
+
+# pci modules
+rcopy_ex $ROOT/$LMK/kernel/drivers/cdrom $INITRD_TREE 2>>$DEBUG
+rcopy_ex $ROOT/$LMK/kernel/drivers/ide $INITRD_TREE 2>>$DEBUG
 
 # pcmcia modules
 rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/pcmcia_core.* $INITRD_TREE 2>>$DEBUG

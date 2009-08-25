@@ -40,8 +40,10 @@ mkdir -p $MEMORY
 
 debug_shell
 
-# Find livecd data directory
-echolog "looking for data directory"
+# Find livecd data directory by searching for livecd.sgn file
+SGN=$(cmdline_value sgn)
+if [ "$SGN" = "" ]; then SGN=livecd.sgn; fi
+echolog "looking for data directory (searching for $SGN file)"
 
 # First, try from= boot argument, if given
 DATAFROM=$(cmdline_value from)
@@ -62,7 +64,7 @@ fi
 
 if [ "$DATA" = "" ]; then
    # from= is not used or it didn't contain valid data
-   DATA=$(find_in_computer $LIVECDNAME/$LIVECDSGN)
+   DATA=$(find_in_computer $LIVECDNAME/$SGN)
    DATA=$(dirname $DATA 2>/dev/null)
 fi
 
@@ -96,7 +98,7 @@ rm -f $MEMORY/empty 2>/dev/null
 # if changes can't be mounted or the filesystem is not writable,
 # fallback to the default: tmpfs
 if [ $? -ne 0 ]; then
-   echolog "changes not writable, using memory only"
+   echolog "changes not used or not writable, using memory only"
    fumount $MEMORY
    mkdir -p $MEMORY # mount_device might removed it
 
@@ -104,7 +106,6 @@ if [ $? -ne 0 ]; then
    if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
    mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY
    XINO=$MEMORY
-   mkdir -p $CHANGES
 else
    # So it is writable, we will keep the filesystem mounted.
    # Check if it supports links and chmod.
@@ -127,11 +128,12 @@ else
 fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
-echolog "setup union directory (using aufs, with udba=none)"
+echolog "setup union directory (using aufs)"
+
+mkdir -p $CHANGES
+mkdir -p $IMAGES
 
 debug_shell
-
-mkdir -p $IMAGES
 
 # store the xino file in memory in all cases, it's faster and safer
 if [ "$XINO" != "$MEMORY" ]; then
@@ -140,8 +142,8 @@ if [ "$XINO" != "$MEMORY" ]; then
 fi
 
 # mount aufs using the writable branch as the first one (leftmost/topmost)
-mount -t aufs -o nowarn_perm,udba=none,xino=$XINO/.aufs.xino,br:$CHANGES=rw aufs $UNION
-if [ $? -ne 0 ]; then fatal "can't setup union (aufs)"; fi
+mount -t aufs -o nowarn_perm,xino=$XINO/.aufs.xino,br:$CHANGES=rw aufs $UNION
+if [ $? -ne 0 ]; then dmesg | tail -n 1; fatal "can't setup union (aufs)"; fi
 
 debug_shell
 
@@ -185,7 +187,7 @@ cp -af /liblinuxlive $UNION/usr/lib/
 debug_shell
 
 echolog "creating /etc/fstab"
-echo -ne > $UNION/etc/fstab
+touch $UNION/etc/fstab
 fstab_update $UNION
 
 # everything is ready now, so we may unload unused kernel modules
@@ -201,7 +203,7 @@ mkdir -p $UNION/proc
 mkdir -p $UNION/sys
 mkdir -p $UNION/dev
 mkdir -p $UNION/tmp
-chmod 0777 $UNION/tmp
+chmod 1777 $UNION/tmp
 
 # Boot will contain whatever was in ./boot directory in the bootable media
 # Error output goes to null, as nothing is mounted with copy2ram
@@ -218,15 +220,16 @@ cd $UNION
 mkdir -p $INITRAMDISK
 
 # Copy all dev files (found by mdev) to unioned dev directory
-# so at least disk devices exist (your Linux may need them)
+# so at least disk devices exist (your Linux may need them).
+# Two exceptions, do not copy pty* and tty* devs.
 if [ ! -e /dev/console ]; then mknod /dev/console c 5 1; fi
-cp -fdR /dev .
+cp -fdR /dev . 2>/dev/null
 
 # find chroot and init
-if [ -x bin/chroot ]; then  CHROOT=/bin/chroot; fi
-if [ -x sbin/chroot ]; then  CHROOT=/sbin/chroot; fi
-if [ -x usr/bin/chroot ]; then  CHROOT=/usr/bin/chroot; fi
-if [ -x usr/sbin/chroot ]; then CHROOT=/usr/sbin/chroot; fi
+if [ -x bin/chroot ]; then  CHROOT=bin/chroot; fi
+if [ -x sbin/chroot ]; then  CHROOT=sbin/chroot; fi
+if [ -x usr/bin/chroot ]; then  CHROOT=usr/bin/chroot; fi
+if [ -x usr/sbin/chroot ]; then CHROOT=usr/sbin/chroot; fi
 if [ "$CHROOT" = "" ]; then fatal "Can't find executable chroot command"; fi
 
 if [ -x bin/init ]; then INIT=bin/init; fi
@@ -236,6 +239,9 @@ if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
 # time to end Linux Live scripts and start the distribution itself,
 # using /sbin/init or whatever was found.
 header "linux live end, starting the Linux distribution"
+
+debug_shell
+
 mount -n -o remount,ro aufs .
 
 # We will copy init from the distro to initrd (there should be 2MB free)

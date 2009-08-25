@@ -1,14 +1,23 @@
 #!/bin/bash
-# Use module while running LiveCD
-# include it into live directory structure on the fly
+# Activate a module, while running LiveCD.
+# Include it into live directory structure on the fly
 #
 # Author: Tomas M. <http://www.linux-live.org>
 
-MODULE="$1"
+if [ "$1" = "-k" ]; then
+   CALLED_BY_KDE_HELPER=1
+   shift
+fi
+
+if [ "$DISPLAY" -a ! "$CALLED_BY_KDE_HELPER" -a "$(whereis kactivate)" ]; then
+   exec kactivate "$@" 2>/dev/null
+fi
+
+MODULE=$(readlink -f "$1")
 
 if [ "$MODULE" = "" -o ! -e "$MODULE" -o -d "$MODULE" ]; then
    echo
-   echo "Use module on the fly while running Live CD"
+   echo "Activate a module on the fly while running Linux Live"
    echo "Usage: $0 module.lzm"
    exit 1
 fi
@@ -16,7 +25,6 @@ fi
 if [ "$(echo $MODULE | fgrep -i .lzm)" = "" ]; then
    echo
    echo "$(basename $MODULE): Module must end with .lzm"
-   echo "If you have .mo extension, convert it by using mo2lzm"
    exit 2
 fi
 
@@ -29,7 +37,7 @@ MODULES=/mnt/live/memory/modules
 
 # are we even using union?
 if [ "$(grep '^aufs / ' /proc/mounts)" = "" ]; then
-   echo "not in the live mode, can't continue. Try lzm2dir"
+   echo "not in the live mode, can't continue. Try lzm2dir $MODULE /"
    exit 4
 fi
 
@@ -53,15 +61,21 @@ MOD=$(union_insert_module / "$MODULE" $IMAGES)
 if [ $? -ne 0 ]; then echo "error inserting module to live filesystem" >&2; exit 3; fi
 
 # All executables (but symlinks) in /etc/rc.d/ from this module will be started
-# with two arguments: "start" "uselivemod".
-# This is done only by uselivemod, not in the case when the module is loaded 
+# with two arguments: "start" "activate". Moreover, all executables in
+# /etc/rc.d/rc*.d/S* will be started as well.
+# This is done only by the 'activate' script, not in the case when the module is loaded 
 # during OS startup (in that case, your distro is responsible for execution)
 MOD=$(basename $MOD)
-find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
-   if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
-      ${SCRIPT##$IMAGES/$MOD} start uselivemod
-   fi
-done
+if [ -d $IMAGES/$MOD/etc/rc.d ]; then
+   ( find $IMAGES/$MOD/etc/rc.d -type f -maxdepth 1 ; \
+     find $IMAGES/$MOD/etc/rc.d -type f -maxdepth 2 -mindepth 2 | egrep '/S[^/]+$' \
+   ) | while read SCRIPT; do
+      if [ "$SCRIPT" != "" -a -x "$SCRIPT" -a ! -d "$SCRIPT" ]; then
+         # call the script by real path, not from the images directory
+         ${SCRIPT##$IMAGES/$MOD} start activate
+      fi
+   done
+fi
 
 # update ld cache if new ld.so.conf/cache exists in the module
 if [ -e "$IMAGES/$MOD/etc/ld.so.conf" -o -e "$IMAGES/$MOD/etc/ld.so.cache" ]; then

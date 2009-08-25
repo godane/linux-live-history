@@ -22,7 +22,6 @@ COPY2RAM=$MEMORY/copy2ram
 IMAGES=$MEMORY/images
 INITRAMDISK=$MOUNTDIR/live
 LOOPMOUNT=$MOUNTDIR/tmp
-LIVECDSGN=livecd.sgn
 
 # this will be replaced by build script, so never change the following line!
 LIVECDNAME="mylinux"
@@ -153,7 +152,7 @@ mount_initrd_loops()
 {
    debug_log "mount_initrd_loops" "$*"
    if [ -e /usr.lzm ]; then
-      mount_device /usr.lzm /usr loop,ro
+      mount_device /usr.lzm /usr loop,ro squashfs
    fi
 }
 
@@ -184,10 +183,10 @@ mknod_next_loop_dev()
    local NR PFX
 
    if [ -d /dev/loop ]; then
-      NR=$(ls -1vA /dev/loop/ | tail -n 1)
+      NR=$(find /dev/loop/ -maxdepth 1 | sed -r 's/[^0-9]+//' | sort -n | tail -n 1)
       PFX="/"
    else
-      NR=$(ls -1vA /dev/ | grep loop | sed -r 's/[^0-9]+//' | tail -n 1)
+      NR=$(find /dev/ -maxdepth 1 | grep loop | sed -r 's/[^0-9]+//' | sort -n | tail -n 1)
       PFX=""
    fi
    NR=$(expr 0$NR + 1)
@@ -268,7 +267,7 @@ fs_options()
    NOAUTO=$(cmdline_parameter noauto)
    if [ "$NOAUTO" = "" ]; then NOAUTO="auto"; fi
    if [ "$2" = "fstab" ]; then echo -n "$NOAUTO," ; fi
-   if [ "$1" = "swap" ]; then echo "defaults"; return 0; fi
+   if [ "$1" = "swap" ]; then echo "defaults,noauto"; return 0; fi
    echo -n "noatime,users,suid,dev,exec"
 
    IOCHARSET=$(iocharset)
@@ -310,11 +309,12 @@ device_filesystem()
 # $1 = /dev device to mount, eg. /dev/hda1, or loop file, or directory
 # $2 = mountpoint, eg. /mnt/hda1
 # $3 = optional mount options, for example "ro", or "remount,rw"
+# $4 = optional filesystem name, in order to skip autodetection
 #
 mount_device()
 {
    debug_log "mount_device" "$*"
-   local DEV LOOPDEV OPTIONS FILESYSTEM ERR
+   local FS DEV LOOPDEV OPTIONS FILESYSTEM ERR
 
    # make sure we have enough arguments
    if [ "$2" = "" ]; then return 1; fi
@@ -322,35 +322,35 @@ mount_device()
    mkdir -p "$2"
 
    DEV="$1"
-   FS=$(device_filesystem "$1")
-   OPTIONS=$(fs_options $FS mount)
+   if [ "$4" != "" ]; then FS="$4"; else FS=$(device_filesystem "$1"); fi
+   if [ "$FS" ]; then OPTIONS=$(fs_options $FS mount); FS="-t $FS"; fi
    if [ "$OPTIONS" ]; then OPTIONS="$OPTIONS"; else OPTIONS=""; fi
    if [ -f "$DEV" ]; then OPTIONS="$OPTIONS,loop"; fi
    if [ -d "$DEV" ]; then OPTIONS="$OPTIONS,rbind"; fi
    if [ "$3" ]; then OPTIONS="$OPTIONS,$3"; fi
    OPTIONS=$(echo "$OPTIONS" | sed -r "s/^,+//")
 
-   if [ "$FS" = "ntfs-3g" ]; then
+   if [ "$FS" = "-t ntfs-3g" ]; then
       ntfsmount "$DEV" "$2" -o $OPTIONS >/dev/null 2>&1
       ERR=$?
    else
-      mount -n -o $OPTIONS "$DEV" "$2" >/dev/null 2>&1
+      mount -n -o $OPTIONS $FS "$DEV" "$2" >/dev/null 2>&1
       ERR=$?
    fi
 
    # not enough loop devices? try to create one.
-   # This will work only with newest kernels. Tested with 2.6.23-rc2.
+   # This will work only with newest kernels. Tested with 2.6.23.
    if [ $ERR -eq 2 ]; then
        LOOPDEV=$(mknod_next_loop_dev)
-       OPTIONS=$(echo "$OPTIONS" | sed -r "s/,loop//")
+       OPTIONS=$(echo "$OPTIONS" | sed -r "s/,loop//g")
        losetup "$LOOPDEV" "$DEV" 2>/dev/null
-       mount -n -o $OPTIONS "$LOOPDEV" "$2" >/dev/null 2>&1
+       mount -n -o $OPTIONS $FS "$LOOPDEV" "$2" >/dev/null 2>&1
        ERR=$?
    fi
 
    # if nothing works, try to force read-only mount
    if [ $ERR -ne 0 ]; then
-       mount -n -r -o $OPTIONS "$DEV" "$2" >/dev/null 2>&1
+       mount -n -r -o $OPTIONS $FS "$DEV" "$2" >/dev/null 2>&1
        ERR=$?
    fi
 
@@ -398,13 +398,13 @@ fumount()
 # call mksquashfs with apropriate arguments
 # $1 = directory which will be compressed to squashfs module
 # $2 = output filesystem module file
-# $3 = optional -keep-as-directory argument
+# $3..$9 = optional arguments like -keep-as-directory or -b 123456789
 #
 create_module()
 {
    debug_log "create_module" "$*"
    rm -f "$2" # overwrite, never append to existing file
-   mksquashfs "$1" "$2" $3 >/dev/null
+   mksquashfs "$1" "$2" -b 256K -lzmadic 256K $3 $4 $5 $6 $7 $8 $9>/dev/null
    if [ $? -ne 0 ]; then return 1; fi
    chmod oga-wx "$2" # remove execute attrib
 }
@@ -428,7 +428,7 @@ ismountpoint()
 mount_module()
 {
    debug_log "mount_module" "$*"
-   mount_device "$1" "$2" loop,ro
+   mount_device "$1" "$2" loop,ro squashfs
 }
 
 # Insert a directory tree $2 to an union specified by $1
@@ -491,12 +491,12 @@ union_insert_module()
    if [ $? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
    union_insert_dir $1 $TARGET
    if [ $? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
-   echo "$2" | cut -b $4- | cut -b 2-
+   echo "$2" | cut -b $(($4+1))-
    echolog "$2" >/dev/null
    return 0
 }
 
-# Insert all filesystem modules, in $2 directory and subdirectories, to the union
+# Insert all filesystem modules from $2 directory and subdirectories, to the union
 # $1 = union absolute path (starting with /)
 # $2 = LiveCD data dir (with directories /base, /modules, etc.)
 # $3 = destination folder, where images will be mounted to
@@ -508,7 +508,7 @@ union_insert_modules()
 
    list_modules $2 | while read MODULE; do
       INSERTED=$(union_insert_module $1 $MODULE $3 ${#2})
-      if [ "$INSERTED" != "" ]; then echolog " -> $INSERTED"; fi
+      if [ "$INSERTED" != "" ]; then echolog " -> $(echo $INSERTED | sed -r s:^/::)"; fi
    done
 }
 
@@ -727,7 +727,8 @@ mdev_start_hotplug()
    debug_log "mdev_start_hotplug" "$*"
    echolog "creating /dev entries for block devices"
    mdev -s
-   echo /bin/mdev > /proc/sys/kernel/hotplug
+   rm /dev/pty??* /dev/tty??* # remove unneeded pty and tty devices
+   echo /bin/mdev > /proc/sys/kernel/hotplug # use mdev as a hotplug handler
 }
 
 # Modprobe kernel modules needed for the LiveCD
@@ -744,9 +745,14 @@ modprobe_essential_modules()
    modprobe_module squashfs
    echolog "starting aufs support with brs=1"
    modprobe_module aufs brs=1
-   echolog "starting vfat support"
+   echolog "starting linux filesystem support"
+   modprobe_module ext2
+   modprobe_module ext3
+   modprobe_module reiserfs
+   modprobe_module xfs
    modprobe_module vfat
-   echolog "starting ntfs support"
+   echolog "starting windows filesystem support"
+   modprobe_module vfat
    modprobe_module fuse # for ntfs-3g
    modprobe_module ntfs # for ro driver
 }
@@ -898,9 +904,6 @@ fstab_update()
          if [ "$FS" != "swap" ]; then mkdir -p "$1/$MNT"; fi
       fi
    done
-
-   fstab_add_line $FSTABTMP /dev/fd0 /mnt/floppy vfat noauto,noatime,users,suid,dev,exec
-   mkdir -p $1/mnt/floppy
 
    mv -f $FSTABTMP $FSTAB
 }

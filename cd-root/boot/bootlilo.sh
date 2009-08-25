@@ -61,7 +61,6 @@ prompt
 timeout=40
 lba32
 compact
-vga=769
 change-rules
 reset
 install=text

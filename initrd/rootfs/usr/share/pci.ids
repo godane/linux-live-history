@@ -13,6 +13,10 @@
 	4389  SB600 USB (OHCI2)
 	438a  SB600 USB (OHCI3)
 	438b  SB600 USB (OHCI4)
+	4396  SB700/SB800 USB EHCI Controller
+	4397  SB700/SB800 USB OHCI0 Controller
+	4398  SB700/SB800 USB OHCI1 Controller
+	4399  SB700/SB800 USB OHCI2 Controller
 1033  NEC Corporation
 	0035  USB
 		807d 0035  PCI-USB2 (OHCI subsystem)
@@ -36,11 +40,23 @@
 	5253  M5253 P1394 OHCI 1.1 Controller
 10de  nVidia Corporation
 	00e8  nForce3 EHCI USB 2.0 Controller
+	055e  MCP67 OHCI USB 1.1 Controller
+	055f  MCP67 EHCI USB 2.0 Controller
 1106  VIA Technologies, Inc.
 	3038  VT82xxxxx UHCI USB 1.1 Controller
 1166  Broadcom
 	0220  OSB4/CSB5 OHCI USB Controller
 	0221  CSB6 OHCI USB Controller
+	0412  HT1100 USB OHCI Controller
+	0414  HT1100 USB EHCI Controller
+	0416  HT1100 USB EHCI Controller (with Debug Port)
+1414  Microsoft Corporation
+	5804  OHCI Controller 0 (Xenon)
+	5805  EHCI Controller 0 (Xenon)
+	5806  OHCI Controller 1 (Xenon)
+	5807  EHCI Controller 1 (Xenon)
+15ad  VMware Inc
+	0770  Abstract USB2 EHCI Controller
 8086  Intel Corporation
 	1087  631xESB/632xESB UHCI Redirection
 	24c2  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #1
@@ -48,10 +64,14 @@
 	24c7  82801DB/DBL/DBM (ICH4/ICH4-L/ICH4-M) USB UHCI Controller #3
 	24cd  82801DB/DBM (ICH4/ICH4-M) USB2 EHCI Controller
 	24d2  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #1
+		1734 101c  PRIMERGY RX/TX series onboard UHCI
 	24d4  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #2
+		1734 101c  PRIMERGY RX/TX S2 series onboard UHCI
 	24d7  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #3
+		1734 101c  PRIMERGY RX/TX S2 series onboard UHCI
 	24dd  82801EB/ER (ICH5/ICH5R) USB2 EHCI Controller
 	24de  82801EB/ER (ICH5/ICH5R) USB UHCI Controller #4
+		1734 101c  PRIMERGY RX/TX S2 series onboard UHCI
 	2658  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #1
 	2659  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #2
 	265a  82801FB/FBM/FR/FW/FRW (ICH6 Family) USB UHCI #3
@@ -82,6 +102,22 @@
 	2939  82801I (ICH9 Family) USB UHCI Controller #6
 	293a  82801I (ICH9 Family) USB2 EHCI Controller #1
 	293c  82801I (ICH9 Family) USB2 EHCI Controller #2
+	3a34  ICH10 USB UHCI Controller #1
+	3a35  ICH10 USB UHCI Controller #2
+	3a36  ICH10 USB UHCI Controller #3
+	3a37  ICH10 USB UHCI Controller #4
+	3a38  ICH10 USB UHCI Controller #5
+	3a39  ICH10 USB UHCI Controller #6
+	3a3a  ICH10 USB2 EHCI Controller #1
+	3a3c  ICH10 USB2 EHCI Controller #2
+	3a64  ICH10 USB UHCI Controller #1
+	3a65  ICH10 USB UHCI Controller #2
+	3a66  ICH10 USB UHCI Controller #3
+	3a67  ICH10 USB UHCI Controller #4
+	3a68  ICH10 USB UHCI Controller #5
+	3a69  ICH10 USB UHCI Controller #6
+	3a6a  ICH10 USB2 EHCI Controller #1
+	3a6c  ICH10 USB2 EHCI Controller #2
 C 0c  Serial bus controller
 	00  FireWire (IEEE 1394)
 		10  OHCI

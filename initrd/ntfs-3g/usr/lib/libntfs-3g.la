@@ -5,10 +5,10 @@
 # It is necessary for linking the library.
 
 # The name that we can dlopen(3).
-dlname='libntfs-3g.so.5'
+dlname='libntfs-3g.so.16'
 
 # Names of this library.
-library_names='libntfs-3g.so.5.0.0 libntfs-3g.so.5 libntfs-3g.so'
+library_names='libntfs-3g.so.16.0.0 libntfs-3g.so.16 libntfs-3g.so'
 
 # The name of the static archive.
 old_library='libntfs-3g.a'
@@ -17,7 +17,7 @@ old_library='libntfs-3g.a'
 dependency_libs=''
 
 # Version information for libntfs-3g.
-current=5
+current=16
 age=0
 revision=0
 

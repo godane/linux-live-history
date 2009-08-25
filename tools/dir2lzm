@@ -11,47 +11,9 @@ PATH=.:$(dirname $0):/usr/lib:$PATH
 if [ ! -d "$1" -o "$2" = "" ]; then
    echo
    echo "Convert directory tree into .lzm compressed module"
-   echo "usage: $0 source_directory output_file.lzm [ -skipcheck ]"
+   echo "usage: $0 source_directory output_file.lzm"
    exit 1
-fi
-
-# check if the source path is correct. For example, chmod should be set
-# to 0755 for all directories, all files should be readable by everyone, etc.
-# If error is found, warn user.
-#
-if [ "$3" != "-skipcheck" ]; then
-
-   WRONG_PERMS=$(find "$1" -type d ! -perm -755 ; find "$1" ! -perm -444)
-   if [ "$WRONG_PERMS" != "" ]; then
-      echo "---"
-      echo "Warning, assure the following permissions are set intentionally:"
-      ls -ld $WRONG_PERMS
-   fi
-
-   STRIP=$(find | xargs file | egrep -i "executable|shared object" | grep ELF | grep "not stripped" | cut -d : -f 1)
-   if [ "$STRIP" != "" ]; then
-      echo "---"
-      echo "Warning, consider stripping these files to save space:"
-      echo "$STRIP"
-   fi
-
-   ARCHIVES=$(find -name "*.gz" -or -name "*.bz2")
-   if [ "$ARCHIVES" != "" ]; then
-      echo "---"
-      echo "Warning, if possible, uncompress these archives in your module:"
-      echo "$ARCHIVES"
-   fi
-
-   TRANS=$(du -sk "$1/usr/share/locale" 2>/dev/null | cut -f 1)
-
-   if [ "0$TRANS" -gt 512 ]; then
-      echo "---"
-      echo "Warning, it seems you have more than 500KB of translations ($TRANS KB)"
-      echo "Delete unneeded translations from $1/usr/share/locale"
-      echo "(ignore this warning if your module is an international module)"
-   fi
 fi
 
 create_module "$1" "$2"
 if [ $? != 0 ]; then echo "error building compressed image"; exit 1; fi
-echo -e "\ndone OK"
