@@ -20,7 +20,7 @@ if not "%errorlevel%"=="0" goto error2
 
 echo .
 echo Setting up boot sector in %1
-tools\WIN\syslinux.exe -ma "%1"
+tools\WIN\syslinux.exe -fma "%1"
 if not "%errorlevel%"=="0" goto error3
 
 echo.

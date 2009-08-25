@@ -1,3 +1,31 @@
+ 5.4.9
+ 
+ * bugfix: /etc/fstab is deleted before update_fstab is called from linuxrc,
+   this makes sure there are no old lines (from original distro)
+ * bugfix: cleanup script now ejects CD properly
+ 
+
+ 5.4.8
+ 
+ * added busybox 1.1.3 with $((arith)) support in ash
+ * added noswap boot parameter to disable autoloading of a swap parition
+ * fixed egrep_o function which caused fromiso to disallow /dev/... paths
+ * fixed comma and semicolon replacement in load= and noload= params
+ * fixed bug in list_partition_devices (liblinuxlive)
+ * fixed linuxrc searching for data (dirname), thanks to Niels Endres
+ * load= and noload= are now case-insensitive, thanks to Niels Endres
+ * probeusb moved at the top (even before the first debug prompt)
+ * added MKMOD variable to 'config' so user can specify which directories
+   will be included in liveCD.
+ * added -f option to syslinux in make_disk.bat, which allows user to install
+   SLAX to any disk, even if it's not removable
+ * added |sort| to list_modules to preserve correct order even after copy2ram
+ * patched unsquashfs to return zero value if everything is OK. Patch sent to Phillip
+ * important variables moved from linuxrc to liblinuxlive, all paths are now relative
+ * added 'cleanup' script for safe shutdown procedures (you must patch your distro
+   in order to call /mnt/live/cleanup at the end of your distro's shutdown scripts)
+
+
  5.4.7
 
  * finding livecd.sgn rewritten, now it doesn't search in subdirectories

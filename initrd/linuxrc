@@ -10,22 +10,16 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 ln -sf /proc/mounts /etc/mtab # this allows us to use umount -a
 
+# in some cases, we need USB modules soon
+if [ "`cmdline_parameter probeusb`" != "" ]; then
+   modprobe_usb_modules
+fi
+
 # setup DEBUGCMD variable. If debug boot option is present, call debug()
 # function several times during script's execution
 if [ "`cmdline_parameter debug`" ]; then DEBUGCMD="debug"; else DEBUGCMD=""; fi
 
 $DEBUGCMD
-
-# we have to set these variables very carefully
-UNION=/union
-MEMORY=/memory
-MOUNTDIR=mnt
-CHANGES=$MEMORY/changes
-COPY2RAM=$MEMORY/copy2ram
-IMAGES=$MEMORY/images
-INITRAMDISK=$MOUNTDIR/live
-ISOMOUNT=/$MOUNTDIR/iso
-LIVECDSGN=livecd.sgn
 
 # amount of RAM to store changes
 RAMSIZE="`cmdline_value ramsize`"
@@ -35,11 +29,6 @@ if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
 modprobe_essential_modules
 setup_dma
 echo -e "ext3\next2\nvfat\n*" >/etc/filesystems
-
-# in some cases, we need USB modules soon
-if [ "`cmdline_parameter probeusb`" != "" ]; then
-   modprobe_usb_modules
-fi
 
 mkdir -p $UNION
 mkdir -p $MEMORY
@@ -57,7 +46,7 @@ mount_device $CHANGESPATH $MEMORY # silently ignored if changespath is empty
 if [ $? -ne 0 ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY; fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
-echolog "setup union on $UNION"
+echolog "setup union directory"
 
 mkdir -p $CHANGES
 if [ 0$? -ne 0 ]; then
@@ -66,7 +55,7 @@ fi
 
 mkdir -p $IMAGES
 mount -t unionfs -o dirs=$CHANGES=rw unionfs $UNION
-if [ $? -ne 0 ]; then fatal "can't setup union in /union directory"; fi
+if [ $? -ne 0 ]; then fatal "can't setup union"; fi
 
 $DEBUGCMD
 
@@ -74,22 +63,24 @@ $DEBUGCMD
 # USB kernel modules and repeat the find procedure again
 echolog "looking for data modules"
 
-FROMISO="`cmdline_value fromiso`"
-FROMISO="`find_file $MOUNTDIR $FROMISO`"
+DATAFROM="`cmdline_value from`"
+DATAFROM="`find_file $MOUNTDIR $DATAFROM`"
 
-# when fromiso is used, search for livecd.sgn
-if [ "$FROMISO" ]; then
-   mount_device $FROMISO $ISOMOUNT
+# when from= is used, search for livecd.sgn
+if [ "$DATAFROM" ]; then
+   mount_device $DATAFROM $ISOMOUNT
    if [ 0$? -eq 0 -a -e "$ISOMOUNT/$LIVECDSGN" ]; then
-      echolog "found in $FROMISO"
+      echolog "found in $DATAFROM"
       DATA=$ISOMOUNT
    fi
 fi
 
 if [ "$DATA" = "" ]; then
-   # fromiso is not used or it didn't contain livecd.sgn
+   # from= is not used or it didn't contain livecd.sgn
    DATA="`find_file $MOUNTDIR $LIVECDSGN`"
-   DATA="`dirname \"$DATA\"`"
+   if [ "$DATA" != "" ]; then
+      DATA="`dirname \"$DATA\"`"
+   fi
 fi
 
 if [ "$DATA" = "" ]; then
@@ -100,7 +91,10 @@ if [ "$DATA" = "" ]; then
       echo -n "."
       create_block_devices >/dev/null
       DATA="`find_file $MOUNTDIR $LIVECDSGN`";
-      if [ "$DATA" != "" ]; then break; fi
+      if [ "$DATA" != "" ]; then
+         DATA="`dirname \"$DATA\"`"
+         break;
+      fi
       sleep $i;
    done
 fi
@@ -159,6 +153,7 @@ cp -a $DATA/rootcopy/* $UNION 2>/dev/null # may be empty
 $DEBUGCMD
 
 echolog "creating /etc/fstab"
+echo -ne > $UNION/etc/fstab
 fstab_update $UNION
 
 # More likely these directories aren't there.
@@ -175,22 +170,21 @@ $DEBUGCMD
 # Change root directory to it, and move initrd's root to /mnt/live/initramdisk
 # Finaly execute /sbin/init to start the distribution.
 echolog "changing root directory..."
-cd $UNION
-mkdir -p $INITRAMDISK
 
+cd $UNION
 umount /sys # we won't need it anymore
-if [ ! -e $UNION/dev/console ]; then mknod $UNION/dev/console c 5 1; fi
+mkdir -p $INITRAMDISK
+if [ ! -e dev/console ]; then mknod dev/console c 5 1; fi
 
 if [ -x $UNION/usr/sbin/chroot ];
   then CHROOT=/usr/sbin/chroot
   else CHROOT=/usr/bin/chroot
 fi
 
-header "linux live end"
+header "linux live end, starting the Linux distribution"
 pivot_root . $INITRAMDISK
 exec $CHROOT . sbin/init <dev/console >dev/console 2>&1
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
 echolog "Even Ctrl+Alt+Del won't help you in kernel panic."
-

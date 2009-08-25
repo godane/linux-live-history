@@ -13,7 +13,7 @@ Linux Live scripts Requirements         by Tomas M.   http://www.linux-live.org
 
   * all the following things must be compiled directly into kernel:
      (these options are usually compiled so you shouldn't have problems)
-     - ext2 (CONGIG_EXT2_FS=y)
+     - ext2 (CONFIG_EXT2_FS=y)
      - tmpfs (CONFIG_TMPFS=y)
      - ramdisk (CONFIG_BLK_DEV_RAM=y)
      - initrd (CONFIG_BLK_DEV_INITRD=y)

@@ -69,7 +69,7 @@ rm -Rf $INITRD_TREE
 mkdir $INITRD_TREE
 
 debug "creating directories"
-mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sbin,sys,tmp,var/log}
+mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
 
 debug "creating some essential devices in rootdisk"
 mknod $INITRD_TREE/dev/console c 5 1
@@ -89,14 +89,25 @@ done
 
 debug "copying files to the rootdisk"
 touch $INITRD_TREE/etc/{m,fs}tab
-cp {linuxrc,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
+cp {linuxrc,cleanup,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
 chmod a+x $INITRD_TREE/linuxrc
+chmod a+x $INITRD_TREE/cleanup
 
 cp -R rootfs/* $INITRD_TREE
 ln -s busybox $INITRD_TREE/bin/ash
 ln -s busybox $INITRD_TREE/bin/sh
 ln -s busybox $INITRD_TREE/bin/bash
 ln -s busybox $INITRD_TREE/bin/[
+ln -s busybox $INITRD_TREE/bin/mount
+ln -s busybox $INITRD_TREE/bin/umount
+ln -s busybox $INITRD_TREE/bin/poweroff
+ln -s busybox $INITRD_TREE/bin/halt
+ln -s busybox $INITRD_TREE/bin/reboot
+ln -s busybox $INITRD_TREE/bin/ld
+ln -s busybox $INITRD_TREE/bin/head
+ln -s busybox $INITRD_TREE/bin/cat
+ln -s busybox $INITRD_TREE/bin/grep
+ln -s busybox $INITRD_TREE/bin/sleep
 ln -s bin $INITRD_TREE/sbin
 
 LMK="lib/modules/$KERNEL"
@@ -126,7 +137,6 @@ rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
 rcopy_ex /$LMK/kernel/drivers/usb/host/ehci-hcd* $INITRD_TREE 2>>$DEBUG
 rcopy_ex /$LMK/kernel/drivers/usb/host/ohci-hcd* $INITRD_TREE 2>>$DEBUG
 rcopy_ex /$LMK/kernel/drivers/usb/host/uhci-hcd* $INITRD_TREE 2>>$DEBUG
-#rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
 
 #disk (scsi, ide, raid, pcmcia) modules
 #rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE

@@ -12,6 +12,17 @@
 # never remove it from fstab automatically (user added it)
 FSTABLLFLAG="# AutoUpdate"
 
+# We have to set these variables very carefully
+UNION=union
+MEMORY=memory
+MOUNTDIR=mnt
+CHANGES=$MEMORY/changes
+COPY2RAM=$MEMORY/copy2ram
+IMAGES=$MEMORY/images
+INITRAMDISK=$MOUNTDIR/live
+ISOMOUNT=$MOUNTDIR/iso
+LIVECDSGN=livecd.sgn
+
 # ===========================================================
 # user interface functions
 # ===========================================================
@@ -88,7 +99,7 @@ allow_only_root()
 egrep_o()
 {
    SED="`echo \"$1\" | sed -r 's/\\//\\\\\\//g'`"
-   cat | egrep "$1" | sed -r "s/.*($SED).*/\\1/"
+   cat | egrep "$1" | sed -r "s/.*$SED.*/\\1/" 2>/dev/null
 }
 
 # look into cmdline and echo $1 back if $1 is set
@@ -99,7 +110,7 @@ cmdline_parameter()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1(\$|=|[[:space:]]+)" | egrep_o "($1)"
+   cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1(\$|=|[[:space:]]+))" | egrep_o "($1)"
 }
 
 # look into cmdline and echo value of $1 option
@@ -110,7 +121,7 @@ cmdline_value()
 {
    CMDLINE=/proc/cmdline
    if [ "$2" != "" ]; then CMDLINE="$2"; fi
-   cat "$CMDLINE" | egrep_o "(^|[[:space:]]+)$1=([^[:space:]]+)" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
+   cat "$CMDLINE" | egrep_o "((^|[[:space:]]+)$1=([^[:space:]]+))" | egrep_o "(=.*)" | cut -b 2- | tail -n 1
 }
 
 # ===========================================================
@@ -176,6 +187,20 @@ mount_device()
   return $err
 }
 
+# Force unmount of all parameters
+# $1..$n = directories to be unmounted
+#
+fumount()
+{
+   while [ "$1" ]; do
+      umount "$1" >/dev/null 2>&1
+      if [ 0$? -ne 0 ]; then
+         umount -l "$1" >/dev/null 2>&1
+      fi
+      shift
+   done
+}
+
 # ===========================================================
 # live module functions
 # ===========================================================
@@ -232,14 +257,14 @@ union_insert_dir()
 #
 list_modules()
 {
-   LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
-   NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed 's/,|;/|/g'`"
-   find $1/base $1/modules $1/optional -name "*.mo" 2>/dev/null | while read LINE; do
+   LOAD="`cmdline_value load | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
+   NOLOAD="`cmdline_value noload | sed -r 's/\*/.\*/g' | sed -r 's/,|;/|/g'`"
+   find $1/base $1/modules $1/optional -name "*.mo" 2>/dev/null | sort | while read LINE; do
       MODNAME="`echo $LINE | cut -b ${#1}- | cut -b 2-`"
       if [ "`echo $LINE | grep /optional/`" ]; then
-         if [ ! "$LOAD" -o ! "`echo $MODNAME | egrep \"$LOAD\"`" ]; then continue; fi
+         if [ ! "$LOAD" -o ! "`echo $MODNAME | egrep -i \"$LOAD\"`" ]; then continue; fi
       fi
-      if [ "$NOLOAD" -a "`echo $MODNAME | egrep \"$NOLOAD\"`" ]; then continue; fi
+      if [ "$NOLOAD" -a "`echo $MODNAME | egrep -i \"$NOLOAD\"`" ]; then continue; fi
       echo $LINE
    done
 }
@@ -312,8 +337,7 @@ list_cdrom_devices()
 list_partition_devices()
 {
    if [ "`cmdline_parameter nohd`" != "" ]; then return 1; fi
-   cat /proc/partitions | grep -v loop | sed -r "s/^[0-9 ]+/\\/dev\\//" | grep /dev/
-#   blkid | grep -v swap | cut -d : -f 1 | grep -v loop
+   cat /proc/partitions | grep -v loop |grep -v major | grep -v "^\$" | sed -r "s/^[0-9 ]+/\\/dev\\//"
 }
 
 # List all disk devices
@@ -327,7 +351,7 @@ list_disk_devices()
 #
 list_swap_devices()
 {
-   if [ "`cmdline_parameter nohd`" != "" ]; then return 1; fi
+   if [ "`cmdline_parameter nohd`" != "" -o "`cmdline_parameter noswap`" != "" ]; then return 1; fi
    blkid -t TYPE="swap" | cut -d : -f 1
 }
 
@@ -489,13 +513,11 @@ fstab_update()
    fstab_update_line $FSTAB~ tmpfs / tmpfs defaults
    fstab_update_line $FSTAB~ devpts /dev/pts devpts gid=5,mode=620
    fstab_update_line $FSTAB~ proc /proc proc defaults
-
    list_cdrom_devices | while read DEVICE; do
       MOUNTDIR="/mnt/`basename $DEVICE`_cdrom"
       mkdir -p $1/$MOUNTDIR
       fstab_update_line $FSTAB~ $DEVICE $MOUNTDIR iso9660 noauto,users,exec
    done
-
    list_partition_devices | while read DEVICE; do
       unset REMOVABLE; unset OPT; DEV="`basename $DEVICE`"; DEV0="`echo $DEV | cut -b 1-3`"
       if [ "0`cat /sys/block/$DEV0/removable 2>/dev/null`" -ne 0 ]; then

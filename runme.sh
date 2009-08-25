@@ -54,13 +54,15 @@ rm initrd/$INITRDIMG.gz
 
 echo "creating compressed images..."
 
-for dir in bin etc home lib opt root usr sbin var; do
+for dir in $MKMOD; do
     if [ -d $ROOT/$dir ]; then
       echo "base/$dir.mo"
       create_module $ROOT/$dir $CDDATA/base/$dir.mo -keep-as-directory
       if [ $? -ne 0 ]; then exit; fi
     fi
 done
+
+
 
 echo "creating LiveCD ISO image..."
 cd $CDDATA
