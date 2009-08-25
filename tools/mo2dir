@@ -22,8 +22,12 @@ allow_only_root
 TMPDIR=/tmp/mo2dir$$
 
 mkdir -p $TMPDIR
-mount_module "$1" "$TMPDIR"
+mount_module "$1" "$TMPDIR" 2>/dev/null
+if [ $? -ne 0 ]; then
+   echo "Error mounting module. Please try to move it outside the union,"
+   echo "e.g. to harddisk partition or /mnt/live/memory ... then try $0 again"
+   exit
+fi
 cp -R --preserve=all $TMPDIR/* "$2"
 umount "$TMPDIR"
 rmdir "$TMPDIR"
-/sbin/ldconfig

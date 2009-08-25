@@ -172,6 +172,6 @@ debug "deleting directory $MOUNTDIR"
 rmdir $MOUNTDIR
 
 debug "deleting directory $INITRD_TREE"
-#rm -Rf $INITRD_TREE
+rm -Rf $INITRD_TREE
 
 debug "$INITRDIMG.gz created"

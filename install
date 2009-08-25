@@ -13,11 +13,11 @@ N="`basename $0`"
 if [ "$N" = "install" ]; then
    mkdir -p $ROOT/usr/sbin
    mkdir -p $ROOT/usr/lib
-   ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
-   ls -aA1b ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
+   ls -1 ./tools | egrep -v "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/sbin; done
+   ls -1 ./tools | egrep "^lib" | while read FILE; do cp ./tools/$FILE $ROOT/usr/lib; done
 else
-   ls -aA1b ./tools | egrep -v "^lib" | while read FILE; do rm -v $ROOT/usr/sbin/$FILE; done
-   ls -aA1b ./tools | egrep "^lib" | while read FILE; do rm -v $ROOT/usr/lib/$FILE; done
+   ls -1 ./tools | egrep -v "^lib" | while read FILE; do rm -v $ROOT/usr/sbin/$FILE; done
+   ls -1 ./tools | egrep "^lib" | while read FILE; do rm -v $ROOT/usr/lib/$FILE; done
 fi
 
 echo "Linux Live scripts were $N""ed successfuly in $1/"

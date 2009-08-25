@@ -1,3 +1,19 @@
+ 5.4.1
+
+ * uselivemod starts ldconfig only if ld.so.conf is found in the module
+ * copy2ram now copies /rootcopy/ dir too.
+ * fixed list_modules() function, so only modules from 
+   /base /modules and /optional are used during boot
+ * The changes= boot argument now stores all modules used with uselivemod
+   (only if the module has been moved to changes directory, for example by using
+    uselivemod /root/module.mo)
+ * mo2dir: added error message when trying to mount module from unioned fs.
+ * busybox compiled with mountpoint support
+ * If module already exists, don't add it to live filesystem anymore.
+   In the past, it was mounted to module.mo.x.x.x but now it just ignores it.
+   This allows us to never uselivemod any module with the same name like before.
+ 
+
  5.4.0
  
  * fixed some very important bug in unionfs (by Junjiro Okajima, sponsored by SLAX)

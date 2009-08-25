@@ -62,5 +62,9 @@ find $IMAGES/$MOD/etc/rc.d -type f 2>/dev/null | while read SCRIPT; do
    fi
 done
 
-# update ld cache
-/sbin/ldconfig
+# update ld cache if new ld.so.conf/cache exists in the module
+
+if [ -e "$IMAGES/$MOD/etc/ld.so.conf" -o -e "$IMAGES/$MOD/etc/ld.so.cache" ]; then
+   echo "Module contains ld.so.conf or ld.so.cache, updating lib cache..."
+   /sbin/ldconfig
+fi

@@ -201,7 +201,7 @@ union_insert_dir()
 list_modules()
 {
    LOAD="`cmdline_value load`"
-   ls -A1d $1/*.mo $1/*/*.mo 2>/dev/null | while read LINE; do
+   ls -A1d $1/base/*.mo $1/modules/*.mo $1/optional/*.mo 2>/dev/null | while read LINE; do
       MODNAME="`basename $LINE .mo`"
       if [ "$LOAD" != "*" -a "`echo $LINE | grep optional`" != "" -a "`echo $LOAD | egrep \"(^|,)$MODNAME(\\\$|,)\"`" = "" ]; then continue
         else echo $LINE; fi
@@ -216,7 +216,7 @@ list_modules()
 union_insert_module()
 {
    TARGET="$3/`basename $2`"
-   while [ -e $TARGET ]; do TARGET=$TARGET.X; done
+   if mountpoint $TARGET >/dev/null 2>&1; then continue; fi # skip mounted modules
    mkdir -p $TARGET
    mount_module $2 $TARGET
    if [ $? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
