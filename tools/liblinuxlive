@@ -127,7 +127,7 @@ make_links()
             if [ "`ls -aA \"$DESTFILE\" 2>/dev/null`" = "" ]; then
 	       mkdir -p "$DESTFILE"
 	       if [ "`ls -aA \"$SOURCEDIR/$FILE\" 2>/dev/null`" != ""  ]; then
-	          mount --rbind "$SOURCEDIR/$FILE" "$DESTFILE"
+	          mount -n --rbind "$SOURCEDIR/$FILE" "$DESTFILE"
 	       fi
             else
       	       make_writable "$DESTFILE" $3
@@ -189,14 +189,26 @@ cp2ram()
 # $1 = image to mount
 # $2 = where to create a tmpdir
 # $3 = storage textfile, append mountpoint path there
+# $4 = mount arguments, for example -n will disable writing to /etc/mtab
 #
 mount_img()
 {
    local MOUNTPOINT=`tempdir $1 $2`
-   mount -o loop,ro $1 $MOUNTPOINT
-   if [ $? != 0 ]; then echo "error mounting $1 to $MOUNTPOINT"; exit 1; fi
-   mount -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
-   if [ $? != 0 ]; then echo "error submounting $1"; exit 1; fi
+   mount $4 -o loop,ro $1 $MOUNTPOINT
+   if [ $? != 0 ]; then
+      echo "error mounting $1 to $MOUNTPOINT";
+      echo "Do you have enough free loop devices?";
+      exit 1;
+   fi
+
+   mount $4 -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
+   if [ $? != 0 ]; then
+      echo "error submounting $1";
+      echo "Do you have enough free loop devices?";
+      echo "Do you have transparent decompression for ISO filesystem compiled into kernel?";
+      exit 1;
+   fi
+   
    echo "$MOUNTPOINT" >>$3
 }
 

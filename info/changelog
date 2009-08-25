@@ -1,3 +1,22 @@
+ 4.0.6
+ 
+ * fixed moduse script, added calling of "manual" module script if exists
+ * liblinuxlive: added -n to mount calls
+ * third argument for dir2img is optional now, it defaults to "/"
+ * harddisk partitions are mounted with 022 umask, allowing users to read data
+
+
+ 4.0.5
+ 
+ * tar.gz packs are extracted before inserting modules, to allow modules
+   to contain /etc and /root settings too.
+ * fixed "eject" boot parameter:
+   /boot is mounted only if eject is not specified
+ * create_bootdisk.sh: fixed lilo (forced to trash old boot record)
+ * added memtest v 1.11 (it's finaly working now)
+ * fixed ide-scsi - added the missing kernel module
+
+
  4.0.4
 
  * modified F1 boot help text
@@ -110,4 +129,4 @@
 
  2.9.0.22
 
-   changelog for all older versions is lost :(
+   changelog for all older versions is lost

@@ -59,29 +59,23 @@ chmod 0755 $MOUNTDIR/bin/filesize
 LMK="lib/modules/$KERNEL"
 
 #necessary modules and dependency files
-mkdir -p $MOUNTDIR/$LMK
-mkdir -p $MOUNTDIR/$LMK/kernel/fs/ovlfs
-cp -R /$LMK/kernel/fs/ovlfs $MOUNTDIR/$LMK/kernel/fs
+rcopy /$LMK/kernel/fs/ovlfs $MOUNTDIR
 
 #copy filesystem modules, if not directly copied into kernel
-mkdir -p $MOUNTDIR/$LMK/kernel/fs/ntfs
-cp -R /$LMK/kernel/fs/ntfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
-mkdir -p $MOUNTDIR/$LMK/kernel/fs/ext3
-cp -R /$LMK/kernel/fs/ext3 $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
-mkdir -p $MOUNTDIR/$LMK/kernel/fs/reiserfs
-cp -R /$LMK/kernel/fs/reiserfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
+rcopy /$LMK/kernel/fs/ntfs $MOUNTDIR 2>/dev/null
+rcopy /$LMK/kernel/fs/ext3 $MOUNTDIR 2>/dev/null
+rcopy /$LMK/kernel/fs/reiserfs $MOUNTDIR 2>/dev/null
 
 #usb modules
-mkdir -p $MOUNTDIR/$LMK/kernel/drivers/usb
-cp -R /$LMK/kernel/drivers/usb/usbcore* $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
-cp -R /$LMK/kernel/drivers/usb/host $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
-cp -R /$LMK/kernel/drivers/usb/storage $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
+rcopy /$LMK/kernel/drivers/usb/usbcore.* $MOUNTDIR 2>/dev/null
+rcopy /$LMK/kernel/drivers/usb/host $MOUNTDIR 2>/dev/null
+rcopy /$LMK/kernel/drivers/usb/storage $MOUNTDIR 2>/dev/null
 
-#disk (ide, raid, pcmcia, pnp) modules
-mkdir -p $MOUNTDIR/$LMK/kernel/drivers/ide
-cp -R /$LMK/kernel/drivers/ide $MOUNTDIR/$LMK/kernel/drivers
-cp -R /$LMK/kernel/drivers/pcmcia $MOUNTDIR/$LMK/kernel/drivers
-cp -R /$LMK/kernel/drivers/pnp $MOUNTDIR/$LMK/kernel/drivers
+#disk (ide, raid, pcmcia, pnp, ide-scsi) modules
+rcopy /$LMK/kernel/drivers/ide $MOUNTDIR
+rcopy /$LMK/kernel/drivers/pcmcia $MOUNTDIR
+rcopy /$LMK/kernel/drivers/pnp $MOUNTDIR
+rcopy /$LMK/kernel/drivers/scsi/ide-scsi.* $MOUNTDIR
 
 chroot $MOUNTDIR depmod -a 2>/dev/null # some dependences may be missing
 

@@ -46,6 +46,7 @@ mkmod /lib
 mkmod /opt
 mkmod /usr
 mkmod /sbin
+#mkmod /home
 
 echo "copying kernel from $VMLINUZ..."
 cp $VMLINUZ $CDDATA/vmlinuz

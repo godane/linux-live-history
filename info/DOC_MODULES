@@ -1,0 +1,67 @@
+How to create own modules for your LiveCD
+-----------------------------------------
+
+To create a module for your LiveCD, create an empty
+directory somewhere, for example in /tmp/newmod.
+
+Then create the essential module content in this directory.
+Each module should contain these files:
+
+  ./preinsert     # /tmp/newmod/preinsert
+  ./postinsert    # /tmp/newmod/postinsert
+  ./manual        # /tmp/newmod/manual
+
+and it should contain these directories:
+
+  ./data          # /tmp/newmod/data/
+
+The directory ./data should contain the whole filesystem
+(all changed or new files and directories). Let's assume
+that ./data is the new root here, so if you wish to include
+/bin/bash in your module, place it in ./data/bin/bash
+(or in /tmp/newmod/data/bin/bash in this example).
+
+The content of ./data directory could be created from
+slackware's TGZ package by using "installpkg -root ./data packagename.tgz"
+(or by "installpkg -root /tmp/newmod/data/ packagename.tgz" in this example)
+
+Finaly, create the module by using
+dir2img /tmp/newmod/ /tmp/modulename.img
+The first argument is the module directory
+The second argument is the new name for your module
+
+
+Module insertion works this way
+-------------------------------
+
+At first, module is mounted in /mnt/livecd/modulename
+and preinsert file is started - only in the case it's
+marked as executable, so be sure to chmod it correctly
+(for example by using chmod a+x preinsert).
+
+Then, the whole filesystem from ./data is inserted in
+the Live filesystem. For example ./data/bin/bash will become
+/bin/bash, etc. This insertion is done by using symlinks
+(for new files) and by mount calls with "--rbind" option
+(for new directories).
+
+Finaly, postinsert file is started (if marked as executable)
+to perform some post-insertion operations.
+
+What is ./manual file for? Normally, the module is inserted
+at the boot phase, so all your modified or new rc-scripts
+are started by your distribution automatically. The problem
+is with including the module by using moduse script.
+./manual is executed only in the case if the module is included
+by moduse tool, so it should contain all commands neccessary
+to start appropriate rc-scripts automatically.
+
+
+Note
+----
+
+Please keep the number of your modules as small as possible.
+Each inserted module could consume alot of resources (several
+mount calls, several loop devices and lots of symlinks), so it's always
+better to include all files you wish in a single module.
+10 modules is OK, but 1000 modules is not ok.

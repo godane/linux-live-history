@@ -51,7 +51,7 @@ initrd = $MOUNTPOINT/$SUBDIR/initrd.gz
 read-write
 append=\" probeusb $APPEND livecd_subdir=$SUBDIR \" " >$TMPLILOCONF
 
-lilo -v -C $TMPLILOCONF
+lilo -v -C $TMPLILOCONF -S /dev/null
 
 umount $DATADIR 2>/dev/null >/dev/null
 if [ "$?" = "0" ]; then rmdir $DATADIR; fi

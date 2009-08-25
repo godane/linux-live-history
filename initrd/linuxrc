@@ -22,13 +22,13 @@ LINUXINIT=/tmp/init
 header "linuxrc-start"
 
 echo "creating root filesystem in /mnt"
-mount -t tmpfs -o size=90% tmpfs /mnt
+mount -t tmpfs -o "size=90%" tmpfs /mnt
 mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,var/run,var/lock}
 mkdir -p /mnt/mnt/{ramdisk,livecd}
 
 # touch to avoid "overmounting" by ovlfs, which could sometimes cause errors
 # with locking. For example /etc/mtab locking or /root/.Xauthority locking
-touch /mnt/{etc,root,tmp,var/run,var/lock}/.lock_enable
+touch /mnt/{etc,root,tmp,var/run,var/lock}/.disable_overmount
 
 mount -t proc proc /proc
 
@@ -120,7 +120,6 @@ if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
 fi
 
 echo "liveCD found in $LIVECD_PATH"
-mount --rbind $LIVECD_PATH /mnt/boot
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
 
 echo -n "copying selected modules to RAM... "
@@ -140,14 +139,21 @@ cmdline_value load | tr "," "\\n" | while read IMG; do
          echo "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
    done
 done
+echo
 
+echo -n "unpacking .tar.gz from the CD... "
+ls -aA1b $LIVECD_PATH/packs | while read PACK;
+do
+   echo -n "$PACK "
+   tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
+done
 echo
 
 echo -n "mounting all images... "
 cat $MNTORDER | while read IMG;
 do
    echo -n "`basename \" $IMG\"` "
-   mount_img $IMG $IMGRO $INSORDER
+   mount_img $IMG $IMGRO $INSORDER -n
 done
 echo
 
@@ -178,14 +184,6 @@ do
 done
 echo
 
-echo -n "unpacking .tar.gz from the CD... "
-ls -aA1b $LIVECD_PATH/packs | while read PACK;
-do
-   echo -n "$PACK "
-   tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
-done
-echo
-
 $DEBUG
 
 if [ ! "`cmdline_parameter eject`" = "" ]; then
@@ -194,6 +192,8 @@ if [ ! "`cmdline_parameter eject`" = "" ]; then
    if [ ! "$?" = 0 ]; then
       echo "error, cdrom cannot be unmounted or doesn't support ejecting"
    fi
+else
+   mount --rbind $LIVECD_PATH /mnt/boot
 fi
 
 echo "exporting LIVECD variables to profile.d..."
@@ -217,7 +217,7 @@ cat $MOUNTS | while read DEVICE; do
    umount "$DEVICE" 1>/dev/null 2>/dev/null
    if [ "$?" = 0 ]; then
       LINERO=${LINE/ \/mnt/ }
-      LINEDEF=${LINERO/ ro / defaults }
+      LINEDEF=${LINERO/ ro / defaults,umask=022 }
       echo $LINEDEF >>/mnt/etc/fstab
    fi
 done
