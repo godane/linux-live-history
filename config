@@ -14,5 +14,5 @@ MOUNTDIR=/tmp/live_tmp_mountdir_$$
 
 # the size of RAMdisk (in KBytes)
 # if you change this, then you will need to change the size 
-# also in files: bootfiles/isolinux.cfg and tools/DOS/linux.bat
+# also in files: bootfiles/isolinux.cfg and tools/DOS/slax
 RAM0SIZE=7777

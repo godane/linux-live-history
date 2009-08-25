@@ -4,7 +4,7 @@ Enter to skip this boot prompt.
 
 linux nohotplug ...... to disable probing for usb and other hotplugable HW
 linux debug=bash ..... to start Linux shell several times during the boot
-linux copy2ram=all ... to copy all files to RAM (only if you have enough!)
+linux copy2ram ....... to copy all files to RAM (only if you have enough!)
 linux eject .......... to force cdrom ejecting (use only with copy2ram=all)
 linux nolock ......... to disable CD locking (dangerous, use with caution)
 linux probeusb ....... to autoprobe USB modules (eg. to enable USB flashdisk)

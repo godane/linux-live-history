@@ -247,7 +247,7 @@ mount_all_cds()
    if [ ! -d "$CDIR" ]; then return 0; fi
    ls -aAb1 "$CDIR" | while read FILE ; # list all files in directory
    do
-      CDDEV="$CDIR/`readlink $CDIR/$FILE`"
+      CDDEV="`readlink -f $CDIR/$FILE`"
       mount_device "$CDDEV" "$1/$FILE" ro
       echo "$CDDEV"
    done

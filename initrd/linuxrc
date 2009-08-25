@@ -101,7 +101,7 @@ for DIR in /mnt/mnt/*
 do
   if [ -r "$DIR/$LIVECD_SUBDIR/livecd.flag" ]; then
      export LIVECD_MOUNT="$DIR"
-     export LIVECD_PATH=`dirname "$DIR/$LIVECD_SUBDIR/x"`
+     export LIVECD_PATH="`dirname \"$DIR/$LIVECD_SUBDIR/x\"`"
      break
   fi
 done
@@ -191,6 +191,15 @@ if [ ! "`cmdline_parameter eject`" = "" ]; then
       echo "error, cdrom cannot be unmounted or doesn't support ejecting"
    fi
 fi
+
+echo "exporting LIVECD variables to profile.d..."
+
+echo "export LIVECD_SUBDIR="${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.sh
+chmod 755 /mnt/etc/profile.d/slax.sh
+echo "setenv LIVECD_SUBDIR "${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.csh
+chmod 755 /mnt/etc/profile.d/slax.csh
 
 echo "creating fstab..."
 

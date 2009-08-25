@@ -1,3 +1,11 @@
+ 4.0.3
+
+  * linuxrc creates /etc/profile.d/slax.(csh,sh) to export $LIVECD_SUBDIR and $LIVECD_MOUNT
+    environment variables
+  * added Smart Boot Manager floppy image to FLOPPY/ directory (in bootfiles/)
+  * initrd doesn't include SCSI kernel modules any more, seems like it didn't work
+
+
  4.0.2
  
   * scripts from /tools look for liblinuxlive functions in two directories now, ./ and /usr/lib

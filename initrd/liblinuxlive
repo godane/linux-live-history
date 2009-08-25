@@ -1,4 +1,4 @@
-../tools/liblinuxliveesystem"
+../tools/liblinuxlive filesystem"
 
 echo "Starting ovlfs support (by Arthur Naseef)"
 modprobe_module ovl
@@ -40,6 +40,15 @@ if [ ! "`cmdline_parameter eject`" = "" ]; then
       echo "error, cdrom cannot be unmounted or doesn't support ejecting"
    fi
 fi
+
+echo "exporting LIVECD variables to profile.d..."
+
+echo "export LIVECD_SUBDIR="${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.sh
+echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.sh
+chmod 755 /mnt/etc/profile.d/slax.sh
+echo "setenv LIVECD_SUBDIR "${LIVECD_SUBDIR:4} >/mnt/etc/profile.d/slax.csh
+echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >>/mnt/etc/profile.d/slax.csh
+chmod 755 /mnt/etc/profile.d/slax.csh
 
 echo "creating fstab..."
 
@@ -101,21 +110,7 @@ echo "You are not supposed to be here, something went wrong!"
 echo "calling /mnt/usr/bin/chroot failed?"
 echo "Press Ctrl+Alt+Del for reboot."
 while [ 1 = 1 ]; do bash; done
- is our CD in
-for DIR in /mnt/mnt/*
-do
-  if [ -r "$DIR/$LIVECD_SUBDIR/livecd.flag" ]; then
-     export LIVECD_MOUNT="$DIR"
-     export LIVECD_PATH=`dirname "$DIR/$LIVECD_SUBDIR/x"`
-     break
-  fi
-done
-
-# if none, run bash
-if [ "${#LIVECD_PATH}" -lt 8 ]; then # there should be at least "/mnt/mnt"
-  header "ERROR!"
-  echo "cannot find your compressed IMG files! Maybe you are trying to start the"
-  echo "LiveCD from unsupported CDROM drive (scsi?)"
+ed CDROM drive (scsi?)"
   echo "Or you entered wrong livecd_subdir= parameter?"
   echo "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
@@ -133,5 +128,5 @@ ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
 done
 
 # modules
-ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMGN­‰·
-   echoÖ›‰·p2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAA
+ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while readN­‰·; do
+   Ö›‰· "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CA

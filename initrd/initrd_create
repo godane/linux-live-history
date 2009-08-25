@@ -28,11 +28,13 @@ mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,sbin,lib,tmp,usr/bin,usr/sbin}
 
 echo "copying files to the rootdisk..."
 touch $MOUNTDIR/etc/{m,fs}tab
+cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
+chmod a+x $MOUNTDIR/linuxrc
 
 # find all lib dependences
 for BINARY in cp chmod touch tar gzip gunzip rm bash sh mount umount \
               mkdir rmdir ls ln echo cat grep egrep fdisk blockdev \
-	      pivot_root insmod lsmod modprobe swapon eject tail tr \
+	      pivot_root insmod lsmod modprobe depmod swapon eject tail tr \
 	      chroot readlink basename dirname test sleep [ ;
 do
    for LOCATION in /bin /sbin /usr/bin /usr/sbin ;
@@ -62,12 +64,6 @@ cp -R /$LMK/modules* $MOUNTDIR/$LMK
 mkdir -p $MOUNTDIR/$LMK/kernel/fs/ovlfs
 cp -R /$LMK/kernel/fs/ovlfs $MOUNTDIR/$LMK/kernel/fs
 
-#disk (ide, scsi) modules
-mkdir -p $MOUNTDIR/$LMK/kernel/drivers/ide
-cp -R /$LMK/kernel/drivers/ide $MOUNTDIR/$LMK/kernel/drivers
-mkdir -p $MOUNTDIR/$LMK/kernel/drivers/scsi
-cp -R /$LMK/kernel/drivers/scsi $MOUNTDIR/$LMK/kernel/drivers
-
 #copy filesystem modules, if not directly copied into kernel
 mkdir -p $MOUNTDIR/$LMK/kernel/fs/ntfs
 cp -R /$LMK/kernel/fs/ntfs $MOUNTDIR/$LMK/kernel/fs 2>/dev/null
@@ -82,8 +78,11 @@ cp -R /$LMK/kernel/drivers/usb/usbcore* $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev
 cp -R /$LMK/kernel/drivers/usb/host $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
 cp -R /$LMK/kernel/drivers/usb/storage $MOUNTDIR/$LMK/kernel/drivers/usb 2>/dev/null
 
-cp {linuxrc,liblinuxlive} $MOUNTDIR # symlink will be copied as original file
-chmod a+x $MOUNTDIR/linuxrc
+#disk (ide, scsi) modules
+mkdir -p $MOUNTDIR/$LMK/kernel/drivers/ide
+cp -R /$LMK/kernel/drivers/ide $MOUNTDIR/$LMK/kernel/drivers
+
+chroot $MOUNTDIR depmod -a
 
 echo "unmounting $MOUNTDIR and gzipping initrd.img..."
 umount $MOUNTDIR
