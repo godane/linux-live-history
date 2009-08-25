@@ -1,0 +1,4 @@
+#!/bin/ash
+. /liblinuxlive
+modprobe_module $@
+exit $?

@@ -1,5 +1,4 @@
 #!/bin/bash
-#
 # initrd_create:  make initrd rootdisk by using busybox
 #
 # Author:	  Tomas M. <http://www.linux-live.org>
@@ -63,7 +62,7 @@ rm -Rf $INITRD_TREE
 mkdir $INITRD_TREE
 
 debug "creating directories"
-mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sys,tmp,var/log}
+mkdir -p $INITRD_TREE/{etc,dev,bin,mnt,proc,lib,sbin,sys,tmp,var/log}
 
 debug "creating some essential devices in rootdisk"
 mknod $INITRD_TREE/dev/console c 5 1
@@ -84,6 +83,7 @@ touch $INITRD_TREE/etc/{m,fs}tab
 cp {linuxrc,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
 chmod a+x $INITRD_TREE/linuxrc
 
+cp static-binaries/modprobe $INITRD_TREE/sbin
 cp static-binaries/busybox $INITRD_TREE/bin
 cp static-binaries/unionctl $INITRD_TREE/bin # symlink will be copied as original file
 ln -s busybox $INITRD_TREE/bin/ash
@@ -102,17 +102,24 @@ rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>/dev/null
 
 rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/fat $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/vfat $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/ntfs $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/ext3 $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/fs/reiserfs $INITRD_TREE 2>/dev/null
 
+# add language support for filesystems
+rcopy_ex /$LMK/kernel/fs/nls/ $INITRD_TREE 2>/dev/null
+
 #usb modules
-rcopy_ex /$LMK/kernel/drivers/usb/host $INITRD_TREE 2>/dev/null
 rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/host/ehci-hcd* $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/host/ohci-hcd* $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/host/uhci-hcd* $INITRD_TREE 2>/dev/null
+#rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>/dev/null
 
 #disk (scsi, ide, raid, pcmcia) modules
-rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE
+#rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE
 #rcopy_ex /$LMK/kernel/drivers/ide $INITRD_TREE
 #rcopy_ex /$LMK/kernel/drivers/pcmcia $INITRD_TREE
 

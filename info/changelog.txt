@@ -1,3 +1,34 @@
+
+ 5.0.14
+
+ * I don't like 5.0.13
+ * Autoeject is set to 0 in /proc/.... at the end of copy2ram feature
+ * added changes=/dev/device boot parameter. This device will be mounted
+   to /memory/changes instead of tmpfs so changes can be stored on the disk!
+   (or, for example, on removable USB media)
+ * fixed USB mass storage driver? Remove ub driver from kernel, it's slow! :(
+ * removed scsi modules from initrd
+ * added mkisofs.exe and written create_bootiso.cmd script for Windows!
+ * rootcopy content is now copied with cp -a instead of cp -R
+
+
+ 5.0.12
+ 
+ * added NLS (native language support) kernel modules to initrd, allowing 
+   us to autodetect and automount FAT filesystems too
+ * usb modules are probed too, so USB storage devices are added to fstab
+ * added /sbin/modprobe script to initrd so Kernel can modprobe automatically
+   (I found it's useless because actually kernel doesn't use it. But I will leave it there) 
+
+
+ 5.0.11
+
+ * added rootcopy directory to Live CD, it's content is copied directly to /
+ * added missing vfat support
+ * copy2ram copies the whole CD to RAM now
+ * added new isolinux.bin
+
+
  5.0.10
  
  * added unionfs version which has many important bugs fixed

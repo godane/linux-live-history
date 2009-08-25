@@ -29,15 +29,16 @@ cd initrd
 if [ "$?" -ne 0 ]; then exit; fi
 cd ..
 
+mkdir -p $CDDATA/devel
 mkdir -p $CDDATA/base
 mkdir -p $CDDATA/modules
 mkdir -p $CDDATA/optional
-mkdir -p $CDDATA/devel
+mkdir -p $CDDATA/rootcopy
 
-echo "copying boot files to $CDDATA..."
+echo "copying cd-root to $CDDATA..."
 cp initrd/$INITRDIMG.gz $CDDATA/initrd.gz
 rm initrd/$INITRDIMG.gz
-cp -R bootfiles/* $CDDATA
+cp -R cd-root/* $CDDATA
 cp -R {info,tools} $CDDATA
 
 echo "creating compressed images..."

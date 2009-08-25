@@ -31,25 +31,34 @@ setup_dma
 $DEBUGCMD
 
 # $UNION will be used as a root directory, livecd modules will be added soon.
-# Create temp filesystem and setup union on the top.
 echolog "setup union on $UNION"
 mkdir -p $UNION
 mkdir -p $MEMORY
-mount -t tmpfs -o "size=80%" tmpfs $MEMORY
+
+CHANGESDEV="`cmdline_value changes`"
+if [ "$CHANGESDEV" != "" ]; then
+   echo "mounting $CHANGESDEV to $MEMORY"
+   mount_device $CHANGESDEV $MEMORY
+else false; fi
+
+# mount tmpfs only in the case when changes= boot parameter was empty
+# or we were not able to mount the storage device
+if [ $? -ne 0 ]; then mount -t tmpfs -o "size=80%" tmpfs $MEMORY; fi
+
 mkdir -p $CHANGES
 mkdir -p $COPY2RAM
 mkdir -p $IMAGES
-mount -t unionfs -o dirs=$CHANGES unionfs $UNION
+mount -t unionfs -o dirs=$CHANGES=rw unionfs $UNION
+if [ $? -ne 0 ]; then fatal "can't setup union in /union directory"; fi
 
 $DEBUGCMD
 
 # try to find livecd data directory. If not found, try modprobing
-# USB or SCSI kernel modules and repead the find procedure again
+# USB kernel modules and repeat the find procedure again
 echolog "looking for data modules"
-if [ "$DATA" = "" ]; then DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found"; fi
+DATA="`find_live_data_dir $MOUNTDIR`";
+if [ "$DATA" = "" ]; then modprobe_usb_modules; DATA="`find_live_data_dir $MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found. Are you using SCSI?"; fi
 echolog "found in $DATA"
 
 $DEBUGCMD
@@ -59,11 +68,12 @@ $DEBUGCMD
 # Finaly modify DATA variable so it will point to correct directory
 if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
    echolog "copying modules to RAM, this may take some time"
-   copy_modules $DATA $COPY2RAM
-   setup_cd_autoeject
+   copy_to_ram $DATA $COPY2RAM
+   cd_autoeject 1
    umount $DATA 2>/dev/null
    if [ $? -ne 0 ]; then umount `dirname $DATA` 2>/dev/null; fi
    DATA=$COPY2RAM
+   cd_autoeject 0
 fi
 
 mkdir -p $UNION/boot
@@ -75,6 +85,15 @@ $DEBUGCMD
 # to be mounted and inserted into live filesystem. Do it now.
 echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
+
+$DEBUGCMD
+
+echo "copying rootchanges"
+copy_rootchanges $DATA $UNION
+
+$DEBUGCMD
+
+echo "creating /etc/fstab"
 activate_fstab $UNION
 
 # More likely these directories aren't there.

@@ -41,9 +41,10 @@ header()
 fatal()
 {
    header "Fatal error occured - $1"
-   echolog "Something went wrong and we can't continue booting."
+   echolog "Something went wrong and we can't continue booting :("
    echolog "You may explore the system by using simple commands like ls, lsmod, mount, etc."
-   echolog "Finaly hit Ctrl+Alt+Delete to reboot."
+   echolog "You may also try to hit Ctrl+D. Booting will continue. Use at your own risk."
+   echolog "To be safe, hit Ctrl+Alt+Delete to reboot."
    echolog
    ash
 }
@@ -94,6 +95,7 @@ cmdline_value()
 #
 modprobe_module()
 {
+  if [ "$1" = "" ]; then return 1; fi
   PRINTK=`cat /proc/sys/kernel/printk`
   echo "0" >/proc/sys/kernel/printk
 
@@ -107,7 +109,7 @@ modprobe_module()
         gunzip -c $MODULE 2>/dev/null >$TMPMOD
         if [ "$?" -ne 0 ]; then cp $MODULE $TMPMOD; fi # can't gunzip? copy
         insmod $TMPMOD $2 >/dev/null 2>/dev/null; err=$?
-        if [ "$err" -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi
+        if [ "$err" -eq 0 ]; then echo $TMPMOD >>$LSMOD; fi # module log
         rm $TMPMOD
      fi
   done
@@ -199,7 +201,8 @@ union_insert_module()
    while [ -e $TARGET ]; do TARGET=$TARGET.X; done
    mkdir -p $TARGET
    mount_module $2 $TARGET
-   union_insert_dir $1 $TARGET
+   if [ $? -ne 0 ]; then echo "can't read module data"; return 1; fi
+   union_insert_dir $1 $TARGET; 
 }
 
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
@@ -210,6 +213,7 @@ union_insert_module()
 union_insert_modules()
 {
    list_modules $2 | while read MODULE; do
+      echo " -> `basename $MODULE`"
       union_insert_module $1 $MODULE $3
    done
 }
@@ -218,15 +222,19 @@ union_insert_modules()
 # $1 = data directory
 # $2 = target directory in RAM
 #
-copy_modules()
+copy_to_ram()
 {
-   list_modules $1 | while read MODULE; do
-      RELATIVE=${MODULE#$1}
-      DIR="`dirname $RELATIVE`"
-      mkdir -p $2/$DIR
-      cp $MODULE $2/$RELATIVE
-      if [ "$?" -ne 0 ]; then fatal "not enough memory to copy modules to RAM"; fi
-   done
+   cp -R $1/* $2
+   if [ "$?" -ne 0 ]; then fatal "can't copy to RAM, not enough memory?"; fi
+}
+
+# Copy content of "rootcopy" directory on the CD to $2 (union, usually)
+# $1 = source
+# $2 = destination
+#
+copy_rootchanges()
+{
+   cp -a $1/rootcopy/* $2 2>/dev/null # could be empty
 }
 
 # ===========================================================
@@ -277,11 +285,11 @@ list_block_devices()
 find_live_data_dir()
 {
    list_block_devices | while read DEVICE; do
-      DIR=$1/"`basename $DEVICE`"
-      mount_device $DEVICE $DIR;
+      DIR="/$1/`basename $DEVICE`"
+      mount_device $DEVICE $DIR
       if [ $? -ne 0 ]; then continue; fi
       FOUND=`ls -A1d $DIR/livecd.sgn $DIR/*/livecd.sgn 2>/dev/null | head -n 1`
-      if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null;
+      if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null
       else dirname "$FOUND"; return 1; fi
    done
 }
@@ -316,6 +324,13 @@ modprobe_essential_modules()
    modprobe_module squashfs
    echolog "starting unionfs support"
    modprobe_module unionfs
+   echolog "starting vfat support"
+   modprobe_module nls_cp437
+   modprobe_module nls_iso8859-1
+   modprobe_module nls_iso8859-2
+   modprobe_module vfat
+   echolog "starting ntfs support"
+   modprobe_module ntfs
    create_block_devices
 }
 
@@ -323,33 +338,22 @@ modprobe_essential_modules()
 #
 modprobe_usb_modules()
 {
-   echolog "starting USB support, this may take a while"
-   modprobe_module usb-storage
+   echolog "starting USB support"
    modprobe_module ehci-hcd
    modprobe_module ohci-hcd
    modprobe_module uhci-hcd
+   modprobe_module usb-storage
+   echolog "waiting for USB devices, max 9 seconds"
+   sleep 9
    create_block_devices
 }
 
-# modprobe kernel modules needed for SCSI disks
+# enable/disable CD autoejecting when unmounted
+# $1 = 1|0 ... enable|disable
 #
-modprobe_scsi_modules()
+cd_autoeject()
 {
-   echolog "starting SCSI support, this may take a while"
-   ls /lib/modules/`uname -r`/kernel/drivers/scsi | cut -d . -f 1 | while read MODULE; do
-      if [ "$MODULE" != "sg" -a "$MODULE" != "scsi_debug" ]; then
-         echolog "modprobe $MODULE..."
-	 modprobe_module $MODULE
-      fi
-   done
-   create_block_devices
-}
-
-# Enable CD autoejecting when unmounted
-#
-setup_cd_autoeject()
-{
-   echo 1 >/proc/sys/dev/cdrom/autoeject
+   echo $1 >/proc/sys/dev/cdrom/autoeject
 }
 
 # Disable DMA if nodma boot parameter is present
@@ -377,9 +381,9 @@ activate_fstab()
    echo "proc             /proc            proc        defaults         0   0" >>$FSTAB
 
    list_cdrom_devices | while read DEVICE; do
-      MOUNTDIR="/mnt/`basename $DEVICE`"
-      mkdir -p $MOUNTDIR
-      echo "$DEVICE $MOUNTDIR auto defaults,users 0 0" >>$FSTAB
+      MOUNTDIR="/mnt/cdrom_`basename $DEVICE`"
+      mkdir -p $1/$MOUNTDIR
+      echo "$DEVICE $MOUNTDIR iso9660 noauto,users 0 0" >>$FSTAB
    done
 
    list_partition_devices | while read DEVICE; do
@@ -387,7 +391,7 @@ activate_fstab()
       mount_device $DEVICE $1/$MOUNTDIR
       umount $1/$MOUNTDIR 2>/dev/null
       if [ $? -eq 0 ]; then # add to fstab only if mount+umount is OK
-         echo "$DEVICE $MOUNTDIR auto defaults,users 0 0" >>$FSTAB
+         echo "$DEVICE $MOUNTDIR auto auto,users,suid,dev,exec 0 0" >>$FSTAB
       else # remove empty directory
          rmdir $1/$MOUNTDIR 2>/dev/null
       fi

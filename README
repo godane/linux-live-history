@@ -11,8 +11,8 @@
 
  Some documentation:
 
-   cat ./info/changelog
-   cat ./info/requirements
+   cat ./info/changelog.txt
+   cat ./info/requirements.txt
    vi ./config
 
  Author:
