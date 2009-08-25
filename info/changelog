@@ -1,3 +1,8 @@
+ 4.1.0
+ 
+ * added documentation DOC_MODULES
+
+
  4.0.7
  
  * fixed moduse script, added calling of "manual" module script if exists
