@@ -1,0 +1,194 @@
+<!doctype HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="Content-Language" content="en">
+<title>Unionfs in examples</title>
+<style>
+<!--
+body {
+background-color: #E5E5E5;
+scrollbar-face-color: #DEE3E7;
+scrollbar-highlight-color: #FFFFFF;
+scrollbar-shadow-color: #DEE3E7;
+scrollbar-3dlight-color: #D1D7DC;
+scrollbar-arrow-color:  #006699;
+scrollbar-track-color: #EFEFEF;
+scrollbar-darkshadow-color: #98AAB1;
+}
+td, body, p, input, textarea, select { font-family: Verdana,sans,sans-serif,Helvetica; font-size: 11px }
+h1 { font-size: 20px }
+h2 { font-size: 16px }
+pre { border: 1px solid #E5E5E5; background-color: #EFEFEF }
+p { text-align: justify }
+a { text-decoration: underline; }
+a:hover { text-decoration: none; }
+strong { color: #6F6FBF; }
+input, textarea, select { border: 1px solid #858585; }
+textarea { overflow: auto; }
+-->
+</style>
+</head>
+
+<body bgColor="#e6e6e6" leftMargin="0" background="#e6e6e6" topMargin="10" marginheight="10" marginwidth="0"
+link="#0000FF" vlink="#0000FF">
+<a name="top"></a>
+
+<div align=center><center>
+<table border=0 width=800 bgcolor="#e2e2e2" cellpadding=0 cellspacing=1>
+<tr bgcolor="#FFFFFF"><td>
+  <table border=0 width=798 bgcolor="#dddddd" cellpadding=0 cellspacing=1>
+  <tr bgcolor="#FFFFFF"><td>
+    <table border=0 width=796 bgcolor="#858585" cellpadding=20 cellspacing=1>
+    <tr bgcolor="#1f764c"><td>
+    <h1 align=left><font color=white>Unionfs: A Stackable Unification File System</font></td></h1></tr>
+    <tr bgcolor="#FFFFFF"><td>
+
+<h2>Definitions</h2>
+
+<p><a href=http://unionfs.filesystems.org>Unionfs</a>, developed at Stony Brook university in 2004, is a stackable unification file system, which can merge the contents of several directories (so called branches) while 
+keeping their physical content separate. It allows any mix of read-only and read-write branches, as well as insertion and deletion of branches on the fly. Unionfs can be used in 
+several ways, for example to unify home directories from multiple filesystems on different disk partitions, or to merge several CDs to create a unified view of a photo archive. In 
+a similar view, Unionfs, with copy-on-write functionality, can be used to merge read-only and read-write filesystems together and to virtually allow modification of read-only 
+filesystems saving changes to the writable ones.</p>
+<p><a href=http://slax.linux-live.org/>SLAX</a>, developed by Tomas Matejicek, is a 180 MB Linux Live distribution which aims at compacting full featured Linux operating system to a portable medium (like mini-CD) and allows everyone to 
+boot Linux on any machine without the need to install it. It works even on computers with no harddisk at all. Unionfs is the most important part 
+of a SLAX, it allows SLAX to seem and act as a real Linux OS with full-writable root directory tree. So let's speak about unionfs first.</p>
+
+<h2>Getting started</h2>
+<p>To get unionfs working, you need to create a Linux kernel module by compiling its source codes. Unionfs is available as a module extension for Linux Kernel 2.4.20 / 2.6.9 and 
+higher. Download the latest version from FTP and extract the content of the archive by using</p>
+<pre>$ tar -xzf unionfs-x-y-z.tar.gz</pre>
+<p>Then cd to its directory and read README and INSTALL files which are part of the archive. There are many instructions how to avoid problems. Before the compilation itself, you 
+might find it useful to know that it's possible to disable compiling debug information together with the module. Debug info is useful for reporting bugs, but significantly 
+increases the size of kernel module. 
+Two steps are required to disable debug at all:</p>
+<ul>
+	<li>edit Makefile, and empty the variable UNIONFS_DEBUG_CFLAG (remove &quot;-g&quot; from the end of line)</li>
+	<li>create a file called fistdev.mk in the directory with sources, and add this text to it: <br>
+
+	EXTRACFLAGS=-DNODEBUG</li>
+</ul>
+<p>The compiled kernel module will be about 200 KB big without debug info, compared to 5 MB with it.</p>
+<p>Another important thing is to download and extract sources for your running kernel (compilation won't work without them) and then modify LINUXSRC variable in Makefile, adding 
+path where you actually extracted it (this can be autodetected in some cases).</p>
+<p>Finally, use the following commands to build and install unionfs module into /lib/modules/$(KernelVersion)/kernel/fs/unionfs:</p>
+<pre>$ make
+$ make install
+$ depmod -a</pre>
+<h2>Using unionfs</h2>
+<p>In the following example, we will merge contents of two directories into a single directory /mnt/union. We assume that all directories already exist.</p>
+<pre>$ modprobe unionfs
+$ mount -t unionfs -o dirs=/mnt/cdrom1=ro:/mnt/cdrom2=ro unionfs /mnt/union</pre>
+
+<p>From now, the directory /mnt/union will contain all files and directories from /mnt/cdrom1 and /mnt/cdrom2, merged together and both read only. If the same filename is used in 
+both cdrom directories, the one from cdrom1 has precedence (because it was specified leftmost in the list).</p>
+<h2>Using unionctl</h2>
+<p>Unionctl is a tool which is created (together with uniondbg) during unionfs compilation and is installed to /usr/local/sbin. Unionctl is intended to manage the existing union, to list, add, modify or delete existing branches. 
+Some simple example follows, use unionctl command without any argument to see all available options.</p>
+<p>To list branches in existing union, use</p>
+<pre>$ unionctl /mnt/union --list</pre>
+<p>which will produce the following output</p>
+<pre>     /mnt/cdrom1 (r-)
+     /mnt/cdrom2 (r-)</pre>
+<p>To add another directory (/mnt/cdrom3) into existing union, use</p>
+
+<pre>$ unionctl /mnt/union --add --after /mnt/cdrom2 --mode ro /mnt/cdrom3</pre>
+<p>and unionctl --list will now produce</p>
+<pre>     /mnt/cdrom1 (r-)
+     /mnt/cdrom2 (r-)
+     /mnt/cdrom3 (r-)</pre>
+<p>In the case when you change the content of branches themselves, execute the following command to force revalidation of the union:</p>
+<pre>uniondbf -g /mnt/union</pre>
+<h2>Writing to union</h2>
+<p>Merging read-only directories is useful in many cases, but the union itself remains read-only too, until a read-write branch is added to it. In 
+that case, all changes are stored in leftmost branch (using copy-up method, see below) and file deletions are done by using one of the three methods available:</p>
+<ul>
+	<li>
+
+	<p>WHITEOUT mode, inserts a .wh (whiteout) file to mask out a real file</li>
+	<li>
+	<p>DELETE_ALL mode, tries to delete all instances of a file from all branches</li>
+	<li>
+	<p>DELETE_FIRST, only deletes the first instance (possibly exposing instances below)</li>
+</ul>
+<p>WHITEOUT mode is used as default. Copy-up is a special method used to handle file modifications in union. A file from ro branch can't be modified, so it is copied to upper (left) 
+read-write branch at the time when the modification should begin. Then the modification is possible and modified file remains in rw branch.<br>
+<br>
+
+To add a rw branch at the top of union in our example, type</p>
+<pre>$ unionctl /mnt/union --add --before /mnt/cdrom1 --mode rw /mnt/changes</pre>
+<p>All the changes will be stored in /mnt/changes and the union will look like this:</p>
+<pre>   /mnt/changes (rw)
+   /mnt/cdrom1 (r-)
+   /mnt/cdrom2 (r-)
+   /mnt/cdrom3 (r-)</pre>
+<h2>Practical unionfs application - SLAX</h2>
+<p>Data stored on a read-only medium like CD-ROM can't be modified. A Live CD Linux distribution, which is offering full write support to all directories, needs to use special 
+techniques to allow virtual modifications and to save all changes in memory. SLAX is using these techniques for very long time, starting at the end of 2003 with ovlfs and 
+implementing unionfs at the end of 2004. SLAX 5, released in April 2005, can give you an impression of what miracles could be, thanks to unionfs, created.</p>
+<h2>SLAX internals</h2>
+<p>You need three essential things to boot Linux: Kernel image (which represents the operating system itself), partition or image with root filesystem (which contains initial 
+program) and some Linux loader (which reads Kernel into memory and executes it). SLAX CD is booting by using isolinux.bin loader, it contains driver for filesystem on the CD and 
+thus is able to read Linux Kernel (file vmlinuz) and root filesystem image (file initrd.gz) from CD to the memory.</p>
+
+<p>When loaded in memory and executed, Linux kernel creates a virtual disk (called Initial ramdisk) in computer's RAM, extracts initrd.gz to it and mounts it as a root filesystem. 
+Initial ramdisk used in SLAX is only 4.4 MB big and contains only basic software and drivers needed to handle SLAX startup. The most difficult part follows, so read carefully.</p>
+<p>File /linuxrc (found in ramdisk) is executed by Linux Kernel as an initial program. Linuxrc's job is pretty tricky.&nbsp; It creates an empty union in /union directory, it 
+mounts tmpfs to /memory directory, and then it locates SLAX CD by mounting all CDs and disks and by searching for a file livecd.sgn. You may be surprised, but the cdrom is mounted 
+in /union/mnt/! After that, all necessary images (*.mo) from 
+SLAX CD are mounted to directories /memory/images/*.mo and all these mountpoints are, by using unionctl, added to union as an individual read-only branches. Union is then extended by a special 
+directory /memory/changes in read-write mode.</p>
+<pre>/(initrd, 4MB)
+     |
+     |---- /memory(tmpfs, 80% of RAM)
+     |        |-- images
+     |        |     |-- base.mo   &lt;--loop--+
+     |        |     |      |-- bin         |
+     |        |     |      |-- usr         |
+     |        |     |      +-- var         |
+     |        |     |                      |
+     |        |     |-- xwindow.mo &lt;-loop------+   
+     |        |     |      |-- etc         |   |
+     |        |     |      |-- usr         |   |
+     |        |     |      +-- var         |   |
+     |        |     |                      |   | 
+     |        |     +-- kde.mo     &lt;-loop----------+
+     |        |            |-- opt         |   |   |
+     |        |            |-- usr         |   |   |
+     |        |            +-- var         |   |   |
+     |        |                            |   |   |
+     |        +-- changes                  |   |   |
+     |                                     |   |   |
+     +---- /union                          |   |   |
+              |---- /mnt/cdrom             |   |   |
+              |          |--- base.mo -----+   |   |
+              |          |--- xwindow.mo ------+   |
+              |          +--- kde.mo --------------+
+              +---- /mnt/live</pre>
+<p>When all modules are added to union and one rw branch is at the top of it, pivot_root is executed. That is pretty tricky too, original root is moved to /mnt/live and /union becomes new root. 
+You may explore /mnt/live while running SLAX to see original content of ramdisk.</p>
+<p>Finally linuxrc executes /sbin/init which will start all system services and display login screen as usual.</p>
+
+<h2>Links</h2>
+<p>Stony Brook university: <a href="http://www.fsl.cs.sunysb.edu/">http://www.fsl.cs.sunysb.edu/</a><br>
+
+UnionFS: <a href="http://www.fsl.cs.sunysb.edu/project-unionfs.html">http://www.fsl.cs.sunysb.edu/project-unionfs.html</a><br>
+
+SLAX: <a href="http://slax.linux-live.org/">http://www.slax.org</a><br>
+
+Linux Live scripts: <a href="http://www.linux-live.org/">http://www.linux-live.org</a><br>
+
+Linux kernel: <a href="http://www.kernel.org">http://www.kernel.org</a></p>
+
+</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+
+&nbsp;<BR>
+This site is maintained by Tomas Matejicek<br>
+(c) 2002-2005 unionfs.org</p>
+
+</body>
+</html>

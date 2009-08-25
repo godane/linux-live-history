@@ -13,7 +13,7 @@ REM  so we need to restore it from backup.
 copy /Y boot\isolinux.bi_ boot\isolinux.bin
 if not "%errorlevel%"=="0" goto error2
 
-tools\DOS\mkisofs.exe @tools\DOS\mkisofs.dos -o "%1" -A "%CDLABEL%" -V "%CDLABEL%" .
+tools\DOS\mkisofs.exe @tools\DOS\config -o "%1" -A "%CDLABEL%" -V "%CDLABEL%" .
 goto theend
 
 :error1

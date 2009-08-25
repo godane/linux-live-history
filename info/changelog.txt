@@ -1,6 +1,28 @@
+ 5.1.4
+ 
+ * uselivemod: requires unionfs to be compiled with -DSETUP_BROKEN_LOSETUP=1
+ * uselivemod: show all error messages now (eg. if squashfs is inconsistent
+               because of broken download of the module)
+ * uselivemod: call ldconfig at the end to update ld cache
+ * uselivemod: run ALL scripts from the module, which are located in /etc/rc.d/ BUT symlinks.
+               Note: scripts from /var/log/setup/... are not executed anymore
+ * uselivemod, img2mo, mo2dir, uselivemod: only root can use it
+ * liblinuxlive: added allow_only_root function
+ * liblinuxlive: echo mounted module and destination to /tmp/_mounts
+ * linuxrc: wait more than 30 seconds for USB devices. and raise the delay.
+ * liblinuxlive: union_insert_module now prints module basename dir
+ * updated isolinux.bin to newest version available today
+ * initrd_create: use new config options to disable compressing kernel modules
+                  and to redirect debug output to some file or /dev/null
+ * added some documentation to "!info" directory
+ * added latest CVS snapshot of unionfs module compiled for 2.6.12.2 kernel
+   (this one is the more stable unionfs ever)
+
+
  5.1.3
  
  * bugfix: precompiled kernel modules weren't gzipped
+
 
  5.1.2
  
@@ -8,6 +30,7 @@
  * added unionfs unionfs-063005-2217
  * released 2.6.12.2 precompiled kernel for lazy people
  * added mkisofs which works in MS DOS too!
+
 
  5.1.1
 
@@ -18,6 +41,7 @@
  * fixed make_iso.bat and added mkisofs.exe for DOS!
  * added uniondbg binary
  
+
  5.1.0
  5.0.16
 
@@ -256,7 +280,7 @@
  * liveCD path is mounted by --rbind option to /boot
  * mkciso removes the RAW img file imediately after compressing it
    to free some important part of disk space
- * added livecd-check to ./moduse script to disable using modules from hd-installed slax
+ * added livecd-check to ./moduse script to disable using modules from hd-installed livecd
 
 
  4.0.3

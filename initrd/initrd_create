@@ -40,8 +40,7 @@ rcopy_ex()
 
 debug()
 {
-   # uncomment to show debug messages
-   # echo "$@"
+   echo "$@" >>$DEBUG
    return 0
 }
 
@@ -70,7 +69,9 @@ mknod $INITRD_TREE/dev/null c 1 3
 mknod $INITRD_TREE/dev/ram b 1 1
 mknod $INITRD_TREE/dev/systty c 4 0
 mknod $INITRD_TREE/dev/tty c 5 0
-mknod $INITRD_TREE/dev/tty1 c 4 1
+for i in 1 2 3 4 5 6; do
+  mknod $INITRD_TREE/dev/tty$i c 4 $i;
+done
 
 loops=255
 while [ $loops -ge 0 ]; do
@@ -94,53 +95,55 @@ LMK="lib/modules/$KERNEL"
 
 #necessary modules and dependency files
 mkdir -p $INITRD_TREE/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/unionfs.ko.gz $INITRD_TREE/$LMK/kernel/fs
-cp kernel-modules/$KERNEL/squashfs.ko.gz $INITRD_TREE/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/unionfs.ko* $INITRD_TREE/$LMK/kernel/fs
+cp kernel-modules/$KERNEL/squashfs.ko* $INITRD_TREE/$LMK/kernel/fs
 
 #copy filesystem modules, if not directly copied into kernel
-rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/lib/zlib_inflate $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/drivers/block/loop* $INITRD_TREE 2>>$DEBUG
 
-rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/fat $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/vfat $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/ntfs $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/ext3 $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/fs/reiserfs $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/isofs $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/fs/fat $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/fs/vfat $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/fs/ntfs $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/fs/ext3 $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/fs/reiserfs $INITRD_TREE 2>>$DEBUG
 
 # add language support for filesystems
-rcopy_ex /$LMK/kernel/fs/nls/ $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/fs/nls/ $INITRD_TREE 2>>$DEBUG
 
 #usb modules
-rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/usb/host/ehci-hcd* $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/usb/host/ohci-hcd* $INITRD_TREE 2>/dev/null
-rcopy_ex /$LMK/kernel/drivers/usb/host/uhci-hcd* $INITRD_TREE 2>/dev/null
-#rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>/dev/null
+rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/drivers/usb/host/ehci-hcd* $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/drivers/usb/host/ohci-hcd* $INITRD_TREE 2>>$DEBUG
+rcopy_ex /$LMK/kernel/drivers/usb/host/uhci-hcd* $INITRD_TREE 2>>$DEBUG
+#rcopy_ex /$LMK/kernel/drivers/usb/storage $INITRD_TREE 2>>$DEBUG
 
 #disk (scsi, ide, raid, pcmcia) modules
 #rcopy_ex /$LMK/kernel/drivers/scsi $INITRD_TREE
 #rcopy_ex /$LMK/kernel/drivers/ide $INITRD_TREE
 #rcopy_ex /$LMK/kernel/drivers/pcmcia $INITRD_TREE
 
-debug "gzipping kernel modules"
-find $INITRD_TREE -name "*.ko" | xargs -r gzip --best
+if [ "$COMPRESS" = 1 ]; then
+   debug "gzipping kernel modules"
+   find $INITRD_TREE -name "*.ko" | xargs -r gzip --best
+fi
 
 debug "generating module dependency files"
 depmod -b $INITRD_TREE $KERNEL
 
 debug "creating empty image file $INITRDIMG"
-dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >/dev/null 2>/dev/null
+dd if=/dev/zero of=$INITRDIMG bs=1024 count=$RAM0SIZE >>$DEBUG 2>&1
 
 debug "making filesystem"
-mkfs -t ext2 -F -m 0 -b 1024 -i 1024 $INITRDIMG 2>/dev/null >/dev/null
+mkfs -t ext2 -F -m 0 -b 1024 -i 1024 $INITRDIMG >>$DEBUG 2>&1
 
 debug "creating empty directory $MOUNTDIR"
 rm -Rf $MOUNTDIR
 mkdir $MOUNTDIR
 
 debug "mounting $INITRDIMG to it"
-modprobe loop 2>/dev/null
+modprobe loop 2>>$DEBUG
 mount -o loop $INITRDIMG $MOUNTDIR
 if [ "$?" -ne 0 ]; then
    echo "Error mounting initrd! Not enough free loop devices?"

@@ -49,6 +49,14 @@ fatal()
    ash
 }
 
+allow_only_root()
+{
+  # test if the script is started by root user. If not, exit
+  if [ "0$UID" -ne 0 ]; then
+     echo "Only root can run `basename $0`"; exit 1
+  fi
+}
+
 # ===========================================================
 # text processing functions
 # ===========================================================
@@ -99,7 +107,7 @@ modprobe_module()
   PRINTK=`cat /proc/sys/kernel/printk`
   echo "0" >/proc/sys/kernel/printk
 
-  KERNEL="`uname -r`"; LSMOD=/tmp/lsmod
+  KERNEL="`uname -r`"; LSMOD=/tmp/_lsmod
   MODULEDEPS="`cat /lib/modules/$KERNEL/modules.dep | egrep \"$1\\.ko(\\.gz)?:\"`"
 
   for MODULE in `echo $MODULEDEPS | cut -d ":" -f 2-` `echo $MODULEDEPS | cut -d ":" -f 1`; do
@@ -152,9 +160,9 @@ mount_device()
 #
 create_module()
 {
-   mksquashfs $1 $2 $3 >/dev/null
+   mksquashfs "$1" "$2" $3 >/dev/null
    if [ $? -ne 0 ]; then return 1; fi
-   chmod oga-x $2 # remove execute attrib
+   chmod oga-x "$2" # remove execute attrib
 }
 
 # Mount .mo module to destination directory
@@ -163,7 +171,8 @@ create_module()
 #
 mount_module()
 {
-   mount -t squashfs -o loop,ro $1 $2
+   mount -t squashfs -o loop,ro "$1" "$2"
+   echo "$1 $2" >>/tmp/_mounts
 }
 
 # Insert a directory tree $2 to an union specified by $1
@@ -173,7 +182,7 @@ mount_module()
 #
 union_insert_dir()
 {
-   unionctl $1 --add --after 0 --mode ro $2
+   unionctl "$1" --add --after 0 --mode ro "$2"
 }
 
 # List all modules in all directories (base, modules, optional)
@@ -201,8 +210,10 @@ union_insert_module()
    while [ -e $TARGET ]; do TARGET=$TARGET.X; done
    mkdir -p $TARGET
    mount_module $2 $TARGET
-   if [ $? -ne 0 ]; then echo "can't read module data"; return 1; fi
-   union_insert_dir $1 $TARGET; 
+   if [ $? -ne 0 ]; then echo "can't read module data. corrupted download?" >&2; return 1; fi
+   union_insert_dir $1 $TARGET
+   if [ $? -ne 0 ]; then echo "can't insert module to union" >&2; return 1; fi
+   basename $TARGET
 }
 
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
@@ -213,7 +224,7 @@ union_insert_module()
 union_insert_modules()
 {
    list_modules $2 | while read MODULE; do
-      echo " -> `basename $MODULE`"
+      echo -n " -> "
       union_insert_module $1 $MODULE $3
    done
 }
@@ -343,8 +354,6 @@ modprobe_usb_modules()
    modprobe_module ohci-hcd
    modprobe_module uhci-hcd
    modprobe_module usb-storage
-   echolog "waiting for USB devices, max 9 seconds"
-   sleep 9
    create_block_devices
 }
 
@@ -388,7 +397,7 @@ activate_fstab()
 
    list_partition_devices | while read DEVICE; do
       unset REMOVABLE; DEV="`basename $DEVICE`"; DEV0="`echo $DEV | cut -b 1-3`"
-      if [ "`cat /sys/block/$DEV0/removable`" != "0" ]; then
+      if [ "0`cat /sys/block/$DEV0/removable`" -ne 0 ]; then
          REMOVABLE="_removable"
       fi
 
@@ -398,9 +407,10 @@ activate_fstab()
 
       # try to mount the device and unmount it. If OK, we can add it to fstab
       mount_device "$DEVICE" "$1/$MOUNTDIR"
+      FS="`cat /proc/mounts | grep $DEVICE | grep $MOUNTDIR | cut -d \" \" -f 3 | head -n 1`"
       umount "$1/$MOUNTDIR" 2>/dev/null
       if [ $? -eq 0 ]; then
-         echo "$DEVICE $MOUNTDIR auto auto,users,suid,dev,exec 0 0" >>$FSTAB
+         echo "$DEVICE $MOUNTDIR $FS auto,users,suid,dev,exec 0 0" >>$FSTAB
       else # remove empty directory
          rmdir "$1/$MOUNTDIR" 2>/dev/null
       fi

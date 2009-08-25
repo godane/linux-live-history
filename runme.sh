@@ -17,7 +17,7 @@ cd $CHANGEDIR
 
 VMLINUZ=$ROOT/boot/vmlinuz
 if [ -L "$VMLINUZ" ]; then VMLINUZ=`readlink -f $VMLINUZ`; fi
-if [ "`ls $VMLINUZ 2>/dev/null`" = "" ]; then echo "cannot find $VMLINUZ"; exit 1; fi
+if [ "`ls $VMLINUZ 2>>$DEBUG`" = "" ]; then echo "cannot find $VMLINUZ"; exit 1; fi
 
 header "Creating LiveCD from your Linux"
 

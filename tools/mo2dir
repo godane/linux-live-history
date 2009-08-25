@@ -17,11 +17,13 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
+allow_only_root
+
 TMPDIR=/tmp/mo2dir$$
 
 mkdir -p $TMPDIR
 mount_module "$1" "$TMPDIR"
-cp -R --preserve=all "$TMPDIR"/* "$2"
+cp -R --preserve=all $TMPDIR/* "$2"
 umount "$TMPDIR"
 rmdir "$TMPDIR"
 /sbin/ldconfig

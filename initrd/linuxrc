@@ -57,8 +57,18 @@ $DEBUGCMD
 # USB kernel modules and repeat the find procedure again
 echolog "looking for data modules"
 DATA="`find_live_data_dir $MOUNTDIR`";
-if [ "$DATA" = "" ]; then modprobe_usb_modules; DATA="`find_live_data_dir $MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found. Are you using SCSI?"; fi
+if [ "$DATA" = "" ]; then
+   modprobe_usb_modules;
+   echolog -n "searching for usb devices .."
+   for i in 1 2 3 4 5 6 7 8; do # max 36 seconds
+      echolog -n "."
+      create_block_devices >/dev/null
+      DATA="`find_live_data_dir $MOUNTDIR`";
+      if [ "$DATA" != "" ]; then break; fi
+      sleep $i;
+   done
+fi
+if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found. Are you using unsupported SCSI?"; fi
 echolog "found in $DATA"
 
 $DEBUGCMD
