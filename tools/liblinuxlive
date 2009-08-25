@@ -3,16 +3,25 @@
 # Author: Tomas Matejicek <http://www.linux-live.org>
 #
 
+# echolog
+# $1 = text to show and to write to /var/log/messages
+#
+echolog()
+{
+   echo "LIVECD:" "$@" >>/var/log/livedbg
+   echo "$@"
+}
+
 # header
 # $1 = text to show
 #
 header()
 {
-   echo " "
-   echo "+============================================================================="
-   echo "| $1:"
-   echo "+============================================================================="
-   echo " "
+   echolog " "
+   echolog "+============================================================================="
+   echolog "| $1:"
+   echolog "+============================================================================="
+   echolog " "
 }
 
 # file extension
@@ -57,7 +66,7 @@ tempfile()
       NAME=$NAME".X"
    done
    touch "$NAME"
-   echo "$NAME"
+   echolog "$NAME"
 }
 
 # create temp directory in $1 with the preffix $2
@@ -78,8 +87,8 @@ tempdir()
    done
 
    mkdir -p "$MOUNTPOINT"
-   if [ $? != 0 ]; then echo "error creating directory $MOUNTPOINT"; exit 1; fi
-   echo "$MOUNTPOINT"
+   if [ $? != 0 ]; then echolog "error creating directory $MOUNTPOINT"; exit 1; fi
+   echolog "$MOUNTPOINT"
 }
 
 # create compressed iso image
@@ -96,9 +105,9 @@ mkciso()
    mkisofs -R -J -D -o "$RAW" $INPUT 2>/dev/null
    mkzftree -z 9 -F "$RAW" "$COMPRESSED"
    if [ ! "$?" = 0 ]; then
-      echo "mkzftree error: directory $1 is very big? Maybe you are running"
-      echo "out of disk space, or mkzftree doesn't support large files,"
-      echo "or mkzftree not found! (get it from cdrtools package)"
+      echolog "mkzftree error: directory $1 is very big? Maybe you are running"
+      echolog "out of disk space, or mkzftree doesn't support large files,"
+      echolog "or mkzftree not found! (get it from cdrtools package)"
       exit 1
    fi
    rm -f "$RAW" # it won't be needed anymore
@@ -174,15 +183,15 @@ cp2ram()
    IMGNAME="`basename \"$1\"`"
 
    if [ ! "$DOCOPY" = "" ]; then
-      echo -n " $IMGNAME" >&2
+      echolog -n " $IMGNAME" >&2
       cp "$1" "$2/$IMGNAME"
 
       if [ $? = 0 ];
-         then echo "$2/$IMGNAME"; return 0
+         then echolog "$2/$IMGNAME"; return 0
          else rm -f "$2/$IMGNAME" # not enough free space?
       fi
    fi
-   echo "$1"
+   echolog "$1"
 }
 
 # mount image into unique temporary directory
@@ -196,20 +205,20 @@ mount_img()
    local MOUNTPOINT=`tempdir $1 $2`
    mount $4 -o loop,ro $1 $MOUNTPOINT
    if [ $? != 0 ]; then
-      echo "error mounting $1 to $MOUNTPOINT";
-      echo "Do you have enough free loop devices?";
+      echolog "error mounting $1 to $MOUNTPOINT";
+      echolog "Do you have enough free loop devices?";
       exit 1;
    fi
 
    mount $4 -o loop,ro $MOUNTPOINT/mountme.iso $MOUNTPOINT
    if [ $? != 0 ]; then
-      echo "error submounting $1";
-      echo "Do you have enough free loop devices?";
-      echo "Do you have transparent decompression for ISO filesystem compiled into kernel?";
+      echolog "error submounting $1";
+      echolog "Do you have enough free loop devices?";
+      echolog "Do you have transparent decompression for ISO filesystem compiled into kernel?";
       exit 1;
    fi
    
-   echo "$MOUNTPOINT" >>$3
+   echolog "$MOUNTPOINT" >>$3
 }
 
 # REmount device in $1 directory, in the mode set by $2
@@ -270,7 +279,7 @@ mount_all_cds()
    do
       CDDEV="`readlink -f $CDIR/$FILE`"
       mount_device "$CDDEV" "$1/$FILE" ro
-      echo "$CDDEV"
+      echolog "$CDDEV"
    done
 }
 
@@ -287,7 +296,7 @@ mount_all_discs()
       ls -aAb1 "$DDIR/$DISC" | grep part | while read PART;
       do
          mount_device "$DDIR/$DISC/$PART" "$1/$DISC$PART" ro
-	 echo "$DDIR/$DISC/$PART"
+	 echolog "$DDIR/$DISC/$PART"
       done
    done
 }
@@ -298,7 +307,7 @@ list_swaps()
 {
    /sbin/fdisk -l 2>/dev/null | grep -i "Linux swap" | egrep -o "^/dev/[a-z0-9/]+" | while read LINE;
    do
-      echo "$LINE swap swap defaults 0 0"
+      echolog "$LINE swap swap defaults 0 0"
    done
 }
 
@@ -325,5 +334,10 @@ rcopy()
       ln -sf "$REALPATH" "$2/$1"
    else
       cp --parent -R "$1" "$2"
+   fi
+   if [ "$?" -ne 0 ]; then
+      echo "Error occured while trying to copy \"$1\" to \"$2\""
+      echo "Possible reason: not enough free space"
+      exit
    fi
 }

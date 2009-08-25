@@ -16,13 +16,15 @@ IMGRO=$LIVECDDATA/imgro
 IMGRW=$LIVECDDATA/imgrw
 CP2RAM=$LIVECDDATA/cp2ram
 CHANGES=$LIVECDDATA/changes
+PROFILED=/mnt/etc/profile.d
 
 # init script, absolute path for chrooted filesystem
 LINUXINIT=/tmp/init
 
 header "linuxrc-start"
 
-echo "creating root filesystem in /mnt"
+echolog "logging all messages to /var/log/livedbg"
+echolog "creating root filesystem in /mnt"
 mount -t tmpfs -o "size=90%" tmpfs /mnt
 mkdir -p /mnt/{bin,boot,dev,etc/X11,home,lib,mnt,opt,proc,root,sbin,tmp,usr,sys,var/run,var/lock}
 mkdir -p /mnt/mnt/{ramdisk,livecd}
@@ -48,10 +50,10 @@ if [ ! -r /dev/.devfsd ]; then
    mount -t devfs devfs /dev
    if [ ! "$?" = "0" ]; then
       header "ERROR!"
-      echo "devfs is not mounted in /dev and mount attempt failed"
-      echo "Your kernel probably doesn't support devfs"
-      echo "try cat /proc/filesystems | grep devfs"
-      echo "Press Ctrl+Alt+Del for reboot."
+      echolog "devfs is not mounted in /dev and mount attempt failed"
+      echolog "Your kernel probably doesn't support devfs"
+      echolog "try cat /proc/filesystems | grep devfs"
+      echolog "Press Ctrl+Alt+Del for reboot."
       while [ 1 = 1 ]; do bash; done
    fi
 fi
@@ -60,7 +62,7 @@ fi
 mount -t devfs devfs /mnt/dev
 
 if [ ! "`cmdline_parameter nolock`" = "" ]; then
-   echo "CD locking disabled by nolock kernel parameter"
+   echolog "CD locking disabled by nolock kernel parameter"
    echo "0" >/proc/sys/dev/cdrom/lock
 fi
 
@@ -68,7 +70,7 @@ fi
 modprobe_module ide-scsi
 
 if [ ! "`cmdline_parameter probeusb`" = "" ]; then
-   echo "probing usb hardware"
+   echolog "probing usb hardware"
    modprobe_module usbcore
    modprobe_module usb-storage
    modprobe_module usb-uhci
@@ -79,16 +81,16 @@ if [ ! "`cmdline_parameter probeusb`" = "" ]; then
 fi
 
 # call mount_all_cds function, to mount /dev/hdc hdd etc.
-echo "mounting all available CDs"
+echolog "mounting all available CDs"
 mount_all_cds /mnt/mnt >>$MOUNTS
 
-echo "mounting other discs (ro)"
+echolog "mounting other discs (ro)"
 mount_all_discs /mnt/mnt >>$MOUNTS
 
 if [ ! "`cmdline_parameter floppy`" = "" ]; then
-   echo "mounting floppy if available (ro)"
+   echolog "mounting floppy if available (ro)"
    mount_device /dev/floppy/0 /mnt/mnt/floppy ro
-   echo "/dev/floppy/0" >>$MOUNTS
+   echolog "/dev/floppy/0" >>$MOUNTS
 fi
 
 LIVECD_SUBDIRECTORY=`cmdline_value livecd_subdirectory`
@@ -98,7 +100,7 @@ if [ ${#LIVECD_SUBDIR} -lt ${#LIVECD_SUBDIRECTORY} ]; then
    LIVECD_SUBDIR="$LIVECD_SUBDIRECTORY"
 fi
 
-echo "liveCD subdirectory is $LIVECD_SUBDIR";
+echolog "liveCD subdirectory is $LIVECD_SUBDIR";
 
 # search what mount directory is our CD in
 for DIR in /mnt/mnt/*
@@ -106,7 +108,7 @@ do
   if [ -r "$DIR/$LIVECD_SUBDIR/$LIVECD_SGN" ]; then
      LIVECD_MOUNT="$DIR"
      LIVECD_PATH="`dirname \"$DIR/$LIVECD_SUBDIR/x\"`"
-     echo "LiveCD path is now $LIVECD_PATH"
+     echolog "LiveCD path is now $LIVECD_PATH"
      break
   fi
 done
@@ -123,36 +125,36 @@ fi
 
 # copy entire CD to harddisk and use it from there
 if [ ! "$TOHD" = "" ]; then
-   echo "Remounting $TOHD read-write"
+   echolog "Remounting $TOHD read-write"
    remount /mnt/mnt/$TOHD rw
    if [ $? -eq 0 ]; then
       TOHDDIR=/mnt/mnt/$TOHD/$HDSUBDIR
       mkdir -p $TOHDDIR 2>/dev/null
       touch $TOHDDIR/slax.tmp 2>/dev/null
       if [ $? -eq 0 ]; then
-         echo "Copying the LiveCD source to $TOHDDIR..."
+         echolog "Copying the LiveCD source to $TOHDDIR..."
          cp -Rf $LIVECD_PATH/* $TOHDDIR 2>/dev/null
 	 if [ $? -eq 0 ]; then
             FROMHD=$TOHD
 	    TOHD_OK=1
          fi
-         echo "Remounting $TOHD read-only"
+         echolog "Remounting $TOHD read-only"
          remount /mnt/mnt/$TOHD ro
       fi
    fi
 
    if [ ! $TOHD_OK -eq 1 ]; then
       header "ERROR!"
-      echo "An error occured while copying CD to $TOHD."
-      echo "Not enough free space? Wrong directory name? ($TOHD)"
-      echo "The original source CD will be used."
-      echo
+      echolog "An error occured while copying CD to $TOHD."
+      echolog "Not enough free space? Wrong directory name? ($TOHD)"
+      echolog "The original source CD will be used."
+      echolog
    fi
 fi
 
 # use already copied CD from harddisk
 if [ ! "$FROMHD" = "" ]; then
-   echo "FROMHD parameter detected, using $FROMHD"
+   echolog "FROMHD parameter detected, using $FROMHD"
    LIVECD_MOUNT="/mnt/mnt/$FROMHD"
    LIVECD_PATH="/mnt/mnt/$FROMHD/$HDSUBDIR"
 fi
@@ -160,102 +162,103 @@ fi
 # if no data found, run bash
 if [ ! -r "$LIVECD_PATH/$LIVECD_SGN" ]; then
   header "ERROR!"
-  echo "cannot find your compressed IMG files! Maybe you are trying"
-  echo "to start the LiveCD from unsupported CDROM drive (scsi?)"
-  echo "Or you entered wrong livecd_subdir= parameter?"
-  echo "Or you entered wrong fromhd= parameter?"
-  echo "Press Ctrl+Alt+Del for reboot."
+  echolog "cannot find your compressed IMG files! Maybe you are trying"
+  echolog "to start the LiveCD from unsupported CDROM drive (scsi?)"
+  echolog "Or you entered wrong livecd_subdir= parameter?"
+  echolog "Or you entered wrong fromhd= parameter?"
+  echolog "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
 fi
 
-echo "liveCD found in $LIVECD_PATH"
+echolog "liveCD found in $LIVECD_PATH"
 mkdir -p $LIVECDDATA $IMGRO $IMGRW $CP2RAM $CHANGES
 
-echo -n "copying selected modules to RAM... "
+echolog -n "copying selected modules to RAM... "
 
 # base
 ls -aA1b "$LIVECD_PATH/base" 2>/dev/null | while read IMG; do
-   echo "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+   echolog "`cp2ram \"$LIVECD_PATH/base/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
 
 # modules
 ls -aA1b "$LIVECD_PATH/modules" 2>/dev/null | while read IMG; do
-   echo "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
+   echolog "`cp2ram \"$LIVECD_PATH/modules/$IMG\" \"$CP2RAM\"`" >>$MNTORDER
 done
 
 # optional modules (insert only modules specified by load= kernel boot parameter)
 cmdline_value load | tr "," "\\n" | while read IMG; do
    ls -aA1b "$LIVECD_PATH/optional/$IMG"* 2>/dev/null | while read IMAGE; do
-         echo "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
+         echolog "`cp2ram \"$IMAGE\" \"$CP2RAM\"`" >>$MNTORDER
    done
 done
-echo
+echolog
 
-echo -n "unpacking .tar.gz from the CD... "
+echolog -n "unpacking .tar.gz from the CD... "
 ls -aA1b $LIVECD_PATH/packs | while read PACK;
 do
-   echo -n "$PACK "
+   echolog -n "$PACK "
    tar -C /mnt -xzmf "$LIVECD_PATH/packs/$PACK"
 done
-echo
+echolog
 
-echo -n "mounting all images... "
+echolog -n "mounting all images... "
 cat $MNTORDER | while read IMG;
 do
-   echo -n "`basename \" $IMG\"` "
+   echolog -n "`basename \" $IMG\"` "
    mount_img $IMG $IMGRO $INSORDER -n
 done
-echo
+echolog
 
 $DEBUG
 
 header "creating live filesystem"
 
-echo "Starting ovlfs support (by Arthur Naseef)"
+echolog "Starting ovlfs support (by Arthur Naseef)"
 modprobe_module ovl
 mount -t ovl cdrom_ovl $IMGRW -o root=$IMGRO,storage=$CHANGES,stg_file=$STGFILE
 
 if [ ! "$?" = "0" ]; then
   header "ERROR!"
-  echo "cannot overmount cdrom in pseudo-write mode."
-  echo "Maybe your kernel doesn't support ovlfs?"
-  echo "Press Ctrl+Alt+Del for reboot."
+  echolog "cannot overmount cdrom in pseudo-write mode."
+  echolog "Maybe your kernel doesn't support ovlfs?"
+  echolog "Press Ctrl+Alt+Del for reboot."
   while [ 1 = 1 ]; do bash; done
 fi
 
-echo -n "inserting images into filesystem... "
+echolog -n "inserting images into filesystem... "
 cat $INSORDER | while read IMG;
 do
    IMG=$IMGRW/${IMG:${#IMGRO}}
-   echo -n "`basename \"$IMG\"` "
+   echolog -n "`basename \"$IMG\"` "
    if [ -x $IMG/preinsert ]; then $IMG/preinsert; fi
    make_links $IMG/data /mnt /mnt
    if [ -x $IMG/postinsert ]; then $IMG/postinsert; fi
 done
-echo
+echolog
 
 $DEBUG
 
 if [ ! "`cmdline_parameter eject`" = "" ]; then
-   echo "trying to eject LiveCD medium..."
+   echolog "trying to eject LiveCD medium..."
    eject "$LIVECD_MOUNT" >/dev/null 2>/dev/null
    if [ ! "$?" = 0 ]; then
-      echo "error, cdrom cannot be unmounted or doesn't support ejecting"
+      echolog "error, cdrom cannot be unmounted or doesn't support ejecting"
    fi
 else
    mount --rbind $LIVECD_PATH /mnt/boot
 fi
 
-echo "exporting LIVECD variables to profile.d..."
+if [ -d $PROFILED ]; then
+   echolog "exporting LIVECD variables to profile.d..."
+   echolog "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >$PROFILED/slax.sh
+   echolog "export LIVECD_PATH="${LIVECD_PATH:4} >>$PROFILED/slax.sh
+   chmod 755 /mnt/etc/profile.d/slax.sh
+   echolog "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >$PROFILED/slax.csh
+   echolog "setenv LIVECD_PATH "${LIVECD_PATH:4} >>$PROFILED/slax.csh
+   chmod 755 /mnt/etc/profile.d/slax.csh
+fi
 
-echo "export LIVECD_MOUNT="${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.sh
-echo "export LIVECD_PATH="${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.sh
-chmod 755 /mnt/etc/profile.d/slax.sh
-echo "setenv LIVECD_MOUNT "${LIVECD_MOUNT:4} >/mnt/etc/profile.d/slax.csh
-echo "setenv LIVECD_PATH "${LIVECD_PATH:4} >>/mnt/etc/profile.d/slax.csh
-chmod 755 /mnt/etc/profile.d/slax.csh
-
-echo "creating fstab..."
+echolog "creating fstab..."
 
 echo "tmpfs /     tmpfs defaults 0 0" >/mnt/etc/fstab
 echo "proc  /proc proc  defaults 0 0" >>/mnt/etc/fstab
@@ -268,7 +271,7 @@ cat $MOUNTS | while read DEVICE; do
    if [ "$?" = 0 ]; then
       LINERO=${LINE/ \/mnt/ }
       LINEDEF=${LINERO/ ro / defaults }
-      echo $LINEDEF >>/mnt/etc/fstab
+      echolog $LINEDEF >>/mnt/etc/fstab
    fi
 done
 
@@ -277,40 +280,41 @@ list_swaps >>/mnt/etc/fstab
 echo >/mnt/etc/mtab
 touch -t 197001010000.00 /mnt/etc/modules.conf # to avoid error messages
 
-echo "creating init script in /tmp/init..."
+echolog "creating init script in /tmp/init..."
 
 echo >/mnt/$LINUXINIT
 chmod 0755 /mnt/$LINUXINIT
 
 NEWROOTPASS="`cmdline_value passwd`"
 if [ "$NEWROOTPASS" = "ask" ]; then
-   echo -ne "\nEnter new password for root: "
+   echolog -ne "\nEnter new password for root: "
    read -s NEWROOTPASS
 fi
 
 if [ ! "$NEWROOTPASS" = "" ]; then
-   echo "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
+   echolog "root:$NEWROOTPASS" | chroot /mnt /usr/sbin/chpasswd
 fi
 
 echo '
-echo "freeing ramdisk..."
+echolog "freeing ramdisk..."
 umount -nl /mnt/ramdisk
 /sbin/blockdev --flushbufs /dev/rd/0
-echo "'"`header \"starting init\"`"'"
+echolog "'"`header \"starting init\"`"'"
 exec /sbin/init <dev/console >dev/console 2>&1
 ' >>/mnt/$LINUXINIT
 
+cp /var/log/livedbg /mnt/var/log/livedbg
 mount -o remount,ro /mnt
 cd /mnt
 
 $DEBUG
 
-echo "changing root directory..."
+echolog "changing root directory..."
 /sbin/pivot_root . mnt/ramdisk
 exec /usr/bin/chroot . $LINUXINIT <dev/console >dev/console 2>&1
 
 header "ERROR!"
-echo "You are not supposed to be here, something went wrong!"
-echo "calling /mnt/usr/bin/chroot failed?"
-echo "Press Ctrl+Alt+Del for reboot."
+echolog "You are not supposed to be here, something went wrong!"
+echolog "calling /mnt/usr/bin/chroot failed?"
+echolog "Press Ctrl+Alt+Del for reboot."
 while [ 1 = 1 ]; do bash; done

@@ -1,31 +1,31 @@
 How to create own modules for your LiveCD
 -----------------------------------------
 
-To create a module for your LiveCD, create an empty
+To create a module for your LiveCD, make an empty
 directory somewhere, for example in /tmp/newmod.
 
 Then create the essential module content in this directory.
-Each module should contain these files:
+Each module can contain these files:
 
-  ./preinsert     # /tmp/newmod/preinsert
-  ./postinsert    # /tmp/newmod/postinsert
-  ./manual        # /tmp/newmod/manual
+  ./preinsert     # /tmp/newmod/preinsert  # only optional
+  ./postinsert    # /tmp/newmod/postinsert # only optional
+  ./manual        # /tmp/newmod/manual     # only optional
 
-and it should contain these directories:
+and it must contain this directory:
 
   ./data          # /tmp/newmod/data/
 
-The directory ./data should contain the whole filesystem
+The directory ./data will contain the whole filesystem
 (all changed or new files and directories). Let's assume
 that ./data is the new root here, so if you wish to include
 /bin/bash in your module, place it in ./data/bin/bash
-(or in /tmp/newmod/data/bin/bash in this example).
+(it is /tmp/newmod/data/bin/bash in this example).
 
-The content of ./data directory could be created from
+The content of ./data directory can be created from
 slackware's TGZ package by using "installpkg -root ./data packagename.tgz"
 (or by "installpkg -root /tmp/newmod/data/ packagename.tgz" in this example)
 
-Finaly, create the module by using
+Finaly, create the final IMG module from prepared directory tree by using
 dir2img /tmp/newmod/ /tmp/modulename.img
 The first argument is the module directory
 The second argument is the new name for your module
@@ -64,4 +64,4 @@ Please keep the number of your modules as small as possible.
 Each inserted module could consume alot of resources (several
 mount calls, several loop devices and lots of symlinks), so it's always
 better to include all files you wish in a single module.
-10 modules is OK, but 1000 modules is not ok.
+10 more modules is OK, but 1000 modules is not ok.

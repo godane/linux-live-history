@@ -5,6 +5,10 @@
    * all the following things must be compiled directly into kernel:
      - devfs (CONFIG_DEVFS_FS=y)
      - ext2 (CONGIG_EXT2_FS=y)
+     - tmpfs (CONFIG_TMPFS=y)
+     - loop device (CONFIG_BLK_DEV_LOOP=y)
+     - ramdisk (CONFIG_BLK_DEV_RAM=y)
+     - initrd (CONFIG_BLK_DEV_INITRD=y)
      - iso filesystem (CONFIG_ISO9660_FS=y)
      -  with transparent decompression (CONFIG_ZISOFS=y)
 
@@ -18,5 +22,10 @@
    * mkzftree is used for img compression. Make sure you have it,
      and also make sure your mkisofs is patched properly.
      (This all is already done in Slackware's cdrtools package)
+
+   * devfsd must be installed and configured in your distribution
+     else your LiveCD won't be able to use devfs (can't open initial console error)
+     (devfsd package was removed from Slackware 10, you can find
+     it in ./packages/ directory now)
 
   These requirements could change with new kernel or ovlfs versions.

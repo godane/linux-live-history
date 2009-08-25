@@ -14,8 +14,13 @@ fi
 
 # isolinux.bin is changed during the ISO creation,
 # so we need to restore it from backup.
-gunzip -c isolinux.bin.gz >isolinux.bin
+ISOLINUXBIN=/tmp/isolinux$$.bin
+gunzip -c isolinux.bin.gz >$ISOLINUXBIN
 
 mkisofs -o "$1" -v -J -R -D -A "$CDLABEL" -V "$CDLABEL" \
 -no-emul-boot -boot-info-table -boot-load-size 4 \
--b isolinux.bin -c isolinux.boot .
+-x "./isolinux.bin" -x "./isolinux.boot" \
+-b isolinux.bin -c isolinux.boot \
+-graft-points isolinux.bin=$ISOLINUXBIN .
+
+rm $ISOLINUXBIN

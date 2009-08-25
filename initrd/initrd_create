@@ -24,7 +24,7 @@ mount -o loop $INITRDIMG $MOUNTDIR
 
 echo "creating directories..."
 rmdir $MOUNTDIR/lost+found
-mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,sbin,lib,tmp,usr/bin,usr/sbin}
+mkdir -p $MOUNTDIR/{etc,dev,bin,mnt,proc,sbin,lib,tmp,usr/bin,usr/sbin,var/log}
 
 echo "copying files to the rootdisk (this may take some time)..."
 touch $MOUNTDIR/etc/{m,fs}tab

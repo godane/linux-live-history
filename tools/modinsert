@@ -46,8 +46,8 @@ gunzip -c $DATADIR/isolinux.bin.gz >$ISOLINUXBIN
 mkisofs -o "$OUTPUT" -v -J -R -D -A "$CDNAME" -V "$CDNAME" \
 -no-emul-boot -boot-info-table -boot-load-size 4 \
 -x "$DATADIR/isolinux.bin" -x "$DATADIR/isolinux.boot" \
--b isolinux.bin -c isolinux.boot -graft-points \
-isolinux.bin=$ISOLINUXBIN $GRAFT "$DATADIR"
+-b isolinux.bin -c isolinux.boot \
+-graft-points isolinux.bin=$ISOLINUXBIN $GRAFT "$DATADIR"
 
 # cleanup all temporary files and directories
 rm $ISOLINUXBIN
