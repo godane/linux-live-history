@@ -189,7 +189,7 @@ if [ "$INIT" = "" ]; then fatal "Can't find executable init command"; fi
 # time to end Linux Live scripts and start the distribution itself
 header "linux live end, starting the Linux distribution"
 
-mount -o remount,ro .
+mount -n -o remount,ro aufs .
 pivot_root . $INITRAMDISK
 exec $CHROOT . $INIT <dev/console >dev/console 2>&1
 

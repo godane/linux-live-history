@@ -6,7 +6,7 @@
 
 MODULE="$1"
 
-if [ "$MODULE" = "" -o ! -e "$MODULE" ]; then
+if [ "$MODULE" = "" -o ! -e "$MODULE" -o -d "$MODULE" ]; then
    echo
    echo "Use module on the fly while running Live CD"
    echo "Usage: $0 module.lzm"
@@ -28,8 +28,7 @@ IMAGES=/mnt/live/memory/images
 MODULES=/mnt/live/memory/modules
 
 # are we even using union?
-unionctl / --list 2>/dev/null >/dev/null
-if [ $? -ne 0 ]; then
+if [ "`grep \"^aufs / \" /proc/mounts`" = "" ]; then
    echo "not in the live mode, can't continue. Try lzm2dir"
    exit 4
 fi
@@ -38,8 +37,7 @@ mkdir -p "$MODULES"
 
 # Test whether the module file is stored in union
 # if yes, then we must move it somewhere else (to RAM) else it can't be added
-unionctl / --whereis "$MODULE"
-if [ $? -ne 0 ]; then
+if [ -e "/mnt/live/memory/changes/`readlink -f \"$MODULE\"`" ]; then
    echo "module file is stored inside the union, moving to $MODULES first..."
    TARGET="$MODULES/`basename \"$MODULE\"`"
    mv "$MODULE" "$TARGET"

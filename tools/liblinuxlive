@@ -240,7 +240,7 @@ mount_module()
 #
 union_insert_dir()
 {
-   unionctl "$1" --add --after 0 --mode ro "$2"
+    mount -n -o remount,add:1:$2=ro aufs $1
 }
 
 # List all modules in all directories (base, modules, optional)

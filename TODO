@@ -9,3 +9,4 @@ vysunovani CDROM u rebootu - nekteri rikaji ze ani pre2 nefunguje dobre
 nohotplug should affect USB modules probing 
 
 changes= bez uvedeni zarizeni by melo hledat pouze na disku z kteryho bootuju slax
+(find live data bude predtim, takze uz to budu vedet nebo co)

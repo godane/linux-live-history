@@ -1,3 +1,15 @@
+ 6.0.2
+
+ * fixed mo2lzm script, it didn't create lzm file in correct directory
+   and it didn't clean up used space
+ * fixed uselivemod to detect correctly if .lzm module is inside the union 
+   and if it is needed to move it to memory
+ * removed unionctl and call everything directly now
+ * fixed remounting of union which may caused errors during startup
+   when many modules (eg. 50) are used
+ * current aufs limitation is 127 modules, never try to use more!
+ 
+
  6.0.1
 
  * minor update of some messages

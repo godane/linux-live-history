@@ -19,5 +19,5 @@ TMP=/tmp/mo2lzm$$
 mkdir -p $TMP
 
 lzm2dir "$1" $TMP # it's backward compatible so it will read old mo format
-dir2lzm $TMP "`echo $1 | sed -r 's/\.mo$//'`".lzm
-rmdir $TMP
+dir2lzm $TMP "$2"
+rm -Rf $TMP
