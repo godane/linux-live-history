@@ -1,3 +1,9 @@
+ 6.0.3
+
+ * I forgot to include all required directories in the MKMOD variable
+   in .config file. Fixed
+
+
  6.0.2
 
  * fixed mo2lzm script, it didn't create lzm file in correct directory
