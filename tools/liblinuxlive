@@ -694,7 +694,6 @@ find_in_computer()
    TIMEOUT=$(cmdline_value timeout | sed -r 's/[^0-9]*([0-9]+).*/\1/')
    if [ "$TIMEOUT" = "" ]; then TIMEOUT=10; fi
 
-   TIMEOUT=10
    RESULT=$(find_file "$1")
 
    while [ $TIMEOUT -gt 0 -a "$RESULT" = "" ]; do
@@ -833,7 +832,7 @@ fstab_add_line()
 fstab_update()
 {
    debug_log "fstab_update" "$*"
-   local FSTAB
+   local FSTAB FSTABTMP
 
    FSTAB="$1/etc/fstab"
    FSTABTMP=$FSTAB$$

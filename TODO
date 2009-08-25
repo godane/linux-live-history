@@ -8,4 +8,11 @@ Linux Live Scripts TODO list
 - nohotplug should affect USB modules probing 
 
 - lilo boot loading
-  
+
+- chopt = eie ... we need something better, because eie (expand if empty)
+  may take a long long time (because fat doesn't support sparse files). We need:
+  a) a progress bar, or 
+  b) limit the maximum size (maybe using another chopt variable, or eie:64
+  syntax for example). Progress bar would be perhaps better, so the user
+  can see that something is happening. But is it a good idea to fill the
+  device up? Is fat filesystem safe when filled? Maybe eie:17 would be the best

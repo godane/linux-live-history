@@ -24,7 +24,7 @@ if [ "$SLIK" = "slik" -o "$SLIK" = "http" ]; then
       kdialog --title "error" --error "Can't mount the module remotely.\nDownload it to your computer and try again."
       exit 128;
    fi
-   FILE="$MNT/$BAS"
+   FILE="$MNT/$BASE"
 fi
 
 if [ "$FILE" = "" -o ! -e "$FILE" ]; then
