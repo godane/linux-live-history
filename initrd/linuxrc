@@ -27,11 +27,6 @@ fi
 
 $DEBUGCMD
 
-# Find out how much of RAM do we like to use to save filesystem changes
-# Defaults to 60%. Moreover it's not used if changes= boot argument exists.
-RAMSIZE="`cmdline_value ramsize`"
-if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
-
 # Load essential drivers, like CDROM drivers, aufs/squashfs etc.
 modprobe_essential_modules
 
@@ -63,7 +58,7 @@ if [ "$DATAFROM" ]; then
 
    if [ "$DATAFROM" ]; then
       mount_device $DATAFROM $LOOPMOUNT # mount again, it may be loop device
-      if [ $? -eq 0 -a -f "$LOOPMOUNT/$LIVECDNAME" ]; then
+      if [ $? -eq 0 -a -d "$LOOPMOUNT/$LIVECDNAME" ]; then
          echolog "found in $LOOPMOUNT"
          DATA=$LOOPMOUNT/$LIVECDNAME
       else
@@ -103,13 +98,42 @@ if [ "$CHANGESVAL" ]; then
    if [ "$CHANGESMNT" = "" ]; then
       # still empty? Load USB modules and try again
       modprobe_usb_modules
-      CHANGESPATH="`find_file $MOUNTDIR $CHANGESVAL`"
+      CHANGESMNT="`find_file $MOUNTDIR $CHANGESVAL`"
    fi
    echolog $CHANGESMNT
 fi
 
+$DEBUGCMD
+
+# options for the changes= boot parameter (chopt)
+# eie = expand if empty
+CHANGESOPT="`cmdline_value chopt`"
+if [ "$CHANGESOPT" = "eie" -a -f "$CHANGESMNT" -a "`du -k \"$CHANGESMNT\" 2>/dev/null | cut -b1`" -eq 0 ]; then
+   SIZE="`df -k $CHANGESMNT | tail -n 1 | tr -s ' ' | cut -d ' ' -f 4`"
+   SIZE="`expr $SIZE / 1024`"
+   # xfs filesystem can't be created if the loop file is too small
+   if [ $SIZE -lt 17 ]; then
+      echo "- not enough free space, at least 17 MB is required"
+   elif ! touch $CHANGESMNT 2>/dev/null; then
+      echo "- a Read-Only filesystem is not supported"
+   else
+      echolog "expanding the file for changes to $SIZE MB"
+      echolog "(it may take few minutes, depending on your drive/bus speed and size)"
+      dd if=/dev/zero of=$CHANGESMNT bs=1M count=0 seek=$SIZE >/dev/null 2>&1
+      sync
+      echolog "creating journaling XFS filesystem to store changes safely..."
+      mkfs.xfs $CHANGESMNT >/dev/null
+   fi
+fi
+
 mount_device $CHANGESMNT $MEMORY # if empty or fails, mount tmpfs:
-if [ $? -ne 0 ]; then mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY; fi
+if [ $? -ne 0 ]; then 
+   # Find out how much of RAM do we like to use to save filesystem changes
+   RAMSIZE="`cmdline_value ramsize`"
+   if [ "$RAMSIZE" = "" ]; then RAMSIZE="60%"; fi
+   mkdir -p $MEMORY # mount_device could remove it
+   mount -t tmpfs -o "size=$RAMSIZE" tmpfs $MEMORY
+fi
 
 # $UNION will be used as a root directory, livecd modules will be added soon
 echolog "setup union directory (using aufs)"

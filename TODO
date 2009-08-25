@@ -1,3 +1,5 @@
+Linux Live Scripts - LLS
+
 linux - slax - LIVECDNAME - v liblinuxlive to upravit
 
 vysunovani CDROM u rebootu - nekteri rikaji ze ani pre2 nefunguje dobre
@@ -6,3 +8,7 @@ nohotplug should affect USB modules probing
 
 changes= bez uvedeni zarizeni by melo hledat pouze na disku z kteryho bootuju slax
 (find live data bude predtim, takze uz to budu vedet nebo co)
+
+review starting of rc scripts in uselivemod!
+review fstab create executed by udev (for slax only, not related to LLS)
+review cleanup script, some guy told me it may cause hang

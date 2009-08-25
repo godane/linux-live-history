@@ -1,3 +1,25 @@
+ 6.0.7 - code name dd seek=`df`
+ 
+ * upgraded to new busybox 1.4.1 with bbconfig applet
+ * added mkfs.xfs (compressed by upx) to initrd
+ * implemented chopt= boot argument. For now it accepts only:
+
+   'chopt=eie' (stands for: CHanges OPTion = Expand If Empty)
+   
+   In this case, if the boot argument changes=/path/save.dat is given
+   and if the file save.dat is empty (zero size) at the same time, 
+   the file will be automatically expanded to the full size of your device.
+
+   For example, if you're running your live distro from a 512 MB USB disk 
+   and your distro's data take up 200 MB, then save.dat will be created 312MB
+
+   Finally XFS filesystem is created in the file and it's mounted.
+   Minimum free space required is 17MB, as XFS can't be smaller.
+
+ * fixed a typo preventing changes= working if Live distro is started from CD
+   but changes are required to load from USB device
+ * fixed a typo preventing from= working at all (we should use -d, not -f)
+
 
  6.0.6 - code name Japanese
  

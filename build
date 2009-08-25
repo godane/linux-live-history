@@ -79,5 +79,5 @@ echo "* run $CDDATA/$LIVECDNAME/make_iso.bat to create ISO image"
 echo "* or copy content of $CDDATA to your USB device"
 echo "and run ./boot/bootinst.sh (from the device!) to setup boot sector"
 echo
-echo "Now press Enter to finish..."
+echo "Now press Enter..."
 read junk

@@ -160,7 +160,6 @@ mount_device()
 
   # make sure we have enough arguments
   if [ "$2" = "" ]; then return 1; fi
-
   mkdir -p "$2"
 
   OPTIONS=$(fs_options `device_filesystem $1`)
