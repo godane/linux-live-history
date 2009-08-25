@@ -85,7 +85,7 @@ cp {linuxrc,liblinuxlive} $INITRD_TREE # symlink will be copied as original file
 chmod a+x $INITRD_TREE/linuxrc
 
 cp static-binaries/busybox $INITRD_TREE/bin
-cp static-binaries/unionctl $INITRD_TREE/bin
+cp static-binaries/unionctl $INITRD_TREE/bin # symlink will be copied as original file
 ln -s busybox $INITRD_TREE/bin/ash
 ln -s busybox $INITRD_TREE/bin/sh
 ln -s busybox $INITRD_TREE/bin/[

@@ -17,8 +17,12 @@ else
    . /usr/lib/liblinuxlive || exit 1
 fi
 
-union_insert_module / $1 /mnt/live/images
+union_insert_module / $1 /mnt/live/memory/images
 
-# executable called "manual" is started only by this script (uselivemod)
+# executable in /var/log/setup/setup.modulename will be started
+# only by this script (uselivemod)
 #
-#if [ -x "$IMG/manual" ]; then "$IMG/manual"; fi
+SETUPEXE="/var/log/setup/setup.`basename $1 .mo`"
+if [ -x "$SETUPEXE" ]; then
+   . $SETUPEXE;
+fi

@@ -1,3 +1,13 @@
+ 5.0.10
+ 
+ * added unionfs version which has many important bugs fixed
+ * patched unionctl to skip stat() function
+ * added support for Linux 2.6.11.6
+ * added sample kernel configuration to kernel-modules/*/config.gz
+ * added a lot of text to requirements file
+ * fixed uselivemod script
+
+
  5.0.9
 
  * added precompiled version of mksquashfs to ./tools

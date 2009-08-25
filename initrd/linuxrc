@@ -4,7 +4,6 @@ export PATH=.:/:/usr/sbin:/usr/bin:/sbin:/bin
 . liblinuxlive
 
 header "starting Linux Live scripts <http://www.linux-live.org/>"
-echolog "logging all messages to /var/log/livedbg"
 
 echolog "mounting /proc and /sys filesystems"
 mount -t proc proc /proc
@@ -18,13 +17,14 @@ $DEBUGCMD
 
 # I have to set these variables very carefully
 UNION=/union
-CHANGES=/changes
-MOUNTDIR=$UNION/mnt
-IMAGES=$UNION/mnt/live/images
-TORAM=$CHANGES/mnt/live/toram
-INITRAMDISK=mnt/live/initramdisk
+MEMORY=/memory
+MOUNTDIR=mnt
+CHANGES=$MEMORY/changes
+COPY2RAM=$MEMORY/copy2ram
+IMAGES=$MEMORY/images
+INITRAMDISK=$MOUNTDIR/live
 
-# we need cdrom support, isofs support, etc
+# we need cdrom support, isofs support, unionfs support, etc
 modprobe_essential_modules
 setup_dma
 
@@ -34,8 +34,11 @@ $DEBUGCMD
 # Create temp filesystem and setup union on the top.
 echolog "setup union on $UNION"
 mkdir -p $UNION
+mkdir -p $MEMORY
+mount -t tmpfs -o "size=80%" tmpfs $MEMORY
 mkdir -p $CHANGES
-mount -t tmpfs -o "size=80%" tmpfs $CHANGES
+mkdir -p $COPY2RAM
+mkdir -p $IMAGES
 mount -t unionfs -o dirs=$CHANGES unionfs $UNION
 
 $DEBUGCMD
@@ -43,9 +46,9 @@ $DEBUGCMD
 # try to find livecd data directory. If not found, try modprobing
 # USB or SCSI kernel modules and repead the find procedure again
 echolog "looking for data modules"
-if [ "$DATA" = "" ]; then DATA="`find_live_data_dir $MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $MOUNTDIR`"; fi
-if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then modprobe_usb_modules;  DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
+if [ "$DATA" = "" ]; then modprobe_scsi_modules; DATA="`find_live_data_dir $UNION/$MOUNTDIR`"; fi
 if [ "$DATA" = "" ]; then fatal "Data for LiveCD not found"; fi
 echolog "found in $DATA"
 
@@ -56,14 +59,20 @@ $DEBUGCMD
 # Finaly modify DATA variable so it will point to correct directory
 if [ "`cmdline_parameter toram`" != "" -o "`cmdline_parameter copy2ram`" != "" ]; then
    echolog "copying modules to RAM, this may take some time"
-   copy_modules $DATA $TORAM
-   DATA=$TORAM
+   copy_modules $DATA $COPY2RAM
+   setup_cd_autoeject
+   umount $DATA 2>/dev/null
+   if [ $? -ne 0 ]; then umount `dirname $DATA` 2>/dev/null; fi
+   DATA=$COPY2RAM
 fi
+
+mkdir -p $UNION/boot
+mount -o bind $DATA $UNION/boot
 
 $DEBUGCMD
 
-# DATA contains path to all .mo images which needs to be mounted and inserted
-# into live filesystem. Do it now.
+# DATA contains path to the base directory of all .mo images which need
+# to be mounted and inserted into live filesystem. Do it now.
 echolog "inserting all modules and creating live filesystem"
 union_insert_modules $UNION $DATA $IMAGES
 activate_fstab $UNION
@@ -74,7 +83,6 @@ mkdir -p $UNION/proc
 mkdir -p $UNION/sys
 mkdir -p $UNION/tmp
 mkdir -p $UNION/dev
-mkdir -p $UNION/boot
 
 $DEBUGCMD
 
@@ -99,5 +107,5 @@ exec $CHROOT . sbin/init <dev/console >dev/console 2>&1; fi
 
 header "ERROR!"
 echolog "You are not supposed to be here, something went wrong!"
-echolog "Press Ctrl+Alt+Del for reboot."
-ash
+echolog "Even Ctrl+Alt+Del won't help you in kernel panic."
+

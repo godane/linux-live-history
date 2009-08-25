@@ -188,6 +188,20 @@ list_modules()
    done
 }
 
+# Insert one single .mo module to the union
+# $1 = union absolute path (starting with /)
+# $2 = module.mo full path
+# $3 = destination folder, where images will be mounted to
+#
+union_insert_module()
+{
+   TARGET="$3/`basename $2`"
+   while [ -e $TARGET ]; do TARGET=$TARGET.X; done
+   mkdir -p $TARGET
+   mount_module $2 $TARGET
+   union_insert_dir $1 $TARGET
+}
+
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
 # $1 = union absolute path (starting with /)
 # $2 = LiveCD data dir (with directories /base, /modules, etc.)
@@ -196,11 +210,7 @@ list_modules()
 union_insert_modules()
 {
    list_modules $2 | while read MODULE; do
-      TARGET="$3/`basename $MODULE`"
-      while [ -e $TARGET ]; do TARGET=$TARGET.X; done
-      mkdir -p $TARGET
-      mount_module $MODULE $TARGET
-      union_insert_dir $1 $TARGET
+      union_insert_module $1 $MODULE $3
    done
 }
 
@@ -228,13 +238,15 @@ copy_modules()
 #
 list_cdrom_devices()
 {
+   if [ "`cmdline_parameter nocd`" != "" ]; then return 1; fi
    for CDDEVICE in `cat /proc/sys/dev/cdrom/info | head -n 3 | tail -n 1 | cut -d ":" -f 2`; do
       echo "/dev/$CDDEVICE"
    done
 }
 
 # List all partition devices
-# take list of all partitions and output unique disks
+# take list of all partitions and output unique disks.
+# Return empty result when nohd parameter was given.
 #
 list_partition_devices()
 {
@@ -258,19 +270,19 @@ list_block_devices()
 }
 
 # Try to mount all disks, partitions and cdroms and Find where the LiveCD is.
-# If LiveCD found in the device, echo dirname of it's directory
-# and leave the device mounted.
+# If LiveCD found in the device, echo dirname of it's directory,
+# and leave the device mounted. Mounting is not ro, but without any argument.
 # $1 = directory where devices will be mounted
 #
 find_live_data_dir()
 {
    list_block_devices | while read DEVICE; do
       DIR=$1/"`basename $DEVICE`"
-      mount_device $DEVICE $DIR
-      ls -A1d $DIR/livecd.sgn $DIR/*/livecd.sgn 2>/dev/null | \
-        while read FOUND; do dirname "$FOUND"; return 1; done
-      if [ "$?" -eq 0 ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null
-      else return 0; fi
+      mount_device $DEVICE $DIR;
+      if [ $? -ne 0 ]; then continue; fi
+      FOUND=`ls -A1d $DIR/livecd.sgn $DIR/*/livecd.sgn 2>/dev/null | head -n 1`
+      if [ "$FOUND" = "" ]; then umount $DIR 2>/dev/null; rmdir $DIR 2>/dev/null;
+      else dirname "$FOUND"; return 1; fi
    done
 }
 
@@ -326,22 +338,30 @@ modprobe_scsi_modules()
    echolog "starting SCSI support, this may take a while"
    ls /lib/modules/`uname -r`/kernel/drivers/scsi | cut -d . -f 1 | while read MODULE; do
       if [ "$MODULE" != "sg" -a "$MODULE" != "scsi_debug" ]; then
-         echolog "$MODULE..."
+         echolog "modprobe $MODULE..."
 	 modprobe_module $MODULE
       fi
    done
    create_block_devices
 }
 
-# Enable/disable DMA if nodma boot parameter is present
+# Enable CD autoejecting when unmounted
+#
+setup_cd_autoeject()
+{
+   echo 1 >/proc/sys/dev/cdrom/autoeject
+}
+
+# Disable DMA if nodma boot parameter is present
 #
 setup_dma()
 {
-   if [ "`cmdline_parameter nodma`" = "" ]; then USINGDMA=1; else USINGDMA=0; fi
-   for DEVICE in `list_cdrom_devices` `list_disk_devices`; do
-      echolog "setting DMA support for $DEVICE =using_dma:$USINGDMA"
-      echo "using_dma:$USINGDMA" >"/proc/ide/`basename $DEVICE`/settings"
-   done
+   if [ ! "`cmdline_parameter nodma`" = "" ]; then
+      for DEVICE in `list_cdrom_devices` `list_disk_devices`; do
+         echolog "setting DMA support off for $DEVICE"
+         hdparm -d 0 $DEVICE
+      done
+   fi
 }
 
 # create correct fstab file in $1/etc/fstab and create apropriate
@@ -356,10 +376,21 @@ activate_fstab()
    echo "devpts           /dev/pts         devpts      gid=5,mode=620   0   0" >>$FSTAB
    echo "proc             /proc            proc        defaults         0   0" >>$FSTAB
 
-   list_block_devices | while read DEVICE; do
+   list_cdrom_devices | while read DEVICE; do
       MOUNTDIR="/mnt/`basename $DEVICE`"
-      echo "$DEVICE $MOUNTDIR auto defaults,noauto 0 0" >>$FSTAB
-      mkdir -p $1/$MOUNTDIR
+      mkdir -p $MOUNTDIR
+      echo "$DEVICE $MOUNTDIR auto defaults,users 0 0" >>$FSTAB
+   done
+
+   list_partition_devices | while read DEVICE; do
+      MOUNTDIR="/mnt/`basename $DEVICE`"
+      mount_device $DEVICE $1/$MOUNTDIR
+      umount $1/$MOUNTDIR 2>/dev/null
+      if [ $? -eq 0 ]; then # add to fstab only if mount+umount is OK
+         echo "$DEVICE $MOUNTDIR auto defaults,users 0 0" >>$FSTAB
+      else # remove empty directory
+         rmdir $1/$MOUNTDIR 2>/dev/null
+      fi
    done
 
    fdisk -l 2>/dev/null | grep -i "Linux swap" | egrep "^/dev/" \
