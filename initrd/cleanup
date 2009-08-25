@@ -31,9 +31,9 @@ MNT=$(ls -1 $MOUNTDIR 2>/dev/null | head -n 1)
 CD=$(cat /proc/sys/dev/cdrom/info 2>/dev/null | grep name | grep "$MNT")
 if [ "$CD" ]; then
    echo "Ejecting CD-ROM..."
-   eject -m /dev/$MNT 2>/dev/null
+   /bin/eject -m /dev/$MNT >/dev/null 2>&1
    sleep 3
-   eject -t /dev/$MNT 2>/dev/null
+   /bin/eject -t /dev/$MNT >/dev/null 2>&1
 fi
 
 # $1 = action, eg. poweroff, halt or reboot

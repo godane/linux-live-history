@@ -104,6 +104,7 @@ ln -s busybox $INITRD_TREE/bin/poweroff
 ln -s busybox $INITRD_TREE/bin/halt
 ln -s busybox $INITRD_TREE/bin/reboot
 ln -s busybox $INITRD_TREE/bin/ld
+ln -s busybox $INITRD_TREE/bin/ls
 ln -s busybox $INITRD_TREE/bin/head
 ln -s busybox $INITRD_TREE/bin/cat
 ln -s busybox $INITRD_TREE/bin/grep

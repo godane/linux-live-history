@@ -40,9 +40,11 @@ echogreen()
 #
 echolog()
 {
-   echo "LIVECD:" "$@" >>/var/log/livedbg
-   echogreen "* "
-   echo "$@"
+   if [ "$1" != "" ]; then
+      echogreen "* "
+      echo "LIVECD:" "$@" >>/var/log/livedbg
+      echo "$@"
+   fi
 }
 
 # debug
@@ -284,7 +286,9 @@ union_insert_module()
    if [ 0$? -ne 0 ]; then echo "Cannot read module data. corrupted download?" >&2; return 1; fi
    union_insert_dir $1 $TARGET
    if [ 0$? -ne 0 ]; then echo "can't insert module to union" >&2; return 2; fi
-   echo $2 | cut -b $4- | cut -b 2-
+   echo "$2" | cut -b $4- | cut -b 2-
+   echolog "$2" >/dev/null
+   return 0
 }
 
 # Insert all .mo modules, in $2 directory and subdirectories, to the union
@@ -452,12 +456,15 @@ modprobe_essential_modules()
 #
 modprobe_usb_modules()
 {
+   SLEEP="`cmdline_value probeusb | sed -r 's/[^0-9]*([0-9]+).*/\1/'`"
+   if [ "$SLEEP" = "" ]; then SLEEP=5; fi
+
    echolog "starting USB support"
    modprobe_module ehci-hcd
    modprobe_module ohci-hcd
    modprobe_module uhci-hcd
    modprobe_module usb-storage
-   sleep 3
+   sleep $SLEEP
    create_block_devices
 }
 
@@ -490,7 +497,7 @@ setup_dma()
 #
 fstab_update_line()
 {
-   if [ "`cat \"$1\" | egrep \"^[[:space:]]*[^#[:space:]]+[[:space:]]+$3\"`" = "" ]; then
+   if [ "`cat \"$1\" | sed -r \"s/#.*//\" | egrep \"^[[:space:]]*[^[:space:]]+[[:space:]]+$2[[:space:]]+\"`" = "" ]; then
       echo "$2" "$3" "$4" "$5" 0 0 "$FSTABLLFLAG" >>$1
    fi
 }

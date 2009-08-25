@@ -35,10 +35,10 @@ mkdir -p $MEMORY
 
 $DEBUGCMD
 
-echolog -n "setup directory for changes "
+echolog "setup directory for changes"
 CHANGESPATH="`cmdline_value changes`"
 CHANGESPATH="`find_file $MOUNTDIR $CHANGESPATH`"
-echo $CHANGESPATH
+echolog $CHANGESPATH
 mount_device $CHANGESPATH $MEMORY # silently ignored if changespath is empty
 
 # mount tmpfs only in the case when changes= boot parameter was empty
@@ -102,10 +102,10 @@ fi
 $DEBUGCMD
 
 if [ "$DATA" = "" ]; then fatal "
-LiveData not found. Searching for $LIVECDSGN file,but file not found.
+LiveData not found. Searching for $LIVECDSGN file, but the file was not found.
 You are maybe using an unsupported boot device (eg. SCSI or PCMCIA CD-ROM)
 Try to copy all data from CD/USB to your IDE harddisk, for example
-to /mnt/sda1/alldata/ in Linux or C:\\alldata\\ in Windos. Then boot again."
+to /mnt/sda1/ in Linux or C:\\ in Windos. Then boot again."
 fi
 
 echolog "LiveData mounted to $DATA"

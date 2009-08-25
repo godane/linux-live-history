@@ -1,3 +1,15 @@
+ 5.5.0
+ 
+ * fixed another bug in cleanup script 
+   - created ls symlink to eject the right CD
+ * added older version of unionctl which works better then the newer one
+ * boot by using loadlin now includes vga=769 boot argument
+ * boot by using loadlin and syslinux now includes probeusb argument
+ * probeusb now waits 5 seconds instead of 3
+ * probeusb accepts value (in seconds), eg. probeusb=10 will wait 10 seconds
+ * fixed problem with some missing partitions which should be added to fstab
+
+
  5.4.9
  
  * bugfix: /etc/fstab is deleted before update_fstab is called from linuxrc,
@@ -18,7 +30,7 @@
  * added MKMOD variable to 'config' so user can specify which directories
    will be included in liveCD.
  * added -f option to syslinux in make_disk.bat, which allows user to install
-   SLAX to any disk, even if it's not removable
+   LiveCD to any disk, even if it's not removable
  * added |sort| to list_modules to preserve correct order even after copy2ram
  * patched unsquashfs to return zero value if everything is OK. Patch sent to Phillip
  * important variables moved from linuxrc to liblinuxlive, all paths are now relative
