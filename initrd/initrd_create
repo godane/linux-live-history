@@ -28,6 +28,7 @@ rcopy()
    CWD=$(pwd)
    if [ "$ROOT" = "" ]; then cd /; else cd $ROOT; fi
    SOURCE="./${1:${#ROOT}}"
+   echo $SOURCE
    DEST="$2"
    if [ -L "$SOURCE" ]; then
       REALPATH=$(readlink -f "$SOURCE")
@@ -177,7 +178,7 @@ rcopy_ex $ROOT/$LMK/kernel/drivers/pcmcia/yenta_socket.* $INITRD_TREE 2>>$DEBUG
 for mod in $(list_network_drivers); do
    cat $ROOT/$LMK/modules.dep | fgrep /$mod.ko | while read LINE; do
       for dep in $(echo $LINE | tr -d ":"); do
-         rcopy_ex $dep $INITRD_TREE 2>>$DEBUG
+         rcopy_ex $ROOT/$dep $INITRD_TREE 2>>$DEBUG
       done
    done
 done

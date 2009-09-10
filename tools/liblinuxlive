@@ -605,7 +605,7 @@ list_network_drivers()
    # so I'll be happy if you report any particular one to be not working
    # (eg. causing hangups) in order to remove it from this list.
 
-   echo 3c59x acenic atl1 de4x5 dgrs eepro100 e1000 epic100 hp100 ne2k-pci \
+   echo 3c59x acenic atl1 b44 bnx2 de4x5 dgrs e100 eepro100 e1000 epic100 hp100 ne2k-pci \
    olympic pcnet32 r8169 rcpci 8139too 8139cp sktr skge sky2 tulip via-rhine \
    yellowfin tg3 dl2k ns83820 depca ibmtr 3c501 3c503 3c505 3c507 3c509 3c515 \
    ac3200 acenic at1700 cosa cs89x0 de4x5 de600 de620 e2100 eepro eexpress \

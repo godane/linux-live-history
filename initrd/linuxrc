@@ -246,11 +246,16 @@ echolog "changing root directory..."
 cd $UNION
 mkdir -p $INITRAMDISK
 
-# Copy all dev files (found by mdev) to unioned dev directory
-# so at least disk devices exist (your Linux may need them).
-# Two exceptions, do not copy pty* and tty* devs.
-if [ ! -e /dev/console ]; then mknod /dev/console c 5 1; fi
-cp -fdR /dev . 2>/dev/null
+# make sure some devices are there
+if [ ! -e dev/console ]; then mknod dev/console c 5 1; fi
+if [ ! -e dev/null ]; then mknod dev/null c 1 3; fi
+
+# If a boot parameter nohotplug is used, copy all dev files (found by mdev)
+# to the unioned dev directory, your Linux may need them since most likely
+# udev will not be started in that case
+if [ "$(cmdline_parameter nohotplug)" != "" ]; then
+   cp -fdR /dev . 2>/dev/null
+fi
 
 # find chroot and init
 if [ -x bin/chroot ]; then  CHROOT=bin/chroot; fi

@@ -1,3 +1,15 @@
+ 6.3.0
+ 
+ * added optimalizations to tgz2lzm (it now decompress man pages and
+   removes temporary catalog files). This is very safe and allows us to
+   compress modules even more.
+ * added e100 bnx2 and b44 network drivers to initrd, removed eepro100 driver
+ * copy /dev devices to unioned filesystem only if nohotplug parameter is given
+ * added txz2lzm script
+ * bootinst.sh takes just the last mount for the target device (thanks to Nataneal Copa)
+ * fixed a bug in copying network modules if $ROOT config is set (thanks to Mike for reporting that)
+ 
+
  6.2.9
  
  * fixed a bug in unsquashfs, it didn't work well on SMP machines
